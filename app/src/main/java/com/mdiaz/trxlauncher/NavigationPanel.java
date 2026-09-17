@@ -152,6 +152,11 @@ public class NavigationPanel extends FrameLayout {
         enableLocation();
     }
 
+    public boolean closeChooser(){
+        if(chooser.getVisibility()==VISIBLE){chooser.setVisibility(GONE);return true;}
+        return false;
+    }
+
     private void showChooser(){
         if(destination.getText().toString().trim().isEmpty()){
             Toast.makeText(activity,"Enter a destination",Toast.LENGTH_SHORT).show();return;
