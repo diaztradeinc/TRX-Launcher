@@ -1,6 +1,6 @@
 plugins { id 'com.android.application' }
 
-def mapsApiKey = System.getenv('MAPS_API_KEY') ?: 'MISSING_API_KEY'
+def mapsApiKey = System.getenv('MAPS_API_KEY') ?: 'AIzaSyA-tIK8KiByozjZRT8Knvq5lbCEDiKHfP8'
 
 android {
     namespace 'com.mdiaz.trxlauncher'
