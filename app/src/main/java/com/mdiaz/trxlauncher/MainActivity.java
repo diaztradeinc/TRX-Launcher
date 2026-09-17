@@ -12,6 +12,17 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapView;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -27,14 +38,24 @@ public class MainActivity extends Activity {
     private volatile String weatherTemp = "--°";
     private volatile String weatherCondition = "WEATHER UNAVAILABLE";
     private LocationManager locationManager;
+    private FrameLayout root;
+    private FrameLayout mapPanel;
+    private MapView mapView;
+    private GoogleMap googleMap;
+    private boolean mapDark;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         try {
             getWindow().setNavigationBarColor(0xff050607);
             getWindow().setStatusBarColor(0xff050607);
+            root = new FrameLayout(this);
             dashboard = new DashboardView(this);
-            setContentView(dashboard);
+            root.addView(dashboard,new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
+            setContentView(root);
+            setupLiveMap(state);
+            dashboard.post(() -> showLiveMap(dashboard.currentPage()==1));
             startGps();
             fetchWeather();
         } catch (Throwable error) {
@@ -44,8 +65,89 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        if (mapView != null) mapView.onResume();
         MediaBridge.ensureConnected(this);
         if (dashboard != null) dashboard.postInvalidate();
+    }
+
+    @Override protected void onStart(){super.onStart();if(mapView!=null)mapView.onStart();}
+    @Override protected void onPause(){if(mapView!=null)mapView.onPause();super.onPause();}
+    @Override protected void onStop(){if(mapView!=null)mapView.onStop();super.onStop();}
+    @Override public void onLowMemory(){super.onLowMemory();if(mapView!=null)mapView.onLowMemory();}
+    @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);if(mapView!=null)mapView.onSaveInstanceState(out);}
+
+    private void setupLiveMap(Bundle state){
+        mapDark=getSharedPreferences("launcher",MODE_PRIVATE).getBoolean("map_dark",true);
+        mapPanel=new FrameLayout(this);
+        mapPanel.setBackgroundColor(0xff080a0d);
+        mapPanel.setVisibility(View.GONE);
+        mapPanel.setElevation(12f);
+        mapView=new MapView(this);
+        mapView.onCreate(state);
+        mapPanel.addView(mapView,new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
+
+        Button home=mapButton("⌂  NAVIGATE HOME",true);
+        FrameLayout.LayoutParams hp=new FrameLayout.LayoutParams(dp(245),dp(58),Gravity.BOTTOM|Gravity.LEFT);
+        hp.setMargins(dp(18),0,0,dp(18));mapPanel.addView(home,hp);
+        home.setOnClickListener(v->openNavigation());
+
+        Button maps=mapButton("OPEN GOOGLE MAPS  ➤",false);
+        FrameLayout.LayoutParams mp=new FrameLayout.LayoutParams(dp(245),dp(58),Gravity.BOTTOM|Gravity.RIGHT);
+        mp.setMargins(0,0,dp(18),dp(18));mapPanel.addView(maps,mp);
+        maps.setOnClickListener(v->openNavigation());
+
+        mapView.getMapAsync(map->{
+            googleMap=map;
+            map.getUiSettings().setZoomGesturesEnabled(true);
+            map.getUiSettings().setScrollGesturesEnabled(true);
+            map.getUiSettings().setRotateGesturesEnabled(true);
+            map.getUiSettings().setCompassEnabled(true);
+            map.getUiSettings().setMyLocationButtonEnabled(true);
+            applyMapStyle();
+            map.setOnMapLongClickListener(point->{mapDark=!mapDark;
+                getSharedPreferences("launcher",MODE_PRIVATE).edit().putBoolean("map_dark",mapDark).apply();
+                applyMapStyle();});
+            LatLng start=new LatLng(40.33,-74.58);
+            try{
+                if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED){
+                    map.setMyLocationEnabled(true);
+                    Location last=locationManager==null?null:locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    if(last!=null)start=new LatLng(last.getLatitude(),last.getLongitude());
+                }
+            }catch(Throwable ignored){}
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(start,13.5f));
+        });
+    }
+
+    private Button mapButton(String label,boolean primary){
+        Button button=new Button(this);button.setText(label);button.setTextColor(Color.WHITE);
+        button.setTextSize(13);button.setAllCaps(false);button.setGravity(Gravity.CENTER);
+        GradientDrawable bg=new GradientDrawable();bg.setCornerRadius(dp(12));
+        bg.setColor(primary?0xff6e0713:0xee111419);bg.setStroke(dp(1),0xffff2338);
+        button.setBackground(bg);return button;
+    }
+
+    private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
+
+    private void applyMapStyle(){
+        if(googleMap==null)return;
+        try{googleMap.setMapStyle(mapDark?
+            MapStyleOptions.loadRawResourceStyle(this,R.raw.map_dark):new MapStyleOptions("[]"));
+        }catch(Throwable ignored){}
+    }
+
+    public void showLiveMap(boolean visible){
+        if(mapPanel==null||root==null)return;
+        if(visible){
+            int w=Math.max(1,root.getWidth()),h=Math.max(1,root.getHeight());
+            FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(
+                w-Math.round(w*36f/1080f),Math.round(h*1042f/1440f));
+            lp.leftMargin=Math.round(w*18f/1080f);lp.topMargin=Math.round(h*248f/1440f);
+            mapPanel.setLayoutParams(lp);
+            if(mapPanel.getParent()==null)root.addView(mapPanel);
+            mapPanel.setVisibility(View.VISIBLE);mapPanel.bringToFront();
+        }else mapPanel.setVisibility(View.GONE);
     }
 
     private void showStartupError(Throwable error) {
@@ -160,6 +262,7 @@ public class MainActivity extends Activity {
         try {
             if (locationManager != null) locationManager.removeUpdates(gpsListener);
         } catch (Throwable ignored) { }
+        if(mapView!=null)mapView.onDestroy();
         super.onDestroy();
     }
 
