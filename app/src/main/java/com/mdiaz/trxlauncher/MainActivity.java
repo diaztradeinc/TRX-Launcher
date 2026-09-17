@@ -12,14 +12,14 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import java.util.ArrayList;
+import java.io.BufferedReader;\nimport java.io.InputStreamReader;\nimport java.net.HttpURLConnection;\nimport java.net.URL;\nimport java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
 public class MainActivity extends Activity {
     private DashboardView dashboard;
-    private volatile float speedMph;
+    private volatile float speedMph;\n    private volatile String weatherTemp = "--°";\n    private volatile String weatherCondition = "WEATHER UNAVAILABLE";
     private LocationManager locationManager;
 
     @Override public void onCreate(Bundle state) {
@@ -29,7 +29,7 @@ public class MainActivity extends Activity {
             getWindow().setStatusBarColor(0xff050607);
             dashboard = new DashboardView(this);
             setContentView(dashboard);
-            startGps();
+            startGps();\n            fetchWeather();
         } catch (Throwable error) { showStartupError(error); }
     }
 
@@ -46,7 +46,7 @@ public class MainActivity extends Activity {
         } catch (Throwable ignored) { finish(); }
     }
 
-    public float speedMph() { return speedMph; }
+    public float speedMph() { return speedMph; }\n    public String weatherTemp() { return weatherTemp; }\n    public String weatherCondition() { return weatherCondition; }\n\n    private void fetchWeather() {\n        new Thread(() -> {\n            HttpURLConnection connection = null;\n            try {\n                URL url = new URL("https://api.open-meteo.com/v1/forecast?latitude=40.33&longitude=-74.58&current=temperature_2m,weather_code&temperature_unit=fahrenheit");\n                connection = (HttpURLConnection)url.openConnection();\n                connection.setConnectTimeout(6000);\n                connection.setReadTimeout(6000);\n                connection.setRequestProperty("User-Agent","TRX-Launcher/0.3.2");\n                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));\n                StringBuilder json = new StringBuilder();\n                String line;\n                while ((line = reader.readLine()) != null) json.append(line);\n                int current = json.indexOf("\\\"current\\\":");\n                double temp = numberAfter(json,"\\\"temperature_2m\\\":",current);\n                int code = (int)numberAfter(json,"\\\"weather_code\\\":",current);\n                weatherTemp = Math.round(temp) + "°";\n                weatherCondition = weatherName(code);\n            } catch (Throwable ignored) {\n                weatherTemp = "--°";\n                weatherCondition = "WEATHER UNAVAILABLE";\n            } finally {\n                if (connection != null) connection.disconnect();\n                if (dashboard != null) dashboard.postInvalidate();\n            }\n        },"trx-weather").start();\n    }\n\n    private static double numberAfter(StringBuilder text,String key,int from) {\n        int at=text.indexOf(key,Math.max(0,from));\n        if(at<0)return 0;at+=key.length();int end=at;\n        while(end<text.length()&&"-.0123456789".indexOf(text.charAt(end))>=0)end++;\n        try{return Double.parseDouble(text.substring(at,end));}catch(Throwable ignored){return 0;}\n    }\n\n    private static String weatherName(int code) {\n        if(code==0)return "CLEAR";if(code<=3)return "PARTLY CLOUDY";if(code<=48)return "FOG";\n        if(code<=67)return "RAIN";if(code<=77)return "SNOW";if(code<=82)return "SHOWERS";\n        if(code<=86)return "SNOW SHOWERS";return "THUNDERSTORMS";\n    }
 
     private final LocationListener gpsListener = new LocationListener() {
         @Override public void onLocationChanged(Location location) {
