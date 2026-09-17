@@ -19,9 +19,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.osmdroid.config.Configuration;
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
+import org.osmdroid.tileprovider.tilesource.XYTileSource;
 import org.osmdroid.views.MapView;
-import org.osmdroid.views.overlay.TilesOverlay;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 import org.osmdroid.util.GeoPoint;
@@ -44,11 +43,12 @@ public class NavigationPanel extends FrameLayout {
         setBackgroundColor(0xff05070a);
 
         map=new MapView(context);
-        map.setTileSource(TileSourceFactory.MAPNIK);
+        map.setTileSource(new XYTileSource("TRX Dark",0,20,256,".png",
+            new String[]{"https://a.basemaps.cartocdn.com/dark_all/","https://b.basemaps.cartocdn.com/dark_all/"},
+            "© OpenStreetMap contributors © CARTO"));
         map.setMultiTouchControls(true);
         map.setBuiltInZoomControls(false);
         map.setTilesScaledToDpi(true);
-        map.getOverlayManager().getTilesOverlay().setColorFilter(TilesOverlay.INVERT_COLORS);
         map.getController().setZoom(14.2);
         map.getController().setCenter(new GeoPoint(40.3323,-74.5819));
         addView(map,new LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.MATCH_PARENT));
@@ -106,7 +106,7 @@ public class NavigationPanel extends FrameLayout {
         addView(live,liveLp);
 
         TextView credit=new TextView(context);
-        credit.setText("© OpenStreetMap contributors");
+        credit.setText("© OpenStreetMap contributors • © CARTO");
         credit.setTextColor(0xffb9bdc5);credit.setTextSize(9);
         LayoutParams creditLp=new LayoutParams(LayoutParams.WRAP_CONTENT,dp(24),Gravity.RIGHT|Gravity.BOTTOM);
         creditLp.setMargins(0,0,dp(16),dp(18));
@@ -114,31 +114,38 @@ public class NavigationPanel extends FrameLayout {
 
         chooser=new LinearLayout(context);
         chooser.setOrientation(LinearLayout.VERTICAL);
-        chooser.setPadding(dp(20),dp(16),dp(20),dp(16));
-        chooser.setBackground(panel(0xfa080a0e,0xff555a64,1,22));
+        chooser.setPadding(dp(16),dp(8),dp(16),dp(8));
+        chooser.setElevation(dp(32));
+        chooser.setBackground(panel(0xff080a0e,0xff6a707a,1,20));
+        LinearLayout titleRow=new LinearLayout(context);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
         TextView title=new TextView(context);
         title.setText("CHOOSE NAVIGATION");title.setTextColor(Color.WHITE);
-        title.setTextSize(20);title.setTypeface(null,android.graphics.Typeface.BOLD);
-        chooser.addView(title,new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(42)));
+        title.setTextSize(18);title.setTypeface(null,android.graphics.Typeface.BOLD);
+        titleRow.addView(title,new LinearLayout.LayoutParams(0,dp(34),1));
+        Button close=button("×",false);close.setTextSize(22);close.setContentDescription("Close navigation chooser");
+        titleRow.addView(close,new LinearLayout.LayoutParams(dp(42),dp(34)));
+        chooser.addView(titleRow,new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(36)));
 
         LinearLayout apps=new LinearLayout(context);
         apps.setOrientation(LinearLayout.HORIZONTAL);
         Button waze=button("◉  WAZE",true);
         Button google=button("◆  GOOGLE MAPS",false);
-        LinearLayout.LayoutParams half=new LinearLayout.LayoutParams(0,dp(72),1);
+        LinearLayout.LayoutParams half=new LinearLayout.LayoutParams(0,dp(58),1);
         half.setMargins(0,0,dp(8),0);apps.addView(waze,half);
-        LinearLayout.LayoutParams half2=new LinearLayout.LayoutParams(0,dp(72),1);
+        LinearLayout.LayoutParams half2=new LinearLayout.LayoutParams(0,dp(58),1);
         half2.setMargins(dp(8),0,0,0);apps.addView(google,half2);
-        chooser.addView(apps,new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(80)));
+        chooser.addView(apps,new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(64)));
 
         remember=new CheckBox(context);
         remember.setText("Use as default");remember.setTextColor(Color.WHITE);remember.setTextSize(15);
-        chooser.addView(remember,new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(48)));
+        chooser.addView(remember,new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(38)));
         chooser.setVisibility(GONE);
-        LayoutParams chooserLp=new LayoutParams(LayoutParams.MATCH_PARENT,dp(205),Gravity.BOTTOM);
+        LayoutParams chooserLp=new LayoutParams(LayoutParams.MATCH_PARENT,dp(154),Gravity.BOTTOM);
         chooserLp.setMargins(dp(10),0,dp(10),dp(4));
         addView(chooser,chooserLp);
 
+        close.setOnClickListener(v->chooser.setVisibility(GONE));
         waze.setOnClickListener(v->launch(1));
         google.setOnClickListener(v->launch(0));
         chooser.setOnLongClickListener(v->{chooser.setVisibility(GONE);return true;});
