@@ -50,6 +50,26 @@ public final class DashboardView extends View {
 
     @Override protected void onDetachedFromWindow(){ clock.removeCallbacks(ticker); super.onDetachedFromWindow(); }
     @Override protected void onDraw(Canvas c){
+        try {
+            drawDashboard(c);
+        } catch (Throwable error) {
+            c.drawColor(0xff050607);
+            p.setColor(0xffff1d32);
+            p.setTextSize(28f);
+            c.drawText("TRX LAUNCHER DIAGNOSTIC",30,70,p);
+            p.setColor(0xffffffff);
+            p.setTextSize(18f);
+            String message=error.getClass().getSimpleName()+": "+String.valueOf(error.getMessage());
+            int start=0,line=0;
+            while(start<message.length() && line<12){
+                int end=Math.min(message.length(),start+55);
+                c.drawText(message.substring(start,end),30,120+(line*30),p);
+                start=end; line++;
+            }
+        }
+    }
+
+    private void drawDashboard(Canvas c){
         W=getWidth();H=getHeight();u=W/1080f;
         c.drawColor(0xff050607);
         status(c);
