@@ -99,9 +99,10 @@ public class MainActivity extends Activity {
         mapPanel.setBackgroundColor(0xff080a0d);
         mapPanel.setVisibility(View.GONE);
         mapPanel.setElevation(12f);
-        mapView=new NavigationView(this);
-        mapView.onCreate(state);
-        mapPanel.addView(mapView,new FrameLayout.LayoutParams(
+        TextView consoleTitle=new TextView(this);
+        consoleTitle.setText("TRX NAVIGATION\\nChoose Waze or Google Maps");
+        consoleTitle.setTextColor(Color.WHITE);consoleTitle.setTextSize(24);consoleTitle.setGravity(Gravity.CENTER);
+        mapPanel.addView(consoleTitle,new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
 
         destinationInput=new EditText(this);
@@ -119,7 +120,7 @@ public class MainActivity extends Activity {
         Button go=mapButton("GO",true);
         FrameLayout.LayoutParams gp=new FrameLayout.LayoutParams(dp(62),dp(50),Gravity.TOP|Gravity.RIGHT);
         gp.setMargins(0,dp(18),dp(18),0);mapPanel.addView(go,gp);
-        go.setOnClickListener(v->startInternalNavigation(destinationInput.getText().toString()));
+        go.setOnClickListener(v->openPreferredNavigation(destinationInput.getText().toString()));
 
         mapStatus=new TextView(this);
         mapStatus.setText("INITIALIZING TRX NAVIGATION…");
@@ -132,16 +133,21 @@ public class MainActivity extends Activity {
         Button home=mapButton("⌂",true);home.setContentDescription("Navigate Home");
         FrameLayout.LayoutParams hp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.LEFT);
         hp.setMargins(dp(14),0,0,dp(14));mapPanel.addView(home,hp);
-        home.setOnClickListener(v->startInternalNavigation(getSharedPreferences("launcher",MODE_PRIVATE).getString("home_destination","Home")));
+        home.setOnClickListener(v->openNavigationTo(getSharedPreferences("launcher",MODE_PRIVATE).getString("home_destination","Home")));
 
         Button maps=mapButton("G",false);maps.setContentDescription("Open destination in Google Maps");
         FrameLayout.LayoutParams mp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.RIGHT);
         mp.setMargins(0,0,dp(14),dp(14));mapPanel.addView(maps,mp);
         maps.setOnClickListener(v->openGoogleMapsNavigation(destinationInput.getText().toString()));
-        maps.setOnLongClickListener(v->{if(navigator!=null){navigator.stopGuidance();navigator.clearDestinations();}
-            destinationInput.setVisibility(View.VISIBLE);Toast.makeText(this,"TRX guidance stopped",Toast.LENGTH_SHORT).show();return true;});
 
-        initializeNavigator();
+        Button waze=mapButton("W",true);waze.setContentDescription("Open destination in Waze");
+        FrameLayout.LayoutParams wp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);
+        wp.setMargins(0,0,0,dp(14));mapPanel.addView(waze,wp);
+        waze.setOnClickListener(v->openWazeNavigation(destinationInput.getText().toString()));
+
+        mapStatus.setText("API-FREE NAVIGATION • SELECT WAZE OR GOOGLE MAPS");
+        mapStatus.setVisibility(View.VISIBLE);
+        /*
         mapView.getMapAsync(map->{
             googleMap=map;
             map.getUiSettings().setZoomGesturesEnabled(true);
@@ -163,7 +169,7 @@ public class MainActivity extends Activity {
                 }
             }catch(Throwable ignored){}
             map.moveCamera(CameraUpdateFactory.newLatLngZoom(start,13.5f));
-        });
+        }); */
     }
 
     private void initializeNavigator(){
@@ -218,6 +224,23 @@ public class MainActivity extends Activity {
                 mapStatus.setText("OPENING DESTINATION IN GOOGLE MAPS…");}
                 openGoogleMapsNavigation(address);});}
         },"trx-route").start();
+    }
+
+    private void openPreferredNavigation(String destination){
+        int choice=getSharedPreferences("launcher",MODE_PRIVATE).getInt("nav_choice",0);
+        if(choice==1)openWazeNavigation(destination);else openGoogleMapsNavigation(destination);
+    }
+
+    private void openWazeNavigation(String destination){
+        String address=destination==null?"":destination.trim();
+        if(address.isEmpty()){Toast.makeText(this,"Enter a destination",Toast.LENGTH_SHORT).show();return;}
+        try{
+            Intent intent=new Intent(Intent.ACTION_VIEW,Uri.parse("https://waze.com/ul?q="+Uri.encode(address)+"&navigate=yes"));
+            intent.setPackage("com.waze");
+            if(intent.resolveActivity(getPackageManager())!=null){startActivity(intent);return;}
+            Toast.makeText(this,"Waze is not installed • opening Google Maps",Toast.LENGTH_LONG).show();
+            openGoogleMapsNavigation(address);
+        }catch(Throwable error){openGoogleMapsNavigation(address);}
     }
 
     private void openGoogleMapsNavigation(String destination){
