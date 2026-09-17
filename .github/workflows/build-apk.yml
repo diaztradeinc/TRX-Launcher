@@ -36,17 +36,15 @@ jobs:
           gradle-version: "8.13"
 
       - name: Build release APK
-        env:
-          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
         run: gradle --no-daemon --stacktrace :app:assembleRelease
 
       - name: Give APK a friendly name
-        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v0.6.1.apk
+        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v0.6.2.apk
 
       - name: Upload downloadable APK
         uses: actions/upload-artifact@v4
         with:
-          name: TRX-Launcher-v0.6.1
-          path: TRX-Launcher-v0.6.1.apk
+          name: TRX-Launcher-v0.6.2
+          path: TRX-Launcher-v0.6.2.apk
           if-no-files-found: error
           retention-days: 30
