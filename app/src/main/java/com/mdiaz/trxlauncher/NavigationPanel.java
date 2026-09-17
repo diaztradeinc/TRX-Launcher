@@ -8,10 +8,19 @@ import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.drawable.GradientDrawable;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -33,8 +42,12 @@ public class NavigationPanel extends FrameLayout {
     private final SharedPreferences prefs;
     private final MapView map;
     private final EditText destination;
+    private final LinearLayout suggestions;
     private final LinearLayout chooser;
     private final CheckBox remember;
+    private final Handler suggestionHandler=new Handler(Looper.getMainLooper());
+    private int suggestionRequest;
+    private boolean selectingSuggestion;
     private MyLocationNewOverlay locationOverlay;
 
     public NavigationPanel(MainActivity context){
@@ -75,6 +88,37 @@ public class NavigationPanel extends FrameLayout {
         LayoutParams searchLp=new LayoutParams(LayoutParams.MATCH_PARENT,dp(64),Gravity.TOP);
         searchLp.setMargins(dp(16),dp(16),dp(16),0);
         addView(destination,searchLp);
+
+        suggestions=new LinearLayout(context);
+        suggestions.setOrientation(LinearLayout.VERTICAL);
+        suggestions.setPadding(dp(7),dp(5),dp(7),dp(7));
+        suggestions.setBackground(panel(0xf5080a0d,RED,1,16));
+        suggestions.setElevation(dp(18));
+        suggestions.setVisibility(GONE);
+        LayoutParams suggestionLp=new LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT,Gravity.TOP);
+        suggestionLp.setMargins(dp(16),dp(88),dp(16),0);
+        addView(suggestions,suggestionLp);
+
+        destination.setImeOptions(EditorInfo.IME_ACTION_GO);
+        destination.setOnEditorActionListener((v,action,event)->{
+            if(action==EditorInfo.IME_ACTION_GO){
+                suggestions.setVisibility(GONE);
+                showChooser();
+                return true;
+            }
+            return false;
+        });
+        destination.addTextChangedListener(new TextWatcher(){
+            @Override public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+            @Override public void onTextChanged(CharSequence s,int start,int before,int count){}
+            @Override public void afterTextChanged(Editable value){
+                if(selectingSuggestion)return;
+                scheduleAddressSuggestions(value.toString());
+            }
+        });
+        destination.setOnFocusChangeListener((v,focused)->{
+            if(!focused)suggestionHandler.postDelayed(()->suggestions.setVisibility(GONE),180);
+        });
 
         Button route=button("➤",true);
         LayoutParams routeLp=new LayoutParams(dp(54),dp(54),Gravity.TOP|Gravity.RIGHT);
@@ -183,6 +227,137 @@ public class NavigationPanel extends FrameLayout {
         String address=destination.getText().toString().trim();
         if(choice==1)activity.openWazeNavigation(address);
         else activity.openGoogleMapsNavigation(address);
+    }
+
+    private void scheduleAddressSuggestions(String raw){
+        final String query=raw==null?"":raw.trim();
+        final int request=++suggestionRequest;
+        if(query.length()<3){
+            suggestions.removeAllViews();
+            suggestions.setVisibility(GONE);
+            return;
+        }
+        suggestionHandler.postDelayed(()->{
+            if(request!=suggestionRequest||!destination.hasFocus())return;
+            new Thread(()->loadAddressSuggestions(query,request),"trx-address-search").start();
+        },320);
+    }
+
+    private void loadAddressSuggestions(String query,int request){
+        final java.util.List<Address> found=new java.util.ArrayList<>();
+        try{
+            if(Geocoder.isPresent()){
+                java.util.List<Address> matches=new Geocoder(activity,java.util.Locale.US)
+                    .getFromLocationName(query,4);
+                if(matches!=null)found.addAll(matches);
+            }
+        }catch(Throwable ignored){}
+        activity.runOnUiThread(()->renderAddressSuggestions(found,request));
+    }
+
+    private void renderAddressSuggestions(java.util.List<Address> found,int request){
+        if(request!=suggestionRequest||!destination.hasFocus())return;
+        suggestions.removeAllViews();
+        if(found==null||found.isEmpty()){
+            suggestions.setVisibility(GONE);
+            return;
+        }
+
+        TextView heading=new TextView(activity);
+        heading.setText("SUGGESTED DESTINATIONS");
+        heading.setTextColor(RED);
+        heading.setTextSize(10);
+        heading.setLetterSpacing(.14f);
+        heading.setTypeface(null,android.graphics.Typeface.BOLD);
+        heading.setGravity(Gravity.CENTER_VERTICAL);
+        heading.setPadding(dp(14),0,dp(10),0);
+        suggestions.addView(heading,new LinearLayout.LayoutParams(
+            LayoutParams.MATCH_PARENT,dp(28)));
+
+        java.util.HashSet<String> added=new java.util.HashSet<>();
+        for(Address address:found){
+            String full=address.getMaxAddressLineIndex()>=0?address.getAddressLine(0):null;
+            if(TextUtils.isEmpty(full)){
+                StringBuilder built=new StringBuilder();
+                if(!TextUtils.isEmpty(address.getThoroughfare()))built.append(address.getThoroughfare());
+                if(!TextUtils.isEmpty(address.getLocality())){
+                    if(built.length()>0)built.append(", ");
+                    built.append(address.getLocality());
+                }
+                if(!TextUtils.isEmpty(address.getAdminArea())){
+                    if(built.length()>0)built.append(", ");
+                    built.append(address.getAdminArea());
+                }
+                full=built.toString();
+            }
+            if(TextUtils.isEmpty(full)||!added.add(full))continue;
+            String primary=address.getFeatureName();
+            if(TextUtils.isEmpty(primary))primary=address.getThoroughfare();
+            if(TextUtils.isEmpty(primary))primary=address.getLocality();
+            if(TextUtils.isEmpty(primary))primary=full;
+            addAddressSuggestion(primary,full);
+        }
+        if(suggestions.getChildCount()<=1){
+            suggestions.removeAllViews();
+            suggestions.setVisibility(GONE);
+        }else{
+            suggestions.setVisibility(VISIBLE);
+            suggestions.bringToFront();
+        }
+    }
+
+    private void addAddressSuggestion(String primary,String full){
+        LinearLayout row=new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(8),0,dp(10),0);
+        row.setBackground(panel(0xff090b0e,0xff292d33,1,11));
+
+        TextView marker=new TextView(activity);
+        marker.setText("●");
+        marker.setTextColor(RED);
+        marker.setTextSize(13);
+        marker.setGravity(Gravity.CENTER);
+        row.addView(marker,new LinearLayout.LayoutParams(dp(34),dp(54)));
+
+        LinearLayout copy=new LinearLayout(activity);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setGravity(Gravity.CENTER_VERTICAL);
+        TextView name=new TextView(activity);
+        name.setText(primary.toUpperCase(java.util.Locale.US));
+        name.setTextColor(Color.WHITE);
+        name.setTextSize(13);
+        name.setTypeface(null,android.graphics.Typeface.BOLD);
+        name.setSingleLine(true);
+        name.setEllipsize(TextUtils.TruncateAt.END);
+        TextView address=new TextView(activity);
+        address.setText(full);
+        address.setTextColor(0xffaeb3bc);
+        address.setTextSize(11);
+        address.setSingleLine(true);
+        address.setEllipsize(TextUtils.TruncateAt.END);
+        copy.addView(name,new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(24)));
+        copy.addView(address,new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(20)));
+        row.addView(copy,new LinearLayout.LayoutParams(0,dp(50),1));
+
+        LinearLayout.LayoutParams rowLp=new LinearLayout.LayoutParams(
+            LayoutParams.MATCH_PARENT,dp(56));
+        rowLp.setMargins(0,dp(2),0,dp(2));
+        suggestions.addView(row,rowLp);
+        row.setOnClickListener(v->{
+            selectingSuggestion=true;
+            suggestionRequest++;
+            destination.setText(full);
+            destination.setSelection(destination.length());
+            selectingSuggestion=false;
+            suggestions.removeAllViews();
+            suggestions.setVisibility(GONE);
+            InputMethodManager keyboard=(InputMethodManager)activity
+                .getSystemService(Context.INPUT_METHOD_SERVICE);
+            if(keyboard!=null)keyboard.hideSoftInputFromWindow(destination.getWindowToken(),0);
+            destination.clearFocus();
+            showChooser();
+        });
     }
 
     private void enableLocation(){
