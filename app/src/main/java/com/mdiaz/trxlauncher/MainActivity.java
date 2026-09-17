@@ -320,6 +320,11 @@ public class MainActivity extends Activity {
             results[0] == PackageManager.PERMISSION_GRANTED) startGps();
     }
 
+    @Override public void onBackPressed(){
+        if(mapPanel instanceof NavigationPanel&&((NavigationPanel)mapPanel).closeChooser())return;
+        super.onBackPressed();
+    }
+
     @Override protected void onDestroy() {
         try {
             if (locationManager != null) locationManager.removeUpdates(gpsListener);
