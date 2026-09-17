@@ -26,8 +26,18 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(0xff050607);
         getWindow().setStatusBarColor(0xff050607);
         enterImmersive();
-        dashboard = new DashboardView(this);
-        setContentView(dashboard);
+        try {
+            dashboard = new DashboardView(this);
+            setContentView(dashboard);
+        } catch (Throwable error) {
+            android.widget.TextView diagnostic = new android.widget.TextView(this);
+            diagnostic.setBackgroundColor(0xff050607);
+            diagnostic.setTextColor(0xffff1d32);
+            diagnostic.setTextSize(18f);
+            diagnostic.setPadding(30,60,30,30);
+            diagnostic.setText("TRX LAUNCHER STARTUP ERROR\n\n" + error.getClass().getName() + "\n" + String.valueOf(error.getMessage()));
+            setContentView(diagnostic);
+        }
     }
 
     @Override public void onWindowFocusChanged(boolean hasFocus) {
