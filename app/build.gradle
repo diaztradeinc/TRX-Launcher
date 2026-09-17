@@ -1,5 +1,7 @@
 plugins { id 'com.android.application' }
 
+def mapsApiKey = System.getenv('MAPS_API_KEY') ?: 'MISSING_API_KEY'
+
 android {
     namespace 'com.mdiaz.trxlauncher'
     compileSdk 35
@@ -8,8 +10,9 @@ android {
         applicationId 'com.mdiaz.trxlauncher'
         minSdk 26
         targetSdk 35
-        versionCode 11
-        versionName '0.4.0'
+        versionCode 12
+        versionName '0.5.0'
+        manifestPlaceholders = [MAPS_API_KEY: mapsApiKey]
     }
 
     buildTypes {
@@ -18,4 +21,9 @@ android {
             signingConfig signingConfigs.debug
         }
     }
+}
+
+
+dependencies {
+    implementation 'com.google.android.gms:play-services-maps:20.0.0'
 }
