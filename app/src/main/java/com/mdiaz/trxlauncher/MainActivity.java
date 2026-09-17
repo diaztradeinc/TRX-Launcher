@@ -37,20 +37,57 @@ public class MainActivity extends Activity {
             diagnostic.setText("TRX LAUNCHER STARTUP ERROR\n\n" +
                 error.getClass().getName() + "\n" + String.valueOf(error.getMessage()));
             setContentView(diagnostic);
-        } catch (Throwable ignored) {
-            finish();
-        }
+        } catch (Throwable ignored) { finish(); }
     }
 
     public void openNavigation() {
-        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=Home"));
-        if (i.resolveActivity(getPackageManager()) == null)
-            i = new Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=Home"));
-        startActivity(i);
+        try {
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=Home"));
+            if (i.resolveActivity(getPackageManager()) == null)
+                i = new Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=Home"));
+            startActivity(i);
+        } catch (Throwable ignored) { openSystemSettings(); }
+    }
+
+    public void openMedia() {
+        if (launchPackage("com.spotify.music")) return;
+        if (launchPackage("com.google.android.apps.youtube.music")) return;
+        if (launchPackage("com.apple.android.music")) return;
+        try {
+            Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MUSIC);
+            startActivity(i);
+        } catch (Throwable ignored) { openSystemSettings(); }
+    }
+
+    public void openMediaSource(int source) {
+        switch (source) {
+            case 0: if (!launchPackage("com.spotify.music")) openMedia(); break;
+            case 1:
+                if (!launchPackage("com.google.android.apps.youtube.music") &&
+                    !launchPackage("com.google.android.youtube")) openMedia();
+                break;
+            case 2: if (!launchPackage("com.apple.android.music")) openMedia(); break;
+            case 3:
+                try { startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS)); }
+                catch (Throwable ignored) { openSystemSettings(); }
+                break;
+            default: openMedia();
+        }
+    }
+
+    private boolean launchPackage(String packageName) {
+        try {
+            Intent i = getPackageManager().getLaunchIntentForPackage(packageName);
+            if (i == null) return false;
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+            return true;
+        } catch (Throwable ignored) { return false; }
     }
 
     public void openSystemSettings() {
-        startActivity(new Intent(Settings.ACTION_SETTINGS));
+        try { startActivity(new Intent(Settings.ACTION_SETTINGS)); }
+        catch (Throwable ignored) { }
     }
 
     public List<AppEntry> installedApps() {
@@ -71,8 +108,10 @@ public class MainActivity extends Activity {
     }
 
     public void launch(AppEntry app) {
-        Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            .setClassName(app.packageName, app.activityName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(i);
+        try {
+            Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                .setClassName(app.packageName, app.activityName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Throwable ignored) { }
     }
 }
