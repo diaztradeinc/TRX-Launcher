@@ -18,6 +18,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -42,6 +43,7 @@ public class MainActivity extends Activity {
     private FrameLayout mapPanel;
     private MapView mapView;
     private GoogleMap googleMap;
+    private TextView mapStatus;
     private boolean mapDark;
 
     @Override public void onCreate(Bundle state) {
@@ -87,14 +89,22 @@ public class MainActivity extends Activity {
         mapPanel.addView(mapView,new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
 
-        Button home=mapButton("⌂  NAVIGATE HOME",true);
-        FrameLayout.LayoutParams hp=new FrameLayout.LayoutParams(dp(245),dp(58),Gravity.BOTTOM|Gravity.LEFT);
-        hp.setMargins(dp(18),0,0,dp(18));mapPanel.addView(home,hp);
+        mapStatus=new TextView(this);
+        mapStatus.setText("CONNECTING TO GOOGLE MAPS…\nIf this remains visible, enable Maps SDK for Android and billing for the demo key.");
+        mapStatus.setTextColor(0xffff2338);mapStatus.setTextSize(14);mapStatus.setGravity(Gravity.CENTER);
+        mapStatus.setBackgroundColor(0xdd090b0e);
+        FrameLayout.LayoutParams sp=new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,dp(86),Gravity.TOP);
+        mapPanel.addView(mapStatus,sp);
+
+        Button home=mapButton("⌂",true);home.setContentDescription("Navigate Home");
+        FrameLayout.LayoutParams hp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.LEFT);
+        hp.setMargins(dp(14),0,0,dp(14));mapPanel.addView(home,hp);
         home.setOnClickListener(v->openNavigation());
 
-        Button maps=mapButton("OPEN GOOGLE MAPS  ➤",false);
-        FrameLayout.LayoutParams mp=new FrameLayout.LayoutParams(dp(245),dp(58),Gravity.BOTTOM|Gravity.RIGHT);
-        mp.setMargins(0,0,dp(18),dp(18));mapPanel.addView(maps,mp);
+        Button maps=mapButton("➤",false);maps.setContentDescription("Open Google Maps");
+        FrameLayout.LayoutParams mp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.RIGHT);
+        mp.setMargins(0,0,dp(14),dp(14));mapPanel.addView(maps,mp);
         maps.setOnClickListener(v->openNavigation());
 
         mapView.getMapAsync(map->{
@@ -105,6 +115,7 @@ public class MainActivity extends Activity {
             map.getUiSettings().setCompassEnabled(true);
             map.getUiSettings().setMyLocationButtonEnabled(true);
             applyMapStyle();
+            map.setOnMapLoadedCallback(()->{if(mapStatus!=null)mapStatus.setVisibility(View.GONE);});
             map.setOnMapLongClickListener(point->{mapDark=!mapDark;
                 getSharedPreferences("launcher",MODE_PRIVATE).edit().putBoolean("map_dark",mapDark).apply();
                 applyMapStyle();});
@@ -122,9 +133,9 @@ public class MainActivity extends Activity {
 
     private Button mapButton(String label,boolean primary){
         Button button=new Button(this);button.setText(label);button.setTextColor(Color.WHITE);
-        button.setTextSize(13);button.setAllCaps(false);button.setGravity(Gravity.CENTER);
+        button.setTextSize(22);button.setAllCaps(false);button.setGravity(Gravity.CENTER);
         GradientDrawable bg=new GradientDrawable();bg.setCornerRadius(dp(12));
-        bg.setColor(primary?0xff6e0713:0xee111419);bg.setStroke(dp(1),0xffff2338);
+        bg.setColor(0xee050608);bg.setStroke(dp(primary?2:1),0xffff2338);
         button.setBackground(bg);return button;
     }
 
