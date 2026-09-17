@@ -33,7 +33,7 @@ public class MainActivity extends Activity {
         } catch (Throwable error) { showStartupError(error); }
     }
 
-    private void showStartupError(Throwable error) {
+    @Override protected void onResume() {\n        super.onResume();\n        MediaBridge.ensureConnected(this);\n        if (dashboard != null) dashboard.postInvalidate();\n    }\n\n    private void showStartupError(Throwable error) {
         try {
             android.widget.TextView diagnostic = new android.widget.TextView(this);
             diagnostic.setBackgroundColor(0xff050607);
