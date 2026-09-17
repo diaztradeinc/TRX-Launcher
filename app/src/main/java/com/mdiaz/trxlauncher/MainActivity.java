@@ -131,11 +131,12 @@ public class MainActivity extends Activity {
         hp.setMargins(dp(14),0,0,dp(14));mapPanel.addView(home,hp);
         home.setOnClickListener(v->startInternalNavigation(getSharedPreferences("launcher",MODE_PRIVATE).getString("home_destination","Home")));
 
-        Button maps=mapButton("➤",false);maps.setContentDescription("Open Google Maps");
+        Button maps=mapButton("G",false);maps.setContentDescription("Open destination in Google Maps");
         FrameLayout.LayoutParams mp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.RIGHT);
         mp.setMargins(0,0,dp(14),dp(14));mapPanel.addView(maps,mp);
-        maps.setText("■");maps.setContentDescription("Stop navigation");
-        maps.setOnClickListener(v->{if(navigator!=null){navigator.stopGuidance();navigator.clearDestinations();}destinationInput.setVisibility(View.VISIBLE);});
+        maps.setOnClickListener(v->openGoogleMapsNavigation(destinationInput.getText().toString()));
+        maps.setOnLongClickListener(v->{if(navigator!=null){navigator.stopGuidance();navigator.clearDestinations();}
+            destinationInput.setVisibility(View.VISIBLE);Toast.makeText(this,"TRX guidance stopped",Toast.LENGTH_SHORT).show();return true;});
 
         initializeNavigator();
         mapView.getMapAsync(map->{
@@ -211,8 +212,21 @@ public class MainActivity extends Activity {
                     });
                 });
             }catch(Throwable error){runOnUiThread(()->{if(mapStatus!=null){mapStatus.setVisibility(View.VISIBLE);
-                mapStatus.setText("DESTINATION NOT FOUND");}});}
+                mapStatus.setText("OPENING DESTINATION IN GOOGLE MAPS…");}
+                openGoogleMapsNavigation(address);});}
         },"trx-route").start();
+    }
+
+    private void openGoogleMapsNavigation(String destination){
+        String address=destination==null?"":destination.trim();
+        if(address.isEmpty()){Toast.makeText(this,"Enter a destination",Toast.LENGTH_SHORT).show();return;}
+        try{
+            Intent intent=new Intent(Intent.ACTION_VIEW,Uri.parse("google.navigation:q="+Uri.encode(address)+"&mode=d"));
+            intent.setPackage("com.google.android.apps.maps");
+            if(intent.resolveActivity(getPackageManager())!=null){startActivity(intent);return;}
+            Intent web=new Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/maps/dir/?api=1&destination="+Uri.encode(address)+"&travelmode=driving"));
+            startActivity(web);
+        }catch(Throwable error){Toast.makeText(this,"Google Maps is unavailable",Toast.LENGTH_LONG).show();}
     }
 
     private Button mapButton(String label,boolean primary){
