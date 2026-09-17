@@ -136,7 +136,7 @@ public final class DashboardView extends View {
         hero(c,63,492,intro);text(c,"BUILT TO",735,116,18,WHITE,true);text(c,"DOMINATE",868,116,18,RED,true);
         gauge(c,18,500,258,"BOOST","0","PSI",.08f);gauge(c,274,500,514,"RPM","700","RPM",.13f);gauge(c,530,500,770,"COOLANT","194","°F",.62f);gauge(c,786,500,1062,"TRANS TEMP","178","°F",.55f);
         panel(c,18,652,650,1025,"NAVIGATION");text(c,"Tap to begin navigation",52,744,25,MUTED,false);text(c,"HOME",52,801,43,WHITE,true);text(c,"Route and traffic open in Maps",52,850,18,MUTED,false);arrow(c,548,818);
-        panel(c,668,652,1062,1025,"MEDIA");marquee(c,MediaBridge.artist,700,750,1030,18,MUTED,true);marquee(c,MediaBridge.title,700,807,1030,29,WHITE,true);button(c,726,885,1006,976,MediaBridge.playing?"Ⅱ   PAUSE":"▶   OPEN MEDIA",false);
+        panel(c,668,652,1062,1025,"MEDIA");marquee(c,MediaBridge.artist,700,750,1030,18,MUTED,true);marquee(c,MediaBridge.title,700,807,1030,29,WHITE,true);button(c,700,885,792,976,"|◀",false);button(c,804,872,932,989,MediaBridge.playing?"Ⅱ":"▶",true);button(c,944,885,1036,976,"▶|",false);
         panel(c,18,1042,1062,1292,"PERFORMANCE");text(c,"0–60",58,1129,17,MUTED,true);text(c,runTime(),58,1192,39,WHITE,true);text(c,"GPS SPEED",295,1129,17,MUTED,true);text(c,Math.round(speedMph)+" MPH",295,1192,39,WHITE,true);text(c,"OBD",585,1129,17,MUTED,true);float pulse=.55f+.45f*(float)Math.sin(SystemClock.uptimeMillis()/330.0);paint(RED,31,true);p.setAlpha((int)(150+105*pulse));c.drawText("DISCONNECTED",x(585),y(1192),p);p.setAlpha(255);
     }
     private void navigation(Canvas c){hero(c,63,236,1);text(c,"NAVIGATION",38,125,36,WHITE,true);text(c,"Plainsboro, NJ  •  "+activity.weatherTemp()+"  •  "+activity.weatherCondition(),38,170,20,MUTED,false);panel(c,18,248,1062,1290,"");p.setColor(0xff111820);c.drawRect(x(34),y(266),x(1046),y(1270),p);for(int i=0;i<9;i++)line(c,40,330+i*104,1040,286+i*110,0xff303d47,4);for(int i=0;i<7;i++)line(c,95+i*148,270,65+i*151,1260,0xff27323a,3);path.reset();path.moveTo(x(470),y(1240));path.cubicTo(x(380),y(1050),x(690),y(800),x(590),y(610));path.cubicTo(x(540),y(510),x(700),y(430),x(760),y(300));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(12));p.setColor(DEEP_RED);c.drawPath(path,p);p.setStrokeWidth(x(5));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);panel(c,50,290,505,490,"NEXT TURN");text(c,"0.8 mi",80,380,43,WHITE,true);text(c,"Turn right onto Scudders Mill Rd",80,432,16,MUTED,false);button(c,744,1125,1007,1218,"OPEN MAPS",true);}
@@ -259,7 +259,11 @@ public final class DashboardView extends View {
         if(appVelocity!=null){appVelocity.recycle();appVelocity=null;}cancelHeldApp();
         if(yy>=1300){selectPage((int)(xx/216),xx/216>page?1:-1);return true;}
         if(page==0&&xx<650&&yy>652&&yy<1025){activity.openNavigation();return true;}
-        if(page==0&&xx>668&&yy>652&&yy<1025){if(MediaBridge.hasAccess(activity))MediaBridge.toggle(activity);else activity.openMedia();return true;}
+        if(page==0&&xx>668&&yy>652&&yy<1025){
+            if(!MediaBridge.hasAccess(activity)){activity.openMedia();return true;}
+            if(yy>850){if(xx<798)MediaBridge.previous(activity);else if(xx<938)MediaBridge.toggle(activity);else MediaBridge.next(activity);}
+            else MediaBridge.toggle(activity);return true;
+        }
         if(page==1&&xx>700&&yy>1080){activity.openNavigation();return true;}
         if(page==2&&yy>600&&yy<790){if(xx<700)MediaBridge.previous(activity);else if(xx<895)MediaBridge.toggle(activity);else MediaBridge.next(activity);return true;}
         if(page==2&&yy>930&&yy<1190){if(moveX>x(24)){invalidate();return true;}int item=(int)((xx-42+mediaScroll)/198);if(item>=0&&item<mediaApps.size())activity.launch(mediaApps.get(item));else if(item==mediaApps.size())activity.openMediaAppPicker();return true;}

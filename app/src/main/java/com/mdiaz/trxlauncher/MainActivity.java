@@ -428,8 +428,8 @@ public class MainActivity extends Activity {
         android.widget.LinearLayout header=new android.widget.LinearLayout(this);header.setOrientation(android.widget.LinearLayout.HORIZONTAL);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(dp(2),dp(2),dp(2),dp(10));
         android.widget.ImageView icon=new android.widget.ImageView(this);icon.setImageDrawable(app.icon);header.addView(icon,new android.widget.LinearLayout.LayoutParams(dp(50),dp(50)));
         android.widget.LinearLayout titles=new android.widget.LinearLayout(this);titles.setOrientation(android.widget.LinearLayout.VERTICAL);titles.setPadding(dp(14),0,0,0);
-        TextView title=new TextView(this);title.setText(app.label);title.setTextColor(Color.WHITE);title.setTextSize(20);title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);title.setSingleLine(true);title.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        TextView subtitle=new TextView(this);subtitle.setText("APP OPTIONS");subtitle.setTextColor(0xffff2338);subtitle.setTextSize(11);subtitle.setLetterSpacing(.16f);
+        TextView title=new TextView(this);title.setText("TRX OPTIONS");title.setTextColor(Color.WHITE);title.setTextSize(20);title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);title.setSingleLine(true);
+        TextView subtitle=new TextView(this);subtitle.setText(app.label.toUpperCase(Locale.US));subtitle.setTextColor(0xffff2338);subtitle.setTextSize(11);subtitle.setLetterSpacing(.16f);subtitle.setSingleLine(true);subtitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
         titles.addView(title);titles.addView(subtitle);header.addView(titles,new android.widget.LinearLayout.LayoutParams(0,FrameLayout.LayoutParams.WRAP_CONTENT,1));panel.addView(header);
         boolean favorite=isAppFavorite(app);
         addAppMenuAction(panel,"OPEN APP",Color.WHITE,()->launch(app),dialog);
