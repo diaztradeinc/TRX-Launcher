@@ -133,7 +133,8 @@ public class MainActivity extends Activity {
         Button maps=mapButton("➤",false);maps.setContentDescription("Open Google Maps");
         FrameLayout.LayoutParams mp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.RIGHT);
         mp.setMargins(0,0,dp(14),dp(14));mapPanel.addView(maps,mp);
-        maps.setText("■");maps.setContentDescription("Stop navigation");\n        maps.setOnClickListener(v->{if(navigator!=null){navigator.stopGuidance();navigator.clearDestinations();}destinationInput.setVisibility(View.VISIBLE);});
+        maps.setText("■");maps.setContentDescription("Stop navigation");
+        maps.setOnClickListener(v->{if(navigator!=null){navigator.stopGuidance();navigator.clearDestinations();}destinationInput.setVisibility(View.VISIBLE);});
 
         initializeNavigator();
         mapView.getMapAsync(map->{
@@ -250,8 +251,11 @@ public class MainActivity extends Activity {
             diagnostic.setTextColor(0xffff1d32);
             diagnostic.setTextSize(18f);
             diagnostic.setPadding(30,60,30,30);
-            diagnostic.setText("TRX LAUNCHER STARTUP ERROR\n\n" +
-                error.getClass().getName() + "\n" + String.valueOf(error.getMessage()));
+            diagnostic.setText("TRX LAUNCHER STARTUP ERROR
+
+" +
+                error.getClass().getName() + "
+" + String.valueOf(error.getMessage()));
             setContentView(diagnostic);
         } catch (Throwable ignored) { finish(); }
     }
