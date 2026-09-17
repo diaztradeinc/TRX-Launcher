@@ -61,6 +61,9 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        if(!getSharedPreferences("launcher",MODE_PRIVATE).getBoolean("first_run_complete",false)){
+            startActivity(new Intent(this,FirstRunActivity.class));finish();return;
+        }
         try {
             getWindow().setNavigationBarColor(0xff050607);
             getWindow().setStatusBarColor(0xff050607);
