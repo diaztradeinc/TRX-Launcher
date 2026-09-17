@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.graphics.drawable.GradientDrawable;
 import android.location.Location;
 import android.location.LocationManager;
@@ -19,7 +21,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.osmdroid.config.Configuration;
-import org.osmdroid.tileprovider.tilesource.XYTileSource;
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
@@ -43,9 +45,17 @@ public class NavigationPanel extends FrameLayout {
         setBackgroundColor(0xff05070a);
 
         map=new MapView(context);
-        map.setTileSource(new XYTileSource("TRX Dark",0,20,256,".png",
-            new String[]{"https://a.basemaps.cartocdn.com/dark_all/","https://b.basemaps.cartocdn.com/dark_all/"},
-            "© OpenStreetMap contributors © CARTO"));
+        // Key-free OpenStreetMap tiles. The dark appearance is produced locally,
+        // so the launcher never depends on a paid tile provider or API key.
+        map.setTileSource(TileSourceFactory.MAPNIK);
+        ColorMatrix darkTiles=new ColorMatrix(new float[]{
+            -0.72f,0,0,0,210,
+            0,-0.72f,0,0,210,
+            0,0,-0.72f,0,210,
+            0,0,0,1,0
+        });
+        map.getOverlayManager().getTilesOverlay().setColorFilter(
+            new ColorMatrixColorFilter(darkTiles));
         map.setMultiTouchControls(true);
         map.setBuiltInZoomControls(false);
         map.setTilesScaledToDpi(true);
@@ -106,7 +116,7 @@ public class NavigationPanel extends FrameLayout {
         addView(live,liveLp);
 
         TextView credit=new TextView(context);
-        credit.setText("© OpenStreetMap contributors • © CARTO");
+        credit.setText("© OpenStreetMap contributors");
         credit.setTextColor(0xffb9bdc5);credit.setTextSize(9);
         LayoutParams creditLp=new LayoutParams(LayoutParams.WRAP_CONTENT,dp(24),Gravity.RIGHT|Gravity.BOTTOM);
         creditLp.setMargins(0,0,dp(16),dp(18));
