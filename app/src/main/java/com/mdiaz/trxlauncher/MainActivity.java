@@ -173,7 +173,7 @@ public class MainActivity extends Activity {
                 mapView.setRecenterButtonEnabled(true);
                 mapView.setSpeedometerEnabled(true);
                 mapView.setSpeedLimitIconEnabled(true);
-                if(mapStatus!=null)mapStatus.setVisibility(View.GONE);
+                if(mapStatus!=null){mapStatus.setText("NAVIGATION READY • LOADING MAP…");mapStatus.setVisibility(View.VISIBLE);}
             }
             @Override public void onError(int errorCode){
                 if(mapStatus!=null){mapStatus.setVisibility(View.VISIBLE);
@@ -242,7 +242,7 @@ public class MainActivity extends Activity {
     private void applyMapStyle(){
         if(googleMap==null)return;
         try{googleMap.setMapStyle(mapDark?
-            MapStyleOptions.loadRawResourceStyle(this,R.raw.map_dark):new MapStyleOptions("[]"));
+            MapStyleOptions.loadRawResourceStyle(this,R.raw.map_dark):null);
         }catch(Throwable ignored){}
     }
 
