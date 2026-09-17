@@ -419,17 +419,29 @@ public class MainActivity extends Activity {
     }
 
     public void showAppOptions(AppEntry app){
-        boolean favorite=isAppFavorite(app);String favoriteAction=favorite?"Remove from favorites":"Add to favorites";
-        String[] actions={"Open app",favoriteAction,"Add to media sources","App information","Uninstall"};
-        new android.app.AlertDialog.Builder(this).setTitle(app.label).setItems(actions,(dialog,which)->{
-            switch(which){
-                case 0:launch(app);break;
-                case 1:toggleAppFavorite(app);break;
-                case 2:addAppToMediaSources(app);break;
-                case 3:openAppInformation(app);break;
-                case 4:requestAppUninstall(app);break;
-            }
-        }).setNegativeButton("Cancel",null).show();
+        final android.app.Dialog dialog=new android.app.Dialog(this);dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        android.widget.LinearLayout panel=new android.widget.LinearLayout(this);panel.setOrientation(android.widget.LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(14),dp(18),dp(12));
+        GradientDrawable panelBg=new GradientDrawable();panelBg.setColor(0xff0b0d10);panelBg.setCornerRadius(dp(18));panelBg.setStroke(dp(2),0xffff2338);panel.setBackground(panelBg);
+        android.widget.LinearLayout header=new android.widget.LinearLayout(this);header.setOrientation(android.widget.LinearLayout.HORIZONTAL);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(dp(2),dp(2),dp(2),dp(10));
+        android.widget.ImageView icon=new android.widget.ImageView(this);icon.setImageDrawable(app.icon);header.addView(icon,new android.widget.LinearLayout.LayoutParams(dp(50),dp(50)));
+        android.widget.LinearLayout titles=new android.widget.LinearLayout(this);titles.setOrientation(android.widget.LinearLayout.VERTICAL);titles.setPadding(dp(14),0,0,0);
+        TextView title=new TextView(this);title.setText(app.label);title.setTextColor(Color.WHITE);title.setTextSize(20);title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);title.setSingleLine(true);title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView subtitle=new TextView(this);subtitle.setText("APP OPTIONS");subtitle.setTextColor(0xffff2338);subtitle.setTextSize(11);subtitle.setLetterSpacing(.16f);
+        titles.addView(title);titles.addView(subtitle);header.addView(titles,new android.widget.LinearLayout.LayoutParams(0,FrameLayout.LayoutParams.WRAP_CONTENT,1));panel.addView(header);
+        boolean favorite=isAppFavorite(app);
+        addAppMenuAction(panel,"OPEN APP",Color.WHITE,()->launch(app),dialog);
+        addAppMenuAction(panel,favorite?"REMOVE FAVORITE":"ADD TO FAVORITES",Color.WHITE,()->toggleAppFavorite(app),dialog);
+        addAppMenuAction(panel,"ADD TO MEDIA SOURCES",Color.WHITE,()->addAppToMediaSources(app),dialog);
+        addAppMenuAction(panel,"APP INFORMATION",Color.WHITE,()->openAppInformation(app),dialog);
+        addAppMenuAction(panel,"UNINSTALL",0xffff4b5e,()->requestAppUninstall(app),dialog);
+        dialog.setContentView(panel);dialog.setCanceledOnTouchOutside(true);dialog.show();
+        android.view.Window window=dialog.getWindow();if(window!=null){window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);android.view.WindowManager.LayoutParams lp=window.getAttributes();lp.dimAmount=.72f;lp.width=Math.min(dp(500),Math.round(getResources().getDisplayMetrics().widthPixels*.62f));lp.height=android.view.WindowManager.LayoutParams.WRAP_CONTENT;lp.gravity=Gravity.CENTER;window.setAttributes(lp);}
+    }
+    private void addAppMenuAction(android.widget.LinearLayout panel,String label,int color,Runnable action,android.app.Dialog dialog){
+        View divider=new View(this);divider.setBackgroundColor(0xff2c3138);panel.addView(divider,new android.widget.LinearLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,dp(1)));
+        TextView row=new TextView(this);row.setText(label);row.setTextColor(color);row.setTextSize(15);row.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(16),0,dp(12),0);row.setBackgroundColor(Color.TRANSPARENT);
+        android.widget.LinearLayout.LayoutParams params=new android.widget.LinearLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,dp(48));panel.addView(row,params);
+        row.setOnClickListener(v->{dialog.dismiss();action.run();});
     }
 
     private boolean isAppFavorite(AppEntry app){return getSharedPreferences("launcher",MODE_PRIVATE).getStringSet("favorite_apps",java.util.Collections.emptySet()).contains(app.packageName);}

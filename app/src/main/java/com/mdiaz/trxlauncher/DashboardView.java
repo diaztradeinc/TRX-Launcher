@@ -35,6 +35,7 @@ public final class DashboardView extends View {
     private final Handler clock=new Handler(Looper.getMainLooper());
     private final SharedPreferences prefs;
     private final Bitmap hero;
+    private final Bitmap defaultMediaArt;
     private List<AppEntry> apps=new ArrayList<>();
     private List<AppEntry> displayApps=new ArrayList<>();
     private List<AppEntry> mediaApps=new ArrayList<>();
@@ -65,6 +66,7 @@ public final class DashboardView extends View {
         prefs=context.getSharedPreferences("launcher",Context.MODE_PRIVATE);
         page=Math.max(0,Math.min(4,prefs.getInt("page",0)));
         hero=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_banner);
+        defaultMediaArt=BitmapFactory.decodeResource(getResources(),R.drawable.default_media_art);
         reloadMediaApps();clock.post(ticker);
     }
 
@@ -138,7 +140,7 @@ public final class DashboardView extends View {
         panel(c,18,1042,1062,1292,"PERFORMANCE");text(c,"0–60",58,1129,17,MUTED,true);text(c,runTime(),58,1192,39,WHITE,true);text(c,"GPS SPEED",295,1129,17,MUTED,true);text(c,Math.round(speedMph)+" MPH",295,1192,39,WHITE,true);text(c,"OBD",585,1129,17,MUTED,true);float pulse=.55f+.45f*(float)Math.sin(SystemClock.uptimeMillis()/330.0);paint(RED,31,true);p.setAlpha((int)(150+105*pulse));c.drawText("DISCONNECTED",x(585),y(1192),p);p.setAlpha(255);
     }
     private void navigation(Canvas c){hero(c,63,236,1);text(c,"NAVIGATION",38,125,36,WHITE,true);text(c,"Plainsboro, NJ  •  "+activity.weatherTemp()+"  •  "+activity.weatherCondition(),38,170,20,MUTED,false);panel(c,18,248,1062,1290,"");p.setColor(0xff111820);c.drawRect(x(34),y(266),x(1046),y(1270),p);for(int i=0;i<9;i++)line(c,40,330+i*104,1040,286+i*110,0xff303d47,4);for(int i=0;i<7;i++)line(c,95+i*148,270,65+i*151,1260,0xff27323a,3);path.reset();path.moveTo(x(470),y(1240));path.cubicTo(x(380),y(1050),x(690),y(800),x(590),y(610));path.cubicTo(x(540),y(510),x(700),y(430),x(760),y(300));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(12));p.setColor(DEEP_RED);c.drawPath(path,p);p.setStrokeWidth(x(5));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);panel(c,50,290,505,490,"NEXT TURN");text(c,"0.8 mi",80,380,43,WHITE,true);text(c,"Turn right onto Scudders Mill Rd",80,432,16,MUTED,false);button(c,744,1125,1007,1218,"OPEN MAPS",true);}
-    private void media(Canvas c){hero(c,63,250,1);text(c,"MEDIA",38,137,39,WHITE,true);panel(c,18,270,1062,875,"NOW PLAYING");RectF art=new RectF(x(48),y(334),x(470),y(756));p.setShader(new LinearGradient(art.left,art.top,art.right,art.bottom,0xff5a0710,0xff111318,Shader.TileMode.CLAMP));c.drawRoundRect(art,x(14),x(14),p);p.setShader(null);if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);else text(c,"TRX",152,560,70,0x44ffffff,true);marquee(c,MediaBridge.artist,520,395,1030,18,MUTED,true);marquee(c,MediaBridge.title,520,460,1030,32,WHITE,true);text(c,MediaBridge.hasAccess(activity)?"Android MediaSession connected":"Tap play to enable media access",520,508,17,MUTED,false);button(c,520,630,690,742,"◀",false);button(c,710,610,880,762,MediaBridge.playing?"Ⅱ":"▶",true);button(c,900,630,1030,742,"▶|",false);panel(c,18,895,1062,1290,"MEDIA SOURCES");mediaShelf(c);text(c,"Swipe left or right • Add any installed audio app",46,1218,17,MUTED,false);}
+    private void media(Canvas c){hero(c,63,250,1);text(c,"MEDIA",38,137,39,WHITE,true);panel(c,18,270,1062,875,"NOW PLAYING");RectF art=new RectF(x(48),y(334),x(470),y(756));p.setShader(new LinearGradient(art.left,art.top,art.right,art.bottom,0xff5a0710,0xff111318,Shader.TileMode.CLAMP));c.drawRoundRect(art,x(14),x(14),p);p.setShader(null);if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);marquee(c,MediaBridge.artist,520,395,1030,18,MUTED,true);marquee(c,MediaBridge.title,520,460,1030,32,WHITE,true);text(c,MediaBridge.hasAccess(activity)?"Android MediaSession connected":"Tap play to enable media access",520,508,17,MUTED,false);button(c,520,630,690,742,"◀",false);button(c,710,610,880,762,MediaBridge.playing?"Ⅱ":"▶",true);button(c,900,630,1030,742,"▶|",false);panel(c,18,895,1062,1290,"MEDIA SOURCES");mediaShelf(c);text(c,"Swipe left or right • Add any installed audio app",46,1218,17,MUTED,false);}
     private void performance(Canvas c){hero(c,63,270,1);text(c,"PERFORMANCE",38,130,36,WHITE,true);gauge(c,18,285,258,"GPS SPEED",String.valueOf(Math.round(speedMph)),"MPH",Math.min(1,speedMph/120f));gauge(c,274,285,514,"RPM","--","RPM",.03f);gauge(c,530,285,770,"COOLANT","--","°F",.03f);gauge(c,786,285,1062,"TRANS TEMP","--","°F",.03f);panel(c,18,442,520,825,"0–60 GPS TIMER");text(c,"0–60",60,538,18,MUTED,true);text(c,runTime(),60,610,49,WHITE,true);text(c,"STATUS",280,538,18,MUTED,true);text(c,runActive?"RUNNING":(runArmed?"ARMED":"READY"),280,610,31,runActive?RED:WHITE,true);button(c,55,685,245,785,"START",true);button(c,270,685,475,785,"RESET",false);panel(c,540,442,1062,825,"ACCELERATION");for(int i=0;i<5;i++)line(c,570,520+i*58,1035,520+i*58,0xff30343a,1);for(int i=0;i<6;i++)line(c,590+i*85,500,590+i*85,790,0xff30343a,1);text(c,"Timer begins automatically above 1 MPH",615,655,18,MUTED,false);panel(c,18,845,1062,1135,"LIVE DATA");gauge(c,38,900,280,"GPS SPEED",String.valueOf(Math.round(speedMph)),"MPH",Math.min(1,speedMph/120f));gauge(c,294,900,536,"ENGINE LOAD","--","%",.03f);gauge(c,550,900,792,"INTAKE TEMP","--","°F",.03f);gauge(c,806,900,1042,"BATTERY","--","V",.03f);panel(c,18,1150,1062,1290,"SESSION HISTORY");text(c,zeroToSixty>0?"Last 0–60: "+String.format(Locale.US,"%.1f seconds",zeroToSixty):"No completed runs",50,1235,20,MUTED,false);}
     private void apps(Canvas c){
         hero(c,63,216,1);text(c,"ALL APPS",38,126,38,WHITE,true);
@@ -190,10 +192,19 @@ public final class DashboardView extends View {
     private void button(Canvas c,float l,float t,float r,float b,String label,boolean active){RectF q=new RectF(x(l),y(t),x(r),y(b));boolean hit=touchX>=q.left&&touchX<=q.right&&touchY>=q.top&&touchY<=q.bottom;raisedBox(c,q,active||hit,12);paint(WHITE,15,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(label,(q.left+q.right)/2,(q.top+q.bottom)/2+x(6),p);p.setTextAlign(Paint.Align.LEFT);}
     private void arrow(Canvas c,float xx,float yy){p.setColor(RED);path.reset();path.moveTo(x(xx),y(yy));path.lineTo(x(xx+72),y(yy+42));path.lineTo(x(xx),y(yy+84));path.close();c.drawPath(path,p);}
     private void appTile(Canvas c,AppEntry a,float l,float t,float r,float b){
-        Drawable icon=a.icon;int cx=(int)x((l+r)/2),top=(int)y(t+7),sz=(int)x(82);
+        float scale=Math.min(u,usableH/1440f);Drawable icon=a.icon;int cx=(int)x((l+r)/2),top=(int)y(t+5),sz=Math.max(1,Math.round(78*scale));
         try{icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);icon.draw(c);}catch(Throwable ignored){}
-        paint(WHITE,14,false);p.setTextAlign(Paint.Align.CENTER);c.drawText(trim(a.label,18),cx,y(b-17),p);p.setTextAlign(Paint.Align.LEFT);
-        if(isFavorite(a)){paint(RED,13,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText("★",x(r-5),y(t+16),p);p.setTextAlign(Paint.Align.LEFT);}
+        drawAppLabel(c,a.label,cx,l+5,r-5,b,scale);
+        if(isFavorite(a)){p.setShader(null);p.setTypeface(Typeface.DEFAULT_BOLD);p.setTextSize(13*scale);p.setColor(RED);p.setTextAlign(Paint.Align.RIGHT);c.drawText("★",x(r-5),y(t+15),p);p.setTextAlign(Paint.Align.LEFT);}
+    }
+    private void drawAppLabel(Canvas c,String label,float center,float l,float r,float bottom,float scale){
+        String value=label==null?"":label.trim();p.setShader(null);p.setTypeface(Typeface.create("sans",Typeface.NORMAL));p.setTextSize(14*scale);p.setColor(WHITE);p.setTextAlign(Paint.Align.CENTER);
+        float max=x(r-l);if(p.measureText(value)<=max){c.drawText(value,center,y(bottom-12),p);p.setTextAlign(Paint.Align.LEFT);return;}
+        int best=-1;float bestDistance=Float.MAX_VALUE;for(int i=1;i<value.length()-1;i++)if(value.charAt(i)==' '){float distance=Math.abs(i-value.length()/2f);if(distance<bestDistance){best=i;bestDistance=distance;}}
+        String first,second;if(best>0){first=value.substring(0,best);second=value.substring(best+1);}else{int cut=Math.max(1,value.length()/2);first=value.substring(0,cut);second=value.substring(cut);}
+        while(first.length()>1&&p.measureText(first)>max)first=first.substring(0,first.length()-1);while(second.length()>1&&p.measureText(second)>max)second=second.substring(0,second.length()-1);
+        if(p.measureText(second)>max&&second.length()>2)second=second.substring(0,second.length()-2)+"…";
+        c.drawText(first,center,y(bottom-27),p);c.drawText(second,center,y(bottom-9),p);p.setTextAlign(Paint.Align.LEFT);
     }
     private void dockIcon(Canvas c,int kind,float cx,float cy,int color){paint(color,17,true);p.setTextAlign(Paint.Align.CENTER);String icon=kind==0?"◆":kind==1?"➤":kind==2?"♫":kind==3?"⌁":"▦";c.drawText(icon,x(cx),y(cy),p);p.setTextAlign(Paint.Align.LEFT);}
     private void dock(Canvas c){float top=1302;for(int i=0;i<5;i++){float l=i*216,r=l+216,cx=(l+r)/2,lift=page==i?0:7;RectF q=new RectF(x(l+7),y(top+5+lift),x(r-7),H-safeBottom-x(7));raisedBox(c,q,page==i,18);int color=WHITE;dockIcon(c,i,cx,1345+lift,color);paint(color,14,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(PAGES[i],x(cx),y(1392+lift),p);p.setTextAlign(Paint.Align.LEFT);if(page==i)line(c,l+54,1307,r-54,1307,RED,4);}}
