@@ -9,6 +9,8 @@ import android.content.pm.ResolveInfo;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -19,9 +21,16 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+import android.widget.EditText;
+import android.widget.Toast;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapView;
+import com.google.android.libraries.navigation.NavigationView;
+import com.google.android.libraries.navigation.NavigationApi;
+import com.google.android.libraries.navigation.Navigator;
+import com.google.android.libraries.navigation.RoutingOptions;
+import com.google.android.libraries.navigation.Waypoint;
+import com.google.android.libraries.navigation.ListenableResultFuture;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import java.io.BufferedReader;
@@ -41,8 +50,10 @@ public class MainActivity extends Activity {
     private LocationManager locationManager;
     private FrameLayout root;
     private FrameLayout mapPanel;
-    private MapView mapView;
+    private NavigationView mapView;
     private GoogleMap googleMap;
+    private Navigator navigator;
+    private EditText destinationInput;
     private TextView mapStatus;
     private boolean mapDark;
 
@@ -75,7 +86,7 @@ public class MainActivity extends Activity {
     @Override protected void onStart(){super.onStart();if(mapView!=null)mapView.onStart();}
     @Override protected void onPause(){if(mapView!=null)mapView.onPause();super.onPause();}
     @Override protected void onStop(){if(mapView!=null)mapView.onStop();super.onStop();}
-    @Override public void onLowMemory(){super.onLowMemory();if(mapView!=null)mapView.onLowMemory();}
+    @Override public void onLowMemory(){super.onLowMemory();if(mapView!=null)mapView.onTrimMemory(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW);}
     @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);if(mapView!=null)mapView.onSaveInstanceState(out);}
 
     private void setupLiveMap(Bundle state){
@@ -84,29 +95,47 @@ public class MainActivity extends Activity {
         mapPanel.setBackgroundColor(0xff080a0d);
         mapPanel.setVisibility(View.GONE);
         mapPanel.setElevation(12f);
-        mapView=new MapView(this);
+        mapView=new NavigationView(this);
         mapView.onCreate(state);
         mapPanel.addView(mapView,new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
 
+        destinationInput=new EditText(this);
+        destinationInput.setHint("Where to?");
+        destinationInput.setSingleLine(true);destinationInput.setTextColor(Color.WHITE);
+        destinationInput.setHintTextColor(0xff8f949d);destinationInput.setTextSize(15);
+        destinationInput.setPadding(dp(18),0,dp(70),0);
+        GradientDrawable searchBg=new GradientDrawable();searchBg.setColor(0xee090b0f);
+        searchBg.setCornerRadius(dp(14));searchBg.setStroke(dp(2),0xffff2338);
+        destinationInput.setBackground(searchBg);
+        FrameLayout.LayoutParams searchParams=new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,dp(58),Gravity.TOP);
+        searchParams.setMargins(dp(14),dp(14),dp(14),0);mapPanel.addView(destinationInput,searchParams);
+
+        Button go=mapButton("GO",true);
+        FrameLayout.LayoutParams gp=new FrameLayout.LayoutParams(dp(62),dp(50),Gravity.TOP|Gravity.RIGHT);
+        gp.setMargins(0,dp(18),dp(18),0);mapPanel.addView(go,gp);
+        go.setOnClickListener(v->startInternalNavigation(destinationInput.getText().toString()));
+
         mapStatus=new TextView(this);
-        mapStatus.setText("CONNECTING TO GOOGLE MAPS…\nIf this remains visible, enable Maps SDK for Android and billing for the demo key.");
+        mapStatus.setText("INITIALIZING TRX NAVIGATION…");
         mapStatus.setTextColor(0xffff2338);mapStatus.setTextSize(14);mapStatus.setGravity(Gravity.CENTER);
         mapStatus.setBackgroundColor(0xdd090b0e);
         FrameLayout.LayoutParams sp=new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,dp(86),Gravity.TOP);
+            FrameLayout.LayoutParams.MATCH_PARENT,dp(54),Gravity.CENTER);
         mapPanel.addView(mapStatus,sp);
 
         Button home=mapButton("⌂",true);home.setContentDescription("Navigate Home");
         FrameLayout.LayoutParams hp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.LEFT);
         hp.setMargins(dp(14),0,0,dp(14));mapPanel.addView(home,hp);
-        home.setOnClickListener(v->openNavigation());
+        home.setOnClickListener(v->startInternalNavigation(getSharedPreferences("launcher",MODE_PRIVATE).getString("home_destination","Home")));
 
         Button maps=mapButton("➤",false);maps.setContentDescription("Open Google Maps");
         FrameLayout.LayoutParams mp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.RIGHT);
         mp.setMargins(0,0,dp(14),dp(14));mapPanel.addView(maps,mp);
-        maps.setOnClickListener(v->openNavigation());
+        maps.setText("■");maps.setContentDescription("Stop navigation");\n        maps.setOnClickListener(v->{if(navigator!=null){navigator.stopGuidance();navigator.clearDestinations();}destinationInput.setVisibility(View.VISIBLE);});
 
+        initializeNavigator();
         mapView.getMapAsync(map->{
             googleMap=map;
             map.getUiSettings().setZoomGesturesEnabled(true);
@@ -129,6 +158,59 @@ public class MainActivity extends Activity {
             }catch(Throwable ignored){}
             map.moveCamera(CameraUpdateFactory.newLatLngZoom(start,13.5f));
         });
+    }
+
+    private void initializeNavigator(){
+        NavigationApi.getNavigator(this,new NavigationApi.NavigatorListener(){
+            @Override public void onNavigatorReady(Navigator ready){
+                navigator=ready;
+                mapView.setNavigationUiEnabled(true);
+                mapView.setHeaderEnabled(true);
+                mapView.setEtaCardEnabled(true);
+                mapView.setRecenterButtonEnabled(true);
+                mapView.setSpeedometerEnabled(true);
+                mapView.setSpeedLimitIconEnabled(true);
+                if(mapStatus!=null)mapStatus.setVisibility(View.GONE);
+            }
+            @Override public void onError(int errorCode){
+                if(mapStatus!=null){mapStatus.setVisibility(View.VISIBLE);
+                    mapStatus.setText(errorCode==NavigationApi.ErrorCode.NOT_AUTHORIZED?
+                        "NAVIGATION KEY NOT AUTHORIZED":"NAVIGATION SETUP ERROR • "+errorCode);}
+            }
+        });
+    }
+
+    public void startInternalNavigation(String destination){
+        if(destination==null||destination.trim().isEmpty()){Toast.makeText(this,"Enter a destination",Toast.LENGTH_SHORT).show();return;}
+        if(navigator==null){Toast.makeText(this,"Navigation is still initializing",Toast.LENGTH_SHORT).show();return;}
+        String query=destination.trim();
+        if("Home".equalsIgnoreCase(query))query=getSharedPreferences("launcher",MODE_PRIVATE).getString("home_destination","Home");
+        if("Work".equalsIgnoreCase(query))query=getSharedPreferences("launcher",MODE_PRIVATE).getString("work_destination","Work");
+        final String address=query;
+        if(mapStatus!=null){mapStatus.setText("FINDING "+address.toUpperCase()+"…");mapStatus.setVisibility(View.VISIBLE);}
+        new Thread(()->{
+            try{
+                List<Address> matches=new Geocoder(this,Locale.US).getFromLocationName(address,1);
+                if(matches==null||matches.isEmpty())throw new IllegalArgumentException("Destination not found");
+                Address found=matches.get(0);
+                Waypoint waypoint=new Waypoint.Builder()
+                    .setLatLng(found.getLatitude(),found.getLongitude())
+                    .setTitle(address).setVehicleStopover(true).build();
+                RoutingOptions options=new RoutingOptions();
+                options.travelMode(RoutingOptions.TravelMode.DRIVING);
+                runOnUiThread(()->{
+                    ListenableResultFuture<Navigator.RouteStatus> route=navigator.setDestination(waypoint,options);
+                    route.setOnResultListener(status->{
+                        if(status==Navigator.RouteStatus.OK){
+                            navigator.startGuidance();destinationInput.setVisibility(View.GONE);
+                            if(mapStatus!=null)mapStatus.setVisibility(View.GONE);
+                        }else if(mapStatus!=null){mapStatus.setVisibility(View.VISIBLE);
+                            mapStatus.setText("ROUTE UNAVAILABLE • "+status);}
+                    });
+                });
+            }catch(Throwable error){runOnUiThread(()->{if(mapStatus!=null){mapStatus.setVisibility(View.VISIBLE);
+                mapStatus.setText("DESTINATION NOT FOUND");}});}
+        },"trx-route").start();
     }
 
     private Button mapButton(String label,boolean primary){
