@@ -69,7 +69,7 @@ public class MainActivity extends Activity {
         super.onResume();
         if (mapView != null) mapView.onResume();
         MediaBridge.ensureConnected(this);
-        if (dashboard != null) dashboard.postInvalidate();
+        if (dashboard != null) { dashboard.reloadMediaApps(); dashboard.postInvalidate(); }
     }
 
     @Override protected void onStart(){super.onStart();if(mapView!=null)mapView.onStart();}
@@ -316,6 +316,22 @@ public class MainActivity extends Activity {
             startActivity(new Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_APP_MUSIC));
         }catch(Throwable ignored){openSystemSettings();}
+    }
+
+    public void openMediaAppPicker(){
+        try{startActivity(new Intent(this,MediaAppPickerActivity.class));}
+        catch(Throwable ignored){openSystemSettings();}
+    }
+
+    public List<AppEntry> selectedMediaApps(){
+        String raw=getSharedPreferences("launcher",MODE_PRIVATE).getString("media_apps","");
+        List<AppEntry> all=installedApps(),result=new ArrayList<>();
+        if(raw.isEmpty()){
+            String[] defaults={"com.spotify.music","com.google.android.apps.youtube.music","com.apple.android.music"};
+            for(String pkg:defaults)for(AppEntry app:all)if(pkg.equals(app.packageName)){result.add(app);break;}
+        }else for(String pkg:raw.split(","))for(AppEntry app:all)
+            if(pkg.trim().equals(app.packageName)){result.add(app);break;}
+        return result;
     }
 
     public void openSettingsScreen(){
