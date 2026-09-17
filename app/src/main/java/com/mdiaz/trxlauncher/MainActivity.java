@@ -164,23 +164,49 @@ public class MainActivity extends Activity {
     }
 
     public void openNavigation() {
+        String destination=getSharedPreferences("launcher",MODE_PRIVATE)
+            .getString("home_destination","Home");
+        openNavigationTo(destination);
+    }
+
+    public void openNavigationTo(String destination) {
         try {
-            Intent i = new Intent(Intent.ACTION_VIEW,
-                Uri.parse("google.navigation:q=Home"));
-            if (i.resolveActivity(getPackageManager()) == null)
-                i = new Intent(Intent.ACTION_VIEW,Uri.parse("geo:0,0?q=Home"));
+            int choice=getSharedPreferences("launcher",MODE_PRIVATE)
+                .getInt("nav_choice",0);
+            Intent i;
+            if(choice==1){
+                i=new Intent(Intent.ACTION_VIEW,Uri.parse(
+                    "https://waze.com/ul?q="+Uri.encode(destination)+"&navigate=yes"));
+                i.setPackage("com.waze");
+            }else{
+                i=new Intent(Intent.ACTION_VIEW,Uri.parse(
+                    "google.navigation:q="+Uri.encode(destination)));
+            }
+            if(i.resolveActivity(getPackageManager())==null)
+                i=new Intent(Intent.ACTION_VIEW,Uri.parse(
+                    "geo:0,0?q="+Uri.encode(destination)));
             startActivity(i);
-        } catch (Throwable ignored) { openSystemSettings(); }
+        } catch(Throwable ignored){openSystemSettings();}
     }
 
     public void openMedia() {
-        if (launchPackage("com.spotify.music")) return;
-        if (launchPackage("com.google.android.apps.youtube.music")) return;
-        if (launchPackage("com.apple.android.music")) return;
-        try {
+        int choice=getSharedPreferences("launcher",MODE_PRIVATE)
+            .getInt("media_choice",0);
+        if(choice==0&&launchPackage("com.spotify.music"))return;
+        if(choice==1&&launchPackage("com.google.android.apps.youtube.music"))return;
+        if(choice==2&&launchPackage("com.apple.android.music"))return;
+        if(launchPackage("com.spotify.music"))return;
+        if(launchPackage("com.google.android.apps.youtube.music"))return;
+        if(launchPackage("com.apple.android.music"))return;
+        try{
             startActivity(new Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_APP_MUSIC));
-        } catch (Throwable ignored) { openSystemSettings(); }
+        }catch(Throwable ignored){openSystemSettings();}
+    }
+
+    public void openSettingsScreen(){
+        try{startActivity(new Intent(this,SettingsActivity.class));}
+        catch(Throwable ignored){openSystemSettings();}
     }
 
     public void openMediaSource(int source) {
