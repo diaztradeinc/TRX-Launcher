@@ -40,7 +40,10 @@ public final class DashboardView extends View {
         super(context); activity=context; setLayerType(View.LAYER_TYPE_SOFTWARE,null);
         prefs=context.getSharedPreferences("launcher",Context.MODE_PRIVATE);
         page=prefs.getInt("page",0);
-        hero=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero);
+        Drawable heroDrawable=context.getDrawable(R.drawable.trx_hero);
+        hero=Bitmap.createBitmap(1080,1440,Bitmap.Config.ARGB_8888);
+        Canvas heroCanvas=new Canvas(hero);
+        if(heroDrawable!=null){heroDrawable.setBounds(0,0,hero.getWidth(),hero.getHeight());heroDrawable.draw(heroCanvas);}
         apps=activity.installedApps();
         clock.post(ticker);
     }
