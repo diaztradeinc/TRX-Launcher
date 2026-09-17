@@ -1,6 +1,6 @@
 plugins { id 'com.android.application' }
 
-def mapsApiKey = System.getenv('MAPS_API_KEY') ?: 'AIzaSyA-tIK8KiByozjZRT8Knvq5lbCEDiKHfP8'
+def mapsApiKey = System.getenv('MAPS_API_KEY') ?: ''
 
 android {
     compileOptions {
@@ -15,8 +15,8 @@ android {
         applicationId 'com.mdiaz.trxlauncher'
         minSdk 26
         targetSdk 36
-        versionCode 24
-        versionName '0.8.4'
+        versionCode 25
+        versionName '0.8.5'
         manifestPlaceholders = [MAPS_API_KEY: mapsApiKey]
     }
 
