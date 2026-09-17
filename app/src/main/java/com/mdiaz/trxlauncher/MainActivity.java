@@ -94,82 +94,9 @@ public class MainActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);if(mapView!=null)mapView.onSaveInstanceState(out);}
 
     private void setupLiveMap(Bundle state){
-        mapDark=getSharedPreferences("launcher",MODE_PRIVATE).getBoolean("map_dark",true);
-        mapPanel=new FrameLayout(this);
-        mapPanel.setBackgroundColor(0xff080a0d);
+        mapPanel=new NavigationPanel(this);
         mapPanel.setVisibility(View.GONE);
         mapPanel.setElevation(12f);
-        TextView consoleTitle=new TextView(this);
-        consoleTitle.setText("TRX NAVIGATION\\nChoose Waze or Google Maps");
-        consoleTitle.setTextColor(Color.WHITE);consoleTitle.setTextSize(24);consoleTitle.setGravity(Gravity.CENTER);
-        mapPanel.addView(consoleTitle,new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
-
-        destinationInput=new EditText(this);
-        destinationInput.setHint("Where to?");
-        destinationInput.setSingleLine(true);destinationInput.setTextColor(Color.WHITE);
-        destinationInput.setHintTextColor(0xff8f949d);destinationInput.setTextSize(15);
-        destinationInput.setPadding(dp(18),0,dp(70),0);
-        GradientDrawable searchBg=new GradientDrawable();searchBg.setColor(0xee090b0f);
-        searchBg.setCornerRadius(dp(14));searchBg.setStroke(dp(2),0xffff2338);
-        destinationInput.setBackground(searchBg);
-        FrameLayout.LayoutParams searchParams=new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,dp(58),Gravity.TOP);
-        searchParams.setMargins(dp(14),dp(14),dp(14),0);mapPanel.addView(destinationInput,searchParams);
-
-        Button go=mapButton("GO",true);
-        FrameLayout.LayoutParams gp=new FrameLayout.LayoutParams(dp(62),dp(50),Gravity.TOP|Gravity.RIGHT);
-        gp.setMargins(0,dp(18),dp(18),0);mapPanel.addView(go,gp);
-        go.setOnClickListener(v->openPreferredNavigation(destinationInput.getText().toString()));
-
-        mapStatus=new TextView(this);
-        mapStatus.setText("INITIALIZING TRX NAVIGATION…");
-        mapStatus.setTextColor(0xffff2338);mapStatus.setTextSize(14);mapStatus.setGravity(Gravity.CENTER);
-        mapStatus.setBackgroundColor(0xdd090b0e);
-        FrameLayout.LayoutParams sp=new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,dp(54),Gravity.CENTER);
-        mapPanel.addView(mapStatus,sp);
-
-        Button home=mapButton("⌂",true);home.setContentDescription("Navigate Home");
-        FrameLayout.LayoutParams hp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.LEFT);
-        hp.setMargins(dp(14),0,0,dp(14));mapPanel.addView(home,hp);
-        home.setOnClickListener(v->openNavigationTo(getSharedPreferences("launcher",MODE_PRIVATE).getString("home_destination","Home")));
-
-        Button maps=mapButton("G",false);maps.setContentDescription("Open destination in Google Maps");
-        FrameLayout.LayoutParams mp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.RIGHT);
-        mp.setMargins(0,0,dp(14),dp(14));mapPanel.addView(maps,mp);
-        maps.setOnClickListener(v->openGoogleMapsNavigation(destinationInput.getText().toString()));
-
-        Button waze=mapButton("W",true);waze.setContentDescription("Open destination in Waze");
-        FrameLayout.LayoutParams wp=new FrameLayout.LayoutParams(dp(62),dp(62),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);
-        wp.setMargins(0,0,0,dp(14));mapPanel.addView(waze,wp);
-        waze.setOnClickListener(v->openWazeNavigation(destinationInput.getText().toString()));
-
-        mapStatus.setText("API-FREE NAVIGATION • SELECT WAZE OR GOOGLE MAPS");
-        mapStatus.setVisibility(View.VISIBLE);
-        /*
-        mapView.getMapAsync(map->{
-            googleMap=map;
-            map.getUiSettings().setZoomGesturesEnabled(true);
-            map.getUiSettings().setScrollGesturesEnabled(true);
-            map.getUiSettings().setRotateGesturesEnabled(true);
-            map.getUiSettings().setCompassEnabled(true);
-            map.getUiSettings().setMyLocationButtonEnabled(true);
-            applyMapStyle();
-            map.setOnMapLoadedCallback(()->{if(mapStatus!=null)mapStatus.setVisibility(View.GONE);});
-            map.setOnMapLongClickListener(point->{mapDark=!mapDark;
-                getSharedPreferences("launcher",MODE_PRIVATE).edit().putBoolean("map_dark",mapDark).apply();
-                applyMapStyle();});
-            LatLng start=new LatLng(40.33,-74.58);
-            try{
-                if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED){
-                    map.setMyLocationEnabled(true);
-                    Location last=locationManager==null?null:locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                    if(last!=null)start=new LatLng(last.getLatitude(),last.getLongitude());
-                }
-            }catch(Throwable ignored){}
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(start,13.5f));
-        }); */
     }
 
     private void initializeNavigator(){
@@ -231,7 +158,7 @@ public class MainActivity extends Activity {
         if(choice==1)openWazeNavigation(destination);else openGoogleMapsNavigation(destination);
     }
 
-    private void openWazeNavigation(String destination){
+    public void openWazeNavigation(String destination){
         String address=destination==null?"":destination.trim();
         if(address.isEmpty()){Toast.makeText(this,"Enter a destination",Toast.LENGTH_SHORT).show();return;}
         try{
@@ -243,7 +170,7 @@ public class MainActivity extends Activity {
         }catch(Throwable error){openGoogleMapsNavigation(address);}
     }
 
-    private void openGoogleMapsNavigation(String destination){
+    public void openGoogleMapsNavigation(String destination){
         String address=destination==null?"":destination.trim();
         if(address.isEmpty()){Toast.makeText(this,"Enter a destination",Toast.LENGTH_SHORT).show();return;}
         try{
