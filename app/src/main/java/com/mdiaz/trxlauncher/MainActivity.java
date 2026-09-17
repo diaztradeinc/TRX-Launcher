@@ -86,7 +86,7 @@ public class MainActivity extends Activity {
         super.onResume();
         if (mapView != null) mapView.onResume();
         MediaBridge.ensureConnected(this);
-        if (dashboard != null) { dashboard.reloadMediaApps(); dashboard.postInvalidate(); }
+        if (dashboard != null) { dashboard.reloadMediaApps(); dashboard.reloadApps(); dashboard.postInvalidate(); }
     }
 
     @Override protected void onStart(){super.onStart();if(mapView!=null)mapView.onStart();}
@@ -406,6 +406,55 @@ public class MainActivity extends Activity {
         }else for(String pkg:raw.split(","))for(AppEntry app:all)
             if(pkg.trim().equals(app.packageName)){result.add(app);break;}
         return result;
+    }
+
+    public void showAppSearch(String current){
+        final EditText input=new EditText(this);input.setSingleLine(true);input.setText(current==null?"":current);input.setHint("App name");input.setSelectAllOnFocus(true);
+        int pad=dp(20);FrameLayout holder=new FrameLayout(this);holder.setPadding(pad,0,pad,0);holder.addView(input,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.WRAP_CONTENT));
+        new android.app.AlertDialog.Builder(this).setTitle("Search installed apps").setView(holder)
+            .setPositiveButton("Search",(dialog,which)->{if(dashboard!=null)dashboard.setAppSearch(input.getText().toString());})
+            .setNeutralButton("Clear",(dialog,which)->{if(dashboard!=null)dashboard.setAppSearch("");})
+            .setNegativeButton("Cancel",null).show();
+        input.requestFocus();
+    }
+
+    public void showAppOptions(AppEntry app){
+        boolean favorite=isAppFavorite(app);String favoriteAction=favorite?"Remove from favorites":"Add to favorites";
+        String[] actions={"Open app",favoriteAction,"Add to media sources","App information","Uninstall"};
+        new android.app.AlertDialog.Builder(this).setTitle(app.label).setItems(actions,(dialog,which)->{
+            switch(which){
+                case 0:launch(app);break;
+                case 1:toggleAppFavorite(app);break;
+                case 2:addAppToMediaSources(app);break;
+                case 3:openAppInformation(app);break;
+                case 4:requestAppUninstall(app);break;
+            }
+        }).setNegativeButton("Cancel",null).show();
+    }
+
+    private boolean isAppFavorite(AppEntry app){return getSharedPreferences("launcher",MODE_PRIVATE).getStringSet("favorite_apps",java.util.Collections.emptySet()).contains(app.packageName);}
+    private void toggleAppFavorite(AppEntry app){
+        java.util.Set<String> saved=getSharedPreferences("launcher",MODE_PRIVATE).getStringSet("favorite_apps",java.util.Collections.emptySet());
+        java.util.Set<String> next=new java.util.LinkedHashSet<>(saved);boolean added;
+        if(next.contains(app.packageName)){next.remove(app.packageName);added=false;}else{next.add(app.packageName);added=true;}
+        getSharedPreferences("launcher",MODE_PRIVATE).edit().putStringSet("favorite_apps",next).apply();
+        if(dashboard!=null)dashboard.reloadApps();Toast.makeText(this,added?"Added to favorites":"Removed from favorites",Toast.LENGTH_SHORT).show();
+    }
+    private void addAppToMediaSources(AppEntry app){
+        android.content.SharedPreferences store=getSharedPreferences("launcher",MODE_PRIVATE);
+        java.util.Set<String> packages=new java.util.LinkedHashSet<>();
+        String raw=store.getString("media_apps","");
+        if(raw.isEmpty())for(AppEntry selected:selectedMediaApps())packages.add(selected.packageName);else for(String pkg:raw.split(","))if(!pkg.trim().isEmpty())packages.add(pkg.trim());
+        boolean added=packages.add(app.packageName);store.edit().putString("media_apps",android.text.TextUtils.join(",",packages)).apply();
+        if(dashboard!=null)dashboard.reloadMediaApps();Toast.makeText(this,added?"Added to media sources":"Already in media sources",Toast.LENGTH_SHORT).show();
+    }
+    private void openAppInformation(AppEntry app){
+        try{startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+app.packageName)));}
+        catch(Throwable error){Toast.makeText(this,"App information unavailable",Toast.LENGTH_SHORT).show();}
+    }
+    private void requestAppUninstall(AppEntry app){
+        try{startActivity(new Intent(Intent.ACTION_DELETE,Uri.parse("package:"+app.packageName)));}
+        catch(Throwable error){Toast.makeText(this,"This app cannot be uninstalled",Toast.LENGTH_LONG).show();}
     }
 
     public void openSettingsScreen(){
