@@ -499,34 +499,32 @@ public class MainActivity extends Activity {
     }
 
     public List<AppEntry> installedApps() {
-        Intent query = new Intent(Intent.ACTION_MAIN)
-            .addCategory(Intent.CATEGORY_LAUNCHER);
-        List<ResolveInfo> rows =
-            getPackageManager().queryIntentActivities(query,0);
-        List<AppEntry> result = new ArrayList<>();
-        for (ResolveInfo r : rows) {
-            ActivityInfo a = r.activityInfo;
-            if (a == null || a.packageName == null ||
-                a.packageName.equals(getPackageName())) continue;
-            try {
-                CharSequence label = r.loadLabel(getPackageManager());
-                result.add(new AppEntry(
-                    label == null ? a.packageName : label.toString(),
-                    a.packageName,a.name,r.loadIcon(getPackageManager())));
-            } catch (Throwable ignored) { }
+        PackageManager pm=getPackageManager();java.util.LinkedHashMap<String,AppEntry> found=new java.util.LinkedHashMap<>();
+        String[] categories={Intent.CATEGORY_LAUNCHER,Intent.CATEGORY_LEANBACK_LAUNCHER};
+        for(String category:categories){
+            Intent query=new Intent(Intent.ACTION_MAIN).addCategory(category);
+            for(ResolveInfo r:pm.queryIntentActivities(query,0)){
+                ActivityInfo a=r.activityInfo;if(a==null||a.packageName==null||a.packageName.equals(getPackageName())||found.containsKey(a.packageName))continue;
+                try{CharSequence label=r.loadLabel(pm);found.put(a.packageName,new AppEntry(label==null?a.packageName:label.toString(),a.packageName,a.name,r.loadIcon(pm)));}catch(Throwable ignored){}
+            }
         }
-        Collections.sort(result,
-            Comparator.comparing(x -> x.label.toLowerCase()));
-        return result;
+        try{
+            for(android.content.pm.ApplicationInfo info:pm.getInstalledApplications(0)){
+                if(info.packageName.equals(getPackageName())||found.containsKey(info.packageName))continue;
+                Intent launch=pm.getLaunchIntentForPackage(info.packageName);if(launch==null)launch=pm.getLeanbackLaunchIntentForPackage(info.packageName);
+                android.content.ComponentName component=launch==null?null:launch.getComponent();if(component==null)continue;
+                CharSequence label=pm.getApplicationLabel(info);found.put(info.packageName,new AppEntry(label==null?info.packageName:label.toString(),info.packageName,component.getClassName(),info.loadIcon(pm)));
+            }
+        }catch(Throwable ignored){}
+        List<AppEntry> result=new ArrayList<>(found.values());Collections.sort(result,Comparator.comparing(x->x.label.toLowerCase(Locale.US)));return result;
     }
 
     public void launch(AppEntry app) {
         try {
-            Intent i = new Intent(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_LAUNCHER)
-                .setClassName(app.packageName,app.activityName)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            Intent i=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setClassName(app.packageName,app.activityName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(i);
-        } catch (Throwable ignored) { }
-    }
-}
+        } catch(Throwable first) {
+            try{Intent fallback=getPackageManager().getLaunchIntentForPackage(app.packageName);if(fallback==null)fallback=getPackageManager().getLeanbackLaunchIntentForPackage(app.packageName);if(fallback!=null){fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);startActivity(fallback);}}
+            catch(Throwable ignored){}
+        }
+    }}

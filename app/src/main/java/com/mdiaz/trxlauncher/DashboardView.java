@@ -40,6 +40,17 @@ public final class DashboardView extends View {
     private List<AppEntry> mediaApps=new ArrayList<>();
     private boolean favoriteAppsOnly;
     private String appSearch="";
+    private android.widget.OverScroller appScroller;
+    private android.view.VelocityTracker appVelocity;
+    private int heldAppIndex=-1;
+    private boolean appLongPressOpened;
+    private final Runnable openHeldAppOptions=new Runnable(){public void run(){
+        if(page==4&&heldAppIndex>=0&&heldAppIndex<displayApps.size()){
+            appLongPressOpened=true;touchX=touchY=-1;
+            performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+            activity.showAppOptions(displayApps.get(heldAppIndex));invalidate();
+        }
+    }};
     private int page, appPage, safeTop, safeBottom;
     private float W,H,u,usableH,downX,downY,touchX=-1,touchY=-1,appScroll,scrollAtDown,mediaScroll,mediaScrollAtDown;
     private long launchAt=SystemClock.uptimeMillis(), transitionAt, lastMediaRefresh, runStarted;
@@ -50,6 +61,7 @@ public final class DashboardView extends View {
 
     public DashboardView(MainActivity context){
         super(context);activity=context;setFocusable(true);
+        appScroller=new android.widget.OverScroller(context);
         prefs=context.getSharedPreferences("launcher",Context.MODE_PRIVATE);
         page=Math.max(0,Math.min(4,prefs.getInt("page",0)));
         hero=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_banner);
@@ -61,7 +73,8 @@ public final class DashboardView extends View {
         else{safeTop=insets.getSystemWindowInsetTop();safeBottom=insets.getSystemWindowInsetBottom();}
         invalidate();return insets;
     }
-    @Override protected void onDetachedFromWindow(){clock.removeCallbacks(ticker);super.onDetachedFromWindow();}
+    @Override protected void onDetachedFromWindow(){clock.removeCallbacks(ticker);clock.removeCallbacks(openHeldAppOptions);if(appVelocity!=null){appVelocity.recycle();appVelocity=null;}super.onDetachedFromWindow();}
+    @Override public void computeScroll(){super.computeScroll();if(appScroller!=null&&appScroller.computeScrollOffset()){appScroll=appScroller.getCurrY();postInvalidateOnAnimation();}}
     @Override protected void onDraw(Canvas c){try{drawLauncher(c);}catch(Throwable error){c.drawColor(0xff050607);p.setColor(RED);p.setTextSize(28);c.drawText("TRX LAUNCHER DIAGNOSTIC",30,90,p);p.setColor(WHITE);p.setTextSize(18);c.drawText(error.getClass().getSimpleName()+": "+String.valueOf(error.getMessage()),30,135,p);}}
 
     private void drawLauncher(Canvas c){
@@ -177,12 +190,10 @@ public final class DashboardView extends View {
     private void button(Canvas c,float l,float t,float r,float b,String label,boolean active){RectF q=new RectF(x(l),y(t),x(r),y(b));boolean hit=touchX>=q.left&&touchX<=q.right&&touchY>=q.top&&touchY<=q.bottom;raisedBox(c,q,active||hit,12);paint(WHITE,15,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(label,(q.left+q.right)/2,(q.top+q.bottom)/2+x(6),p);p.setTextAlign(Paint.Align.LEFT);}
     private void arrow(Canvas c,float xx,float yy){p.setColor(RED);path.reset();path.moveTo(x(xx),y(yy));path.lineTo(x(xx+72),y(yy+42));path.lineTo(x(xx),y(yy+84));path.close();c.drawPath(path,p);}
     private void appTile(Canvas c,AppEntry a,float l,float t,float r,float b){
-        RectF q=new RectF(x(l),y(t),x(r),y(b));boolean pressed=touchX>=q.left&&touchX<=q.right&&touchY>=q.top&&touchY<=q.bottom;
-        if(pressed){p.setColor(0xff241014);c.drawRoundRect(q,x(14),x(14),p);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(2));p.setColor(RED);c.drawRoundRect(q,x(14),x(14),p);p.setStyle(Paint.Style.FILL);}
-        Drawable icon=a.icon;int cx=(int)x((l+r)/2),top=(int)y(t+14),sz=(int)x(64);
+        Drawable icon=a.icon;int cx=(int)x((l+r)/2),top=(int)y(t+7),sz=(int)x(82);
         try{icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);icon.draw(c);}catch(Throwable ignored){}
-        paint(WHITE,13,false);p.setTextAlign(Paint.Align.CENTER);c.drawText(trim(a.label,18),cx,y(b-23),p);p.setTextAlign(Paint.Align.LEFT);
-        if(isFavorite(a)){paint(RED,13,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText("★",x(r-8),y(t+18),p);p.setTextAlign(Paint.Align.LEFT);}
+        paint(WHITE,14,false);p.setTextAlign(Paint.Align.CENTER);c.drawText(trim(a.label,18),cx,y(b-17),p);p.setTextAlign(Paint.Align.LEFT);
+        if(isFavorite(a)){paint(RED,13,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText("★",x(r-5),y(t+16),p);p.setTextAlign(Paint.Align.LEFT);}
     }
     private void dockIcon(Canvas c,int kind,float cx,float cy,int color){paint(color,17,true);p.setTextAlign(Paint.Align.CENTER);String icon=kind==0?"◆":kind==1?"➤":kind==2?"♫":kind==3?"⌁":"▦";c.drawText(icon,x(cx),y(cy),p);p.setTextAlign(Paint.Align.LEFT);}
     private void dock(Canvas c){float top=1302;for(int i=0;i<5;i++){float l=i*216,r=l+216,cx=(l+r)/2,lift=page==i?0:7;RectF q=new RectF(x(l+7),y(top+5+lift),x(r-7),H-safeBottom-x(7));raisedBox(c,q,page==i,18);int color=WHITE;dockIcon(c,i,cx,1345+lift,color);paint(color,14,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(PAGES[i],x(cx),y(1392+lift),p);p.setTextAlign(Paint.Align.LEFT);if(page==i)line(c,l+54,1307,r-54,1307,RED,4);}}
@@ -206,17 +217,35 @@ public final class DashboardView extends View {
         int col=(int)(localX/195),row=(int)(localY/155);if(col<0||col>=5||localX-col*195>165||localY-row*155>135)return -1;
         int index=row*5+col;return index<displayApps.size()?index:-1;
     }
+    private int maxAppScroll(){float rows=(displayApps.size()+4)/5f;return Math.max(0,Math.round(395+rows*155-1260));}
+    private void startAppTracking(MotionEvent e){
+        if(appScroller!=null&&!appScroller.isFinished())appScroller.abortAnimation();
+        if(appVelocity!=null)appVelocity.recycle();appVelocity=android.view.VelocityTracker.obtain();appVelocity.addMovement(e);
+        float xx=e.getX()/Math.max(.01f,u),yy=(e.getY()-safeTop)*1440f/Math.max(1,usableH);
+        heldAppIndex=appIndexAt(xx,yy);appLongPressOpened=false;clock.removeCallbacks(openHeldAppOptions);
+        if(heldAppIndex>=0)clock.postDelayed(openHeldAppOptions,480);
+    }
+    private void cancelHeldApp(){clock.removeCallbacks(openHeldAppOptions);heldAppIndex=-1;}
     @Override public boolean onTouchEvent(MotionEvent e){
-        if(e.getAction()==MotionEvent.ACTION_DOWN){downX=e.getX();downY=e.getY();scrollAtDown=appScroll;mediaScrollAtDown=mediaScroll;touchX=downX;touchY=downY;invalidate();return true;}
+        if(e.getAction()==MotionEvent.ACTION_DOWN){
+            downX=e.getX();downY=e.getY();scrollAtDown=appScroll;mediaScrollAtDown=mediaScroll;touchX=downX;touchY=downY;
+            if(page==4)startAppTracking(e);invalidate();return true;
+        }
         if(e.getAction()==MotionEvent.ACTION_MOVE){
-            touchX=e.getX();touchY=e.getY();
+            touchX=e.getX();touchY=e.getY();if(page==4&&appVelocity!=null)appVelocity.addMovement(e);
+            float movedX=Math.abs(e.getX()-downX),movedY=Math.abs(e.getY()-downY);
+            if(movedX>x(16)||movedY>x(16))cancelHeldApp();
             if(page==2&&e.getY()>y(930)&&e.getY()<y(1200)){float max=Math.max(0,(mediaApps.size()+1)*198-1000);mediaScroll=Math.max(0,Math.min(max,mediaScrollAtDown+(downX-e.getX())/Math.max(.01f,u)));}
-            if(page==4&&e.getY()>y(365)){float rows=(displayApps.size()+4)/5f,max=Math.max(0,395+rows*155-1260);appScroll=Math.max(0,Math.min(max,scrollAtDown+(downY-e.getY())/Math.max(.01f,usableH)*1440f));}
+            if(page==4&&e.getY()>y(365)){appScroll=Math.max(0,Math.min(maxAppScroll(),scrollAtDown+(downY-e.getY())/Math.max(.01f,usableH)*1440f));}
             invalidate();return true;
         }
         if(e.getAction()!=MotionEvent.ACTION_UP&&e.getAction()!=MotionEvent.ACTION_CANCEL)return true;
+        clock.removeCallbacks(openHeldAppOptions);
         float upX=e.getX(),upY=e.getY(),xx=upX/u,yy=(upY-safeTop)*1440f/usableH;
-        float moveX=Math.abs(upX-downX),moveY=Math.abs(upY-downY);long held=e.getEventTime()-e.getDownTime();touchX=touchY=-1;
+        float moveX=Math.abs(upX-downX),moveY=Math.abs(upY-downY);touchX=touchY=-1;
+        if(appLongPressOpened){cancelHeldApp();if(appVelocity!=null){appVelocity.recycle();appVelocity=null;}return true;}
+        if(page==4&&appVelocity!=null){appVelocity.addMovement(e);appVelocity.computeCurrentVelocity(1000);float vy=appVelocity.getYVelocity();if(moveY>x(24)&&Math.abs(vy)>180){int logicalVelocity=Math.round(-vy*1440f/Math.max(1,usableH));appScroller.fling(0,Math.round(appScroll),0,logicalVelocity,0,0,0,maxAppScroll());postInvalidateOnAnimation();}}
+        if(appVelocity!=null){appVelocity.recycle();appVelocity=null;}cancelHeldApp();
         if(yy>=1300){selectPage((int)(xx/216),xx/216>page?1:-1);return true;}
         if(page==0&&xx<650&&yy>652&&yy<1025){activity.openNavigation();return true;}
         if(page==0&&xx>668&&yy>652&&yy<1025){if(MediaBridge.hasAccess(activity))MediaBridge.toggle(activity);else activity.openMedia();return true;}
@@ -231,10 +260,9 @@ public final class DashboardView extends View {
                 if(xx<910){favoriteAppsOnly=true;appScroll=0;refreshDisplayedApps();invalidate();return true;}
                 activity.openSettingsScreen();return true;
             }
-            if(xx>995&&yy>365&&yy<1280){List<Character> letters=appLetters();if(!letters.isEmpty()){int li=Math.round((yy-400)/Math.max(1,(1245-400f)/Math.max(1,letters.size()-1)));jumpToLetter(li);}return true;}
+            if(xx>995&&yy>365&&yy<1280&&moveX<x(18)&&moveY<x(18)){List<Character> letters=appLetters();if(!letters.isEmpty()){int li=Math.round((yy-400)/Math.max(1,(1245-400f)/Math.max(1,letters.size()-1)));jumpToLetter(li);}return true;}
             if(moveX>x(24)||moveY>x(24)){invalidate();return true;}
-            int index=appIndexAt(xx,yy);
-            if(index>=0){AppEntry app=displayApps.get(index);if(held>=520){performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);activity.showAppOptions(app);return true;}activity.launch(app);}
+            int index=appIndexAt(xx,yy);if(index>=0)activity.launch(displayApps.get(index));
         }
         invalidate();return true;
     }
