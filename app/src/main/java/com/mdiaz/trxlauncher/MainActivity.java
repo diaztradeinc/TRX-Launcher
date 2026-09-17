@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.Configuration;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -89,6 +90,7 @@ public class MainActivity extends Activity {
     @Override protected void onPause(){if(mapView!=null)mapView.onPause();super.onPause();}
     @Override protected void onStop(){if(mapView!=null)mapView.onStop();super.onStop();}
     @Override public void onLowMemory(){super.onLowMemory();if(mapView!=null)mapView.onTrimMemory(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW);}
+    @Override public void onConfigurationChanged(Configuration config){super.onConfigurationChanged(config);if(mapView!=null)mapView.onConfigurationChanged(config);}
     @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);if(mapView!=null)mapView.onSaveInstanceState(out);}
 
     private void setupLiveMap(Bundle state){
