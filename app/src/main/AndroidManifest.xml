@@ -9,7 +9,7 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="TRX Launcher"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme">\n        <meta-data\n            android:name="com.google.android.geo.API_KEY"\n            android:value="${MAPS_API_KEY}" />
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
