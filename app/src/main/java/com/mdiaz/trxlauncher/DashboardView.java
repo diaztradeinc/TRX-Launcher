@@ -44,7 +44,7 @@ public final class DashboardView extends View {
         hero=Bitmap.createBitmap(1080,1440,Bitmap.Config.ARGB_8888);
         Canvas heroCanvas=new Canvas(hero);
         if(heroDrawable!=null){heroDrawable.setBounds(0,0,hero.getWidth(),hero.getHeight());heroDrawable.draw(heroCanvas);}
-        apps=activity.installedApps();
+        apps=new java.util.ArrayList<>();
         clock.post(ticker);
     }
 
@@ -125,7 +125,7 @@ public final class DashboardView extends View {
     private void dock(Canvas c){float top=1302;for(int i=0;i<5;i++){float l=i*216,r=l+216;RectF q=new RectF(x(l+2),y(top),x(r-2),H);p.setColor(page==i?0xff30070e:0xff090b0e);c.drawRect(q,p);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(2));p.setColor(page==i?RED:0xff444a50);c.drawRect(q,p);p.setStyle(Paint.Style.FILL);paint(page==i?WHITE:MUTED,16,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(PAGES[i],x((l+r)/2),y(1384),p);p.setTextAlign(Paint.Align.LEFT);if(page==i)line(c,l+25,1305,r-25,1305,RED,4);}}
 
     @Override public boolean onTouchEvent(MotionEvent e){if(e.getAction()!=MotionEvent.ACTION_UP)return true;float xx=e.getX()/u,yy=e.getY()*1440f/H;
-        if(yy>=1300){page=Math.max(0,Math.min(4,(int)(xx/216)));prefs.edit().putInt("page",page).apply();if(page==4)apps=activity.installedApps();invalidate();return true;}
+        if(yy>=1300){page=Math.max(0,Math.min(4,(int)(xx/216)));prefs.edit().putInt("page",page).apply();if(page==4){try{apps=activity.installedApps();}catch(Exception ignored){apps=new java.util.ArrayList<>();}}invalidate();return true;}
         if(page==0 && xx<650 && yy>655 && yy<1022){activity.openNavigation();return true;}
         if(page==1 && xx>700 && yy>1080){activity.openNavigation();return true;}
         if(page==4){int col=(int)((xx-46)/252),row=(int)((yy-330)/220);if(col>=0&&col<4&&row>=0&&row<4){int i=row*4+col;if(i<apps.size())activity.launch(apps.get(i));}}
