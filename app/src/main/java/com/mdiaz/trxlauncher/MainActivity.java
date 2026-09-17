@@ -251,11 +251,8 @@ public class MainActivity extends Activity {
             diagnostic.setTextColor(0xffff1d32);
             diagnostic.setTextSize(18f);
             diagnostic.setPadding(30,60,30,30);
-            diagnostic.setText("TRX LAUNCHER STARTUP ERROR
-
-" +
-                error.getClass().getName() + "
-" + String.valueOf(error.getMessage()));
+            diagnostic.setText("TRX LAUNCHER STARTUP ERROR\\n\\n" +
+                error.getClass().getName() + "\\n" + String.valueOf(error.getMessage()));
             setContentView(diagnostic);
         } catch (Throwable ignored) { finish(); }
     }
