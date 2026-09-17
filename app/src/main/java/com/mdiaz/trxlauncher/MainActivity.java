@@ -69,6 +69,7 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
             setContentView(root);
             setupLiveMap(state);
+            root.addView(mapPanel);
             dashboard.post(() -> showLiveMap(dashboard.currentPage()==1));
             startGps();
             fetchWeather();
