@@ -30,10 +30,10 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Gradle 8.9
+      - name: Set up Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.9"
+          gradle-version: "8.13"
 
       - name: Build release APK
         env:
@@ -41,12 +41,12 @@ jobs:
         run: gradle --no-daemon --stacktrace :app:assembleRelease
 
       - name: Give APK a friendly name
-        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v0.5.2.apk
+        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v0.6.0.apk
 
       - name: Upload downloadable APK
         uses: actions/upload-artifact@v4
         with:
-          name: TRX-Launcher-v0.5.2
-          path: TRX-Launcher-v0.5.2.apk
+          name: TRX-Launcher-v0.6.0
+          path: TRX-Launcher-v0.6.0.apk
           if-no-files-found: error
           retention-days: 30
