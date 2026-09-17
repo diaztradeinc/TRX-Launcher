@@ -71,6 +71,9 @@ public class MainActivity extends Activity {
             setContentView(root);
             setupLiveMap(state);
             root.addView(mapPanel);
+            root.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{
+                if((r-l)!=(or-ol)||(b-t)!=(ob-ot))showLiveMap(dashboard.currentPage()==1);
+            });
             dashboard.post(() -> showLiveMap(dashboard.currentPage()==1));
             startGps();
             fetchWeather();
@@ -203,9 +206,24 @@ public class MainActivity extends Activity {
         if(mapPanel==null||root==null)return;
         if(visible){
             int w=Math.max(1,root.getWidth()),h=Math.max(1,root.getHeight());
+            int topInset=0,bottomInset=0;
+            try{
+                android.view.WindowInsets wi=root.getRootWindowInsets();
+                if(wi!=null){
+                    if(android.os.Build.VERSION.SDK_INT>=30){
+                        android.graphics.Insets bars=wi.getInsets(android.view.WindowInsets.Type.systemBars());
+                        topInset=bars.top;bottomInset=bars.bottom;
+                    }else{
+                        topInset=wi.getSystemWindowInsetTop();bottomInset=wi.getSystemWindowInsetBottom();
+                    }
+                }
+            }catch(Throwable ignored){}
+            int usable=Math.max(1,h-topInset-bottomInset);
+            int side=Math.round(w*18f/1080f);
             FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(
-                w-Math.round(w*36f/1080f),Math.round(h*1042f/1440f));
-            lp.leftMargin=Math.round(w*18f/1080f);lp.topMargin=Math.round(h*248f/1440f);
+                Math.max(1,w-side*2),Math.max(1,Math.round(usable*1042f/1440f)));
+            lp.leftMargin=side;
+            lp.topMargin=topInset+Math.round(usable*248f/1440f);
             mapPanel.setLayoutParams(lp);
             if(mapPanel.getParent()==null)root.addView(mapPanel);
             mapPanel.setVisibility(View.VISIBLE);mapPanel.bringToFront();
