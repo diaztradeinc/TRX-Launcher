@@ -70,7 +70,8 @@ public class NavigationPanel extends FrameLayout {
         destination.setHintTextColor(0xff9ca1aa);
         destination.setTextSize(17);
         destination.setPadding(dp(22),0,dp(72),0);
-        destination.setBackground(panel(0xee05070a,RED,2,18));
+        destination.setBackground(panel(0xee05070a,0xff5f646d,2,18));
+        destination.setElevation(dp(8));
         LayoutParams searchLp=new LayoutParams(LayoutParams.MATCH_PARENT,dp(64),Gravity.TOP);
         searchLp.setMargins(dp(16),dp(16),dp(16),0);
         addView(destination,searchLp);
@@ -209,14 +210,17 @@ public class NavigationPanel extends FrameLayout {
 
     private Button button(String text,boolean selected){
         Button b=new Button(activity);b.setText(text);b.setAllCaps(false);
-        b.setTextColor(selected?Color.WHITE:0xffff5160);b.setTextSize(19);b.setGravity(Gravity.CENTER);
-        b.setBackground(panel(0xf205070a,selected?RED:0xff9e1f2b,selected?2:1,16));
+        b.setTextColor(Color.WHITE);b.setTextSize(19);b.setGravity(Gravity.CENTER);
+        b.setBackground(panel(0xff050608,selected?RED:0xff5f646d,selected?2:1,16));
+        b.setElevation(dp(selected?9:6));
         return b;
     }
 
     private GradientDrawable panel(int color,int stroke,int width,int radius){
-        GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));
-        d.setStroke(dp(width),stroke);return d;
+        int top=color==0xff050608?0xff24272c:0xff171a1f;
+        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{top,color,0xff030405});
+        d.setCornerRadius(dp(radius));d.setStroke(dp(width),stroke);return d;
     }
 
     private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
