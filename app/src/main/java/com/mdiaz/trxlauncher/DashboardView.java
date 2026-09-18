@@ -110,7 +110,44 @@ public final class DashboardView extends View {
     private void status(Canvas c){RectF r=new RectF(0,y(0),W,y(62));p.setShader(new LinearGradient(0,y(0),W,y(0),0xff07090b,0xff15181c,Shader.TileMode.CLAMP));c.drawRect(r,p);p.setShader(null);text(c,"RAM",30,41,27,WHITE,true);text(c,"TRX LAUNCHER",126,40,17,RED,true);text(c,activity.weatherTemp()+"  •  PLAINSBORO, NJ",565,39,16,MUTED,true);String now=new SimpleDateFormat("h:mm a",Locale.US).format(new Date());p.setTextAlign(Paint.Align.RIGHT);text(c,now,1045,41,24,WHITE,true);p.setTextAlign(Paint.Align.LEFT);line(c,0,61,1080,61,RED,2);}
     private void drawPage(Canvas c,float intro){switch(page){case 0:home(c,intro);break;case 1:navigation(c);break;case 2:media(c);break;case 3:performance(c);break;default:apps(c);}}
 
-    public void onSpeedChanged(float mph){speedMph=mph;if(runArmed&&!runActive&&mph>=1f){runActive=true;runStarted=SystemClock.elapsedRealtime();}if(runActive&&mph>=60f){zeroToSixty=(SystemClock.elapsedRealtime()-runStarted)/1000f;runActive=false;runArmed=false;}invalidate();}
+    public void onSpeedChanged(float mph){speedMph=mph;if(runArmed&&!runActive&&mph>=1f){runActive=true;runStarted=SystemClock.elapsedRealtime();}if(runActive&&mph>=60f){zeroToSixty=(SystemClock.elapsedRealtime()-runStarted)/1000f;runActive=false;runArmed=false;saveCompletedRun(zeroToSixty);}invalidate();}
+    private void saveCompletedRun(float seconds){
+        if(seconds<=0||seconds>60)return;
+        String old=prefs.getString("performance_runs","");
+        String entry=String.format(Locale.US,"%.2f",seconds);
+        String next=entry+(old==null||old.isEmpty()?"":"|"+old);
+        String[] values=next.split("\\|");
+        StringBuilder limited=new StringBuilder();
+        for(int i=0;i<Math.min(10,values.length);i++){
+            if(i>0)limited.append('|');limited.append(values[i]);
+        }
+        prefs.edit().putString("performance_runs",limited.toString()).apply();
+    }
+    private float[] runStats(){
+        String raw=prefs.getString("performance_runs","");
+        if(raw==null||raw.isEmpty())return new float[]{0,0,0};
+        String[] values=raw.split("\\|");float last=0,best=Float.MAX_VALUE;int count=0;
+        for(String value:values)try{float item=Float.parseFloat(value);if(item>0){if(count==0)last=item;best=Math.min(best,item);count++;}}catch(Throwable ignored){}
+        return new float[]{last,best==Float.MAX_VALUE?0:best,count};
+    }
+    private boolean performanceAlerts(){return prefs.getBoolean("performance_alerts",true);}
+    private float warningValue(String key,float fallback){return prefs.getFloat(key,fallback);}
+    private boolean gaugeWarning(String label){
+        if(!performanceAlerts()||!ObdBridge.connected)return false;
+        if("COOLANT".equals(label))return !Float.isNaN(ObdBridge.coolantF)&&ObdBridge.coolantF>=warningValue("warn_coolant",235f);
+        if("INTAKE TEMP".equals(label))return !Float.isNaN(ObdBridge.intakeF)&&ObdBridge.intakeF>=warningValue("warn_intake",170f);
+        if("BATTERY".equals(label))return !Float.isNaN(ObdBridge.batteryV)&&ObdBridge.batteryV<=warningValue("warn_voltage",11.8f);
+        return false;
+    }
+    private void warningBadge(Canvas c,float l,float t,float r,String label){
+        if(!gaugeWarning(label))return;
+        float pulse=.55f+.45f*(float)Math.sin(SystemClock.uptimeMillis()/180.0);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(4));p.setColor(RED);p.setAlpha((int)(130+125*pulse));
+        c.drawRoundRect(new RectF(x(l),y(t),x(r),y(t+138)),x(10),x(10),p);
+        p.setStyle(Paint.Style.FILL);p.setAlpha(255);
+        p.setTextAlign(Paint.Align.RIGHT);text(c,"WARNING",r-14,t+31,10,RED,true);p.setTextAlign(Paint.Align.LEFT);
+    }
+
     private void armRun(){zeroToSixty=0;runActive=false;runArmed=true;}
     private void resetRun(){zeroToSixty=0;runActive=false;runArmed=false;}
     private String runTime(){if(runActive)return String.format(Locale.US,"%.1f s",(SystemClock.elapsedRealtime()-runStarted)/1000f);if(zeroToSixty>0)return String.format(Locale.US,"%.1f s",zeroToSixty);return "--.- s";}
@@ -252,6 +289,7 @@ public final class DashboardView extends View {
         compactGauge(c,280,529,"COOLANT",obdText(ObdBridge.coolantF,0),"°F",obdLevel(ObdBridge.coolantF,100,240));
         compactGauge(c,542,791,"TRANS",obdText(ObdBridge.transmissionF,0),"°F",obdLevel(ObdBridge.transmissionF,100,240));
         compactGauge(c,804,1062,"BATTERY",obdText(ObdBridge.batteryV,1),"V",obdLevel(ObdBridge.batteryV,11,15));
+        warningBadge(c,280,915,529,"COOLANT");warningBadge(c,804,915,1062,"BATTERY");
 
         panel(c,18,1074,520,1292,"//  WEATHER");
         text(c,activity.weatherTemp(),45,1166,45,WHITE,true);
@@ -282,6 +320,7 @@ public final class DashboardView extends View {
         gauge(c,274,285,514,"RPM",obdText(ObdBridge.rpm,0),"RPM",obdLevel(ObdBridge.rpm,0,7000));
         gauge(c,530,285,770,"COOLANT",obdText(ObdBridge.coolantF,0),"°F",obdLevel(ObdBridge.coolantF,100,240));
         gauge(c,786,285,1062,"TRANS TEMP",obdText(ObdBridge.transmissionF,0),"°F",obdLevel(ObdBridge.transmissionF,100,240));
+        warningBadge(c,530,285,770,"COOLANT");
 
         panel(c,18,442,520,825,"0–60 GPS TIMER");
         text(c,"0–60",60,538,18,MUTED,true);text(c,runTime(),60,610,49,WHITE,true);
@@ -299,11 +338,15 @@ public final class DashboardView extends View {
         gauge(c,294,900,536,"ENGINE LOAD",obdText(ObdBridge.engineLoad,0),"%",obdLevel(ObdBridge.engineLoad,0,100));
         gauge(c,550,900,792,"INTAKE TEMP",obdText(ObdBridge.intakeF,0),"°F",obdLevel(ObdBridge.intakeF,40,180));
         gauge(c,806,900,1042,"BATTERY",obdText(ObdBridge.batteryV,1),"V",obdLevel(ObdBridge.batteryV,11,15));
+        warningBadge(c,550,900,792,"INTAKE TEMP");warningBadge(c,806,900,1042,"BATTERY");
 
         panel(c,18,1150,1062,1290,"OBD STATUS • SESSION HISTORY");
-        text(c,ObdBridge.status,50,1213,17,ObdBridge.connected?0xff50dc83:RED,true);
-        text(c,zeroToSixty>0?"Last 0–60: "+String.format(Locale.US,"%.1f seconds",zeroToSixty):"No completed runs",50,1252,16,MUTED,false);
-        p.setTextAlign(Paint.Align.RIGHT);text(c,"TRANS TEMP REQUIRES VERIFIED RAM PID",1030,1252,11,MUTED,true);p.setTextAlign(Paint.Align.LEFT);
+        text(c,trim(ObdBridge.status,48),50,1210,15,ObdBridge.connected?0xff50dc83:RED,true);
+        float[] history=runStats();
+        text(c,"LAST",50,1243,10,MUTED,true);text(c,history[0]>0?String.format(Locale.US,"%.2f s",history[0]):"--",50,1271,17,WHITE,true);
+        text(c,"BEST",260,1243,10,MUTED,true);text(c,history[1]>0?String.format(Locale.US,"%.2f s",history[1]):"--",260,1271,17,WHITE,true);
+        text(c,"RUNS",470,1243,10,MUTED,true);text(c,String.valueOf((int)history[2]),470,1271,17,WHITE,true);
+        p.setTextAlign(Paint.Align.RIGHT);text(c,"TRANS TEMP AWAITS VERIFIED RAM PID",1030,1262,10,MUTED,true);p.setTextAlign(Paint.Align.LEFT);
     }
     private void apps(Canvas c){
         hero(c,63,216,1);text(c,"ALL APPS",38,126,38,WHITE,true);

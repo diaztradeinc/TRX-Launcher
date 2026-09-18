@@ -22,6 +22,10 @@ public class SettingsActivity extends Activity {
     private Spinner media;
     private EditText home;
     private EditText work;
+    private EditText coolantWarning;
+    private EditText intakeWarning;
+    private EditText voltageWarning;
+    private android.widget.Switch alerts;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -56,6 +60,28 @@ public class SettingsActivity extends Activity {
         work=edit(prefs.getString("work_destination","Work"));
         addField(root,"WORK DESTINATION",work);
 
+        TextView performanceTitle=text("LIVE PERFORMANCE ALERTS",18,RED,true);
+        LinearLayout.LayoutParams performanceTitleParams=new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.WRAP_CONTENT);
+        performanceTitleParams.topMargin=dp(30);
+        root.addView(performanceTitle,performanceTitleParams);
+
+        alerts=new android.widget.Switch(this);
+        alerts.setText("Enable visual gauge warnings");
+        alerts.setTextColor(WHITE);alerts.setTextSize(16);
+        alerts.setChecked(prefs.getBoolean("performance_alerts",true));
+        addField(root,"WARNING DISPLAY",alerts);
+
+        coolantWarning=numberEdit(prefs.getFloat("warn_coolant",235f));
+        addField(root,"COOLANT WARNING (°F)",coolantWarning);
+        intakeWarning=numberEdit(prefs.getFloat("warn_intake",170f));
+        addField(root,"INTAKE TEMPERATURE WARNING (°F)",intakeWarning);
+        voltageWarning=numberEdit(prefs.getFloat("warn_voltage",11.8f));
+        addField(root,"LOW-VOLTAGE WARNING (V)",voltageWarning);
+
+        TextView warningNote=text("Display warnings only — they do not replace factory vehicle warnings.",12,0xff8f949d,false);
+        warningNote.setPadding(0,dp(10),0,0);root.addView(warningNote);
+
         Button save=new Button(this);
         save.setText("SAVE SETTINGS");
         save.setTextColor(WHITE);
@@ -80,6 +106,18 @@ public class SettingsActivity extends Activity {
         root.addView(mediaAccess,accessParams);
         mediaAccess.setOnClickListener(v->MediaBridge.requestAccess(this));
 
+        Button clearRuns=new Button(this);
+        clearRuns.setText("CLEAR 0–60 HISTORY");
+        clearRuns.setTextColor(0xffff6573);clearRuns.setTextSize(15);clearRuns.setAllCaps(false);
+        clearRuns.setBackgroundColor(PANEL);
+        LinearLayout.LayoutParams clearParams=new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,dp(58));
+        clearParams.topMargin=dp(12);root.addView(clearRuns,clearParams);
+        clearRuns.setOnClickListener(v->{
+            prefs.edit().remove("performance_runs").apply();
+            android.widget.Toast.makeText(this,"Performance history cleared",android.widget.Toast.LENGTH_SHORT).show();
+        });
+
         setContentView(scroll);
     }
 
@@ -89,6 +127,10 @@ public class SettingsActivity extends Activity {
             .putInt("media_choice",media.getSelectedItemPosition())
             .putString("home_destination",home.getText().toString().trim())
             .putString("work_destination",work.getText().toString().trim())
+            .putBoolean("performance_alerts",alerts.isChecked())
+            .putFloat("warn_coolant",number(coolantWarning,235f))
+            .putFloat("warn_intake",number(intakeWarning,170f))
+            .putFloat("warn_voltage",number(voltageWarning,11.8f))
             .apply();
         setResult(RESULT_OK,new Intent());
         finish();
@@ -131,6 +173,17 @@ public class SettingsActivity extends Activity {
         result.setPadding(dp(18),0,dp(18),0);
         result.setBackgroundColor(PANEL);
         return result;
+    }
+
+    private EditText numberEdit(float value){
+        EditText result=edit(value==Math.round(value)?String.valueOf(Math.round(value)):String.format(java.util.Locale.US,"%.1f",value));
+        result.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        return result;
+    }
+
+    private float number(EditText field,float fallback){
+        try{return Float.parseFloat(field.getText().toString().trim());}
+        catch(Throwable ignored){return fallback;}
     }
 
     private TextView text(String value,int size,int color,boolean bold){
