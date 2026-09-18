@@ -58,6 +58,7 @@ public class MainActivity extends Activity {
     private EditText destinationInput;
     private TextView mapStatus;
     private boolean mapDark;
+    private int lastCompensatedVolume=-1;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -482,6 +483,17 @@ public class MainActivity extends Activity {
         try{startActivity(new Intent(this,SettingsActivity.class));}
         catch(Throwable ignored){openSystemSettings();}
     }
+
+    public float mediaVolumeLevel(){try{android.media.AudioManager m=(android.media.AudioManager)getSystemService(AUDIO_SERVICE);return m.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)/(float)Math.max(1,m.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC));}catch(Throwable ignored){return 0;}}
+    public void setMediaVolumeLevel(float level){try{android.media.AudioManager m=(android.media.AudioManager)getSystemService(AUDIO_SERVICE);int max=Math.max(1,m.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)),value=Math.max(0,Math.min(max,Math.round(level*max)));m.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,value,0);if(autoVolumeEnabled())getSharedPreferences("launcher",MODE_PRIVATE).edit().putInt("auto_volume_base",value).apply();lastCompensatedVolume=value;}catch(Throwable ignored){}}
+    public String audioRouteName(){try{android.media.AudioManager m=(android.media.AudioManager)getSystemService(AUDIO_SERVICE);for(android.media.AudioDeviceInfo d:m.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)){int t=d.getType();if(t==android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP||t==android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO||t==android.media.AudioDeviceInfo.TYPE_USB_DEVICE||t==android.media.AudioDeviceInfo.TYPE_USB_HEADSET||t==android.media.AudioDeviceInfo.TYPE_HDMI){CharSequence n=d.getProductName();return(n==null?"CONNECTED AUDIO":n.toString()).toUpperCase(Locale.US);}}}catch(Throwable ignored){}return "DEVICE SPEAKERS";}
+    public void openAudioRouteSettings(){try{startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));}catch(Throwable ignored){openSystemSettings();}}
+    public void openSoundSettings(){try{startActivity(new Intent(Settings.ACTION_SOUND_SETTINGS));}catch(Throwable ignored){openSystemSettings();}}
+    public int mediaProfile(){return getSharedPreferences("launcher",MODE_PRIVATE).getInt("media_profile",0);}
+    public void setMediaProfile(int profile){getSharedPreferences("launcher",MODE_PRIVATE).edit().putInt("media_profile",Math.max(0,Math.min(2,profile))).apply();if(profile==1&&mediaVolumeLevel()>.42f)setMediaVolumeLevel(.42f);else if(profile==2&&mediaVolumeLevel()>.68f)setMediaVolumeLevel(.68f);if(dashboard!=null)dashboard.invalidate();}
+    public boolean autoVolumeEnabled(){return getSharedPreferences("launcher",MODE_PRIVATE).getBoolean("auto_volume",false);}
+    public void toggleAutoVolume(){android.content.SharedPreferences st=getSharedPreferences("launcher",MODE_PRIVATE);boolean enabled=!st.getBoolean("auto_volume",false);android.media.AudioManager am=(android.media.AudioManager)getSystemService(AUDIO_SERVICE);int current=am==null?0:am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);st.edit().putBoolean("auto_volume",enabled).putInt("auto_volume_base",current).apply();lastCompensatedVolume=-1;if(dashboard!=null)dashboard.invalidate();}
+    public void applySpeedCompensation(float mph){if(!autoVolumeEnabled())return;try{android.media.AudioManager am=(android.media.AudioManager)getSystemService(AUDIO_SERVICE);int max=Math.max(1,am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)),base=getSharedPreferences("launcher",MODE_PRIVATE).getInt("auto_volume_base",am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC));int step=mph>=70?3:mph>=55?2:mph>=35?1:0,desired=Math.min(max,base+step);if(desired!=lastCompensatedVolume){am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,desired,0);lastCompensatedVolume=desired;}}catch(Throwable ignored){}}
 
     public void openMediaSource(int source) {
         switch (source) {

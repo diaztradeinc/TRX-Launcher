@@ -23,6 +23,8 @@ public class MediaBridge extends NotificationListenerService {
     public static volatile Bitmap artwork;
     public static volatile boolean playing;
     public static volatile long durationMs;
+    public static volatile String[] queueTitles=new String[0];
+    public static volatile String[] queueArtists=new String[0];
     private static volatile long positionMs;
     private static volatile long positionCapturedAt;
 
@@ -118,6 +120,9 @@ public class MediaBridge extends NotificationListenerService {
             @Override public void onPlaybackStateChanged(PlaybackState state) {
                 updateMetadata(controller);
             }
+            @Override public void onQueueChanged(List<android.media.session.MediaSession.QueueItem> queue) {
+                updateQueue(controller);
+            }
             @Override public void onSessionDestroyed() {
                 controller = null;
                 title = "NO TRACK SELECTED";
@@ -143,6 +148,7 @@ public class MediaBridge extends NotificationListenerService {
             source = "";
             artwork = null;
             playing = false;
+            queueTitles=new String[0];queueArtists=new String[0];
             return;
         }
         try {
@@ -173,7 +179,22 @@ public class MediaBridge extends NotificationListenerService {
             if (art == null) art = metadata.getBitmap(MediaMetadata.METADATA_KEY_ART);
             if (art == null) art = metadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
             artwork = art;
+            updateQueue(active);
         } catch (Throwable ignored) { }
+    }
+    private static void updateQueue(MediaController active){
+        if(active==null){queueTitles=new String[0];queueArtists=new String[0];return;}
+        try{
+            List<android.media.session.MediaSession.QueueItem> items=active.getQueue();
+            if(items==null||items.isEmpty()){queueTitles=new String[0];queueArtists=new String[0];return;}
+            long currentId=active.getPlaybackState()==null?-1:active.getPlaybackState().getActiveQueueItemId();
+            java.util.ArrayList<String> titles=new java.util.ArrayList<>(),artists=new java.util.ArrayList<>();
+            for(android.media.session.MediaSession.QueueItem item:items){
+                if(item==null||item.getQueueId()==currentId)continue;android.media.MediaDescription d=item.getDescription();
+                CharSequence t=d==null?null:d.getTitle(),a=d==null?null:d.getSubtitle();titles.add(t==null?"UPCOMING TRACK":t.toString());artists.add(a==null?"":a.toString());if(titles.size()>=3)break;
+            }
+            queueTitles=titles.toArray(new String[0]);queueArtists=artists.toArray(new String[0]);
+        }catch(Throwable ignored){queueTitles=new String[0];queueArtists=new String[0];}
     }
 
     public static long currentPositionMs(){
@@ -182,6 +203,8 @@ public class MediaBridge extends NotificationListenerService {
         if(durationMs>0)result=Math.min(result,durationMs);
         return Math.max(0,result);
     }
+
+    public static void seekTo(Context context,long position){try{refresh(context);if(controller!=null)controller.getTransportControls().seekTo(Math.max(0,position));}catch(Throwable ignored){}}
 
     public static void previous(Context context) {
         try { refresh(context); if (controller != null) controller.getTransportControls().skipToPrevious(); }
