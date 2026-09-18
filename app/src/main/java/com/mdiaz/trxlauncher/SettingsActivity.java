@@ -16,6 +16,8 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
@@ -30,6 +32,8 @@ public class SettingsActivity extends Activity {
     private android.widget.Switch alerts,onlineArtwork;
     private SeekBar iconSize;
     private TextView iconSizeValue;
+    private ImageView themePreview;
+    private TextView themePreviewTitle;
     private int selectedTheme,accent;
     private final java.util.ArrayList<Button> themeButtons=new java.util.ArrayList<>();
 
@@ -42,7 +46,7 @@ public class SettingsActivity extends Activity {
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(24),dp(22),dp(24),dp(44));scroll.addView(root);
 
-        TextView eyebrow=text("// TRX COMMAND SYSTEM  •  v1.6",12,accent,true);root.addView(eyebrow);
+        TextView eyebrow=text("// TRX COMMAND SYSTEM  •  v1.7",12,accent,true);root.addView(eyebrow);
         TextView title=text("SETTINGS COMMAND CENTER",30,WHITE,true);title.setPadding(0,dp(4),0,0);root.addView(title);
         TextView subtitle=text("Personalize the cockpit, startup behavior, apps and vehicle alerts.",14,MUTED,false);subtitle.setPadding(0,dp(5),0,dp(18));root.addView(subtitle);
 
@@ -51,13 +55,20 @@ public class SettingsActivity extends Activity {
         boolean gps=checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED;
         health.addView(statusCard("LOCATION",gps?"READY":"ACCESS NEEDED",gps),weight());root.addView(health);
 
-        LinearLayout appearance=section(root,"// APPEARANCE","Choose a complete cockpit personality. The truck artwork stays TRX.");
+        LinearLayout appearance=section(root,"// APPEARANCE","Choose a complete cockpit personality. Truck paint, landscape and accents move together.");
         TextView themeLabel=label("THEME PICKER");appearance.addView(themeLabel);
-        LinearLayout themes=horizontal();String[] names={"TRX RED","BAJA","STEALTH","OEM BLUE","CUSTOM"};
-        for(int i=0;i<names.length;i++){final int index=i;Button button=new Button(this);button.setText(names[i]);button.setTextSize(11);button.setTextColor(WHITE);button.setAllCaps(false);button.setPadding(dp(3),0,dp(3),0);button.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);updateThemeButtons();styleAccentControls();});themeButtons.add(button);themes.addView(button,weightHeight(72));}
+        LinearLayout themes=horizontal();String[] names={"TRX RED","BAJA AMBER","STEALTH","OEM BLUE","CUSTOM"};
+        for(int i=0;i<names.length;i++){final int index=i;Button button=new Button(this);button.setText(names[i]);button.setTextSize(11);button.setTextColor(WHITE);button.setAllCaps(false);button.setPadding(dp(3),0,dp(3),0);button.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);updateThemeButtons();styleAccentControls();updateThemePreview();});themeButtons.add(button);themes.addView(button,weightHeight(72));}
         appearance.addView(themes);updateThemeButtons();
 
+        FrameLayout previewFrame=new FrameLayout(this);previewFrame.setBackground(background(0xff07090c,0xff3b424c,12));
+        themePreview=new ImageView(this);themePreview.setScaleType(ImageView.ScaleType.CENTER_CROP);previewFrame.addView(themePreview,new FrameLayout.LayoutParams(-1,-1));
+        android.view.View shade=new android.view.View(this);shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0x10000000,0xd9000000}));previewFrame.addView(shade,new FrameLayout.LayoutParams(-1,-1));
+        themePreviewTitle=text("",14,WHITE,true);themePreviewTitle.setGravity(Gravity.BOTTOM|Gravity.LEFT);themePreviewTitle.setPadding(dp(16),0,dp(16),dp(13));previewFrame.addView(themePreviewTitle,new FrameLayout.LayoutParams(-1,-1));
+        LinearLayout.LayoutParams previewParams=new LinearLayout.LayoutParams(-1,dp(150));previewParams.topMargin=dp(8);appearance.addView(previewFrame,previewParams);updateThemePreview();
+
         customHex=edit(String.format(java.util.Locale.US,"#%06X",prefs.getInt("custom_accent",0xffff2338)&0xffffff));
+        customHex.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){if(selectedTheme==4){accent=themeColor(4);updateThemeButtons();styleAccentControls();updateThemePreview();}}public void afterTextChanged(android.text.Editable s){}});
         addControl(appearance,"CUSTOM ACCENT HEX",customHex);
         displayMode=spinner(new String[]{"Automatic day / night","Day cockpit","Night cockpit"});
         displayMode.setSelection(prefs.getInt("display_mode",0));addControl(appearance,"DISPLAY MODE",displayMode);
@@ -111,6 +122,17 @@ public class SettingsActivity extends Activity {
     }
     private void styleAccentControls(){
         if(iconSize!=null){iconSize.setProgressTintList(android.content.res.ColorStateList.valueOf(accent));iconSize.setThumbTintList(android.content.res.ColorStateList.valueOf(accent));}
+    }
+
+    private void updateThemePreview(){
+        if(themePreview==null)return;
+        themePreview.clearColorFilter();
+        int image=R.drawable.trx_hero_banner;String title="TRX RED  //  SUNSET RIDGE";
+        if(selectedTheme==1){image=R.drawable.trx_hero_baja;title="BAJA AMBER  //  DESERT DUSK";}
+        else if(selectedTheme==2){image=R.drawable.trx_hero_stealth;title="STEALTH BLACK  //  MOON RIDGE";}
+        else if(selectedTheme==3){image=R.drawable.trx_hero_blue;title="OEM BLUE  //  GLACIER NIGHT";}
+        else if(selectedTheme==4){title="CUSTOM  //  NIGHT HORIZON";themePreview.setColorFilter(accent,android.graphics.PorterDuff.Mode.OVERLAY);}
+        themePreview.setImageResource(image);if(themePreviewTitle!=null){themePreviewTitle.setText(title);themePreviewTitle.setTextColor(accent);}
     }
 
     private int themeColor(int index){if(index==1)return 0xffff9f1a;if(index==2)return 0xffd9dde3;if(index==3)return 0xff438cff;if(index==4){try{return Color.parseColor(customHex==null?prefs.getString("custom_hex","#FF2338"):customHex.getText().toString().trim());}catch(Throwable ignored){return prefs.getInt("custom_accent",0xffff2338);}}return 0xffff2338;}

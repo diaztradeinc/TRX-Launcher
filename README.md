@@ -1,5 +1,9 @@
 # TRX Launcher
 
+Current source: **v1.7.0**
+
+Theme Studio now coordinates the launcher accent with matching realistic TRX hero artwork: TRX Red / Sunset Ridge, Baja Amber / Desert Dusk, Stealth Black / Moon Ridge, OEM Blue / Glacier Night, and a custom-accent mode. The exact approved truck composition, lift, wheels, stance, and black RamBar are preserved across the preset artwork.
+
 Native standalone Android launcher prototype for Michael Diaz's 2023 RAM TRX / Ottocast portrait display.
 
 ## Build in GitHub (no PC required)

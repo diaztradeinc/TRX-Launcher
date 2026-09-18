@@ -35,7 +35,7 @@ public final class DashboardView extends View {
     private final Path path=new Path();
     private final Handler clock=new Handler(Looper.getMainLooper());
     private final SharedPreferences prefs;
-    private final Bitmap hero;
+    private final Bitmap heroRed,heroBaja,heroStealth,heroBlue;
     private final Bitmap defaultMediaArt;
     private List<AppEntry> apps=new ArrayList<>();
     private List<AppEntry> displayApps=new ArrayList<>();
@@ -69,7 +69,10 @@ public final class DashboardView extends View {
         reloadTheme();
         int startup=prefs.getInt("startup_page",-1);
         page=startup<0?Math.max(0,Math.min(4,prefs.getInt("page",0))):Math.max(0,Math.min(4,startup));
-        hero=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_banner);
+        heroRed=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_banner);
+        heroBaja=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_baja);
+        heroStealth=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_stealth);
+        heroBlue=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_blue);
         defaultMediaArt=BitmapFactory.decodeResource(getResources(),R.drawable.default_media_art);
         reloadMediaApps();clock.post(ticker);
     }
@@ -181,7 +184,21 @@ public final class DashboardView extends View {
     }
 
     private void mountains(Canvas c,float top,float bottom){p.setColor(0xff10151b);path.reset();path.moveTo(0,y(bottom));path.lineTo(0,y(top+150));path.lineTo(x(180),y(top+45));path.lineTo(x(345),y(top+135));path.lineTo(x(510),y(top+20));path.lineTo(x(690),y(top+145));path.lineTo(x(860),y(top+55));path.lineTo(W,y(top+142));path.lineTo(W,y(bottom));path.close();c.drawPath(path,p);}
-    private void hero(Canvas c,float top,float bottom,float intro){if(hero==null)return;float reveal=1-(1-intro)*(1-intro),targetRatio=W/Math.max(1f,sy(bottom-top)),sourceRatio=(float)hero.getWidth()/hero.getHeight();Rect src;if(sourceRatio>targetRatio){int crop=(int)((hero.getWidth()-hero.getHeight()*targetRatio)/2f);src=new Rect(crop,0,hero.getWidth()-crop,hero.getHeight());}else{int crop=(int)((hero.getHeight()-hero.getWidth()/targetRatio)/2f);src=new Rect(0,crop,hero.getWidth(),hero.getHeight()-crop);}float lift=sy(22)*(1-reveal);p.setAlpha((int)(255*reveal));c.drawBitmap(hero,src,new RectF(0,y(top)+lift,W,y(bottom)+lift),p);p.setAlpha(255);p.setShader(new LinearGradient(0,y(top),0,y(bottom),0x00000000,0xd907090c,Shader.TileMode.CLAMP));c.drawRect(0,y(top),W,y(bottom),p);p.setShader(null);}
+    private Bitmap themedHero(){
+        int choice=prefs.getInt("theme_choice",0);
+        if(choice==1&&heroBaja!=null)return heroBaja;
+        if(choice==2&&heroStealth!=null)return heroStealth;
+        if(choice==3&&heroBlue!=null)return heroBlue;
+        return heroRed;
+    }
+    private void hero(Canvas c,float top,float bottom,float intro){
+        Bitmap hero=themedHero();if(hero==null)return;
+        float reveal=1-(1-intro)*(1-intro),targetRatio=W/Math.max(1f,sy(bottom-top)),sourceRatio=(float)hero.getWidth()/hero.getHeight();
+        Rect src;if(sourceRatio>targetRatio){int crop=(int)((hero.getWidth()-hero.getHeight()*targetRatio)/2f);src=new Rect(crop,0,hero.getWidth()-crop,hero.getHeight());}else{int crop=(int)((hero.getHeight()-hero.getWidth()/targetRatio)/2f);src=new Rect(0,crop,hero.getWidth(),hero.getHeight()-crop);}
+        float lift=sy(22)*(1-reveal);RectF target=new RectF(0,y(top)+lift,W,y(bottom)+lift);p.setAlpha((int)(255*reveal));c.drawBitmap(hero,src,target,p);p.setAlpha(255);
+        if(prefs.getInt("theme_choice",0)==4){p.setColor((RED&0x00ffffff)|0x30000000);c.drawRect(target,p);}
+        p.setShader(new LinearGradient(0,y(top),0,y(bottom),0x00000000,0xd907090c,Shader.TileMode.CLAMP));c.drawRect(0,y(top),W,y(bottom),p);p.setShader(null);
+    }
     private void panel(Canvas c,float l,float t,float r,float b,String title){RectF q=new RectF(x(l),y(t),x(r),y(b));raisedBox(c,q,false,12);if(!title.isEmpty()){line(c,l+16,t+45,r-16,t+45,0xff42474f,1);text(c,title,l+18,t+32,18,WHITE,true);}line(c,l+28,b-5,r-28,b-5,0xff8f1724,2);}
     private float introGauge(){return Math.max(0,Math.min(1f,(SystemClock.uptimeMillis()-launchAt-250)/1000f));}
     private void gauge(Canvas c,float l,float t,float r,String label,String value,String unit,float level){RectF q=new RectF(x(l),y(t),x(r),y(t+138));raisedBox(c,q,false,10);p.setStyle(Paint.Style.STROKE);RectF arc=new RectF(x(l+24),y(t+46),x(r-24),y(t+154));p.setStrokeWidth(x(7));p.setColor(0xff333840);c.drawArc(arc,195,150,false,p);p.setColor(RED);c.drawArc(arc,195,Math.max(8,150*level*introGauge()),false,p);p.setStyle(Paint.Style.FILL);text(c,label,l+18,t+32,14,MUTED,true);text(c,value,l+18,t+92,31,WHITE,true);text(c,unit,r-58,t+92,13,MUTED,true);}
