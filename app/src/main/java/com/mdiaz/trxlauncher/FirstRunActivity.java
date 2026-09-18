@@ -180,7 +180,7 @@ final class FirstRunView extends View {
         p.setShader(new LinearGradient(0,y(0),0,y(bottom),0x00000000,0xff030405,Shader.TileMode.CLAMP));c.drawRect(0,y(0),W,y(bottom),p);p.setShader(null);
         float scan=Math.min(1,(SystemClock.uptimeMillis()-phaseAt)/1900f);if(scan<1){p.setColor(0x99ff2338);p.setStrokeWidth(2*scale);c.drawLine(0,y(35+bottom*scan),W,y(35+bottom*scan),p);}
         text(c,"RAM",30,48,25,WHITE,true);
-        String badge="FIRST-RUN SETUP  •  v1.6.0";p.setTextSize(12*scale);p.setTypeface(Typeface.DEFAULT_BOLD);float badgeWidth=p.measureText(badge)/sx+30;float left=1080-30-badgeWidth;
+        String badge="FIRST-RUN SETUP  •  v1.6.1";p.setTextSize(12*scale);p.setTypeface(Typeface.DEFAULT_BOLD);float badgeWidth=p.measureText(badge)/sx+30;float left=1080-30-badgeWidth;
         box(c,left,18,1050,58,0xdd090b0e,0xff7a1722,20);text(c,badge,left+15,45,12,0xffff6573,true);
         float rise=(1-ease(850))*25;centerText(c,"WELCOME TO",540,276+rise,14,RED,true);text(c,"TRX",310,356+rise,58,WHITE,true);text(c,"LAUNCHER",492,356+rise,58,RED,true);
         box(c,330,382,750,430,0xcc050608,RED,4);text(c,"SUPERCHARGED",353,413,14,RED,true);text(c,"6.2L V8",590,413,14,WHITE,true);

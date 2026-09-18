@@ -461,10 +461,14 @@ public final class DashboardView extends View {
         List<AppEntry> quick=quickApps();
         for(int i=0;i<quick.size();i++){
             AppEntry app=quick.get(i);float top=340+i*158;RectF slot=new RectF(x(880),y(top),x(1028),y(top+134));
-            p.setShader(new LinearGradient(slot.left,slot.top,slot.left,slot.bottom,0xff272c33,0xff06080b,Shader.TileMode.CLAMP));c.drawRoundRect(slot,x(12),x(12),p);p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0xff3b424b);c.drawRoundRect(slot,x(12),x(12),p);p.setStyle(Paint.Style.FILL);line(c,898,top+8,1010,top+8,0x446f7781,1);
-            float iconScale=Math.max(.8f,Math.min(1.2f,prefs.getInt("app_icon_percent",100)/100f));int cx=(int)x(954),sz=(int)x(70*iconScale),iy=(int)y(top+12+(70-70*iconScale)/2f);try{app.icon.setBounds(cx-sz/2,iy,cx+sz/2,iy+sz);app.icon.draw(c);}catch(Throwable ignored){}
-            paint(WHITE,11,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(trim(app.label,16),x(954),y(top+112),p);p.setTextAlign(Paint.Align.LEFT);
+            p.setShader(new LinearGradient(slot.left,slot.top,slot.left,slot.bottom,0xff292f36,0xff05070a,Shader.TileMode.CLAMP));c.drawRoundRect(slot,x(12),x(12),p);p.setShader(null);
+            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0xff414851);c.drawRoundRect(slot,x(12),x(12),p);p.setStyle(Paint.Style.FILL);
+            line(c,898,top+8,1010,top+8,0x557f8791,1);
+            int cx=(int)x(954),sz=(int)x(60),iy=(int)y(top+16);try{app.icon.setBounds(cx-sz/2,iy,cx+sz/2,iy+sz);app.icon.draw(c);}catch(Throwable ignored){}
+            RectF labelBand=new RectF(x(888),y(top+88),x(1020),y(top+126));p.setColor(0xe6090b0f);c.drawRoundRect(labelBand,x(8),x(8),p);
+            line(c,896,top+88,1012,top+88,0xff3a4149,1);paint(WHITE,10,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(trim(app.label,15),x(954),y(top+113),p);p.setTextAlign(Paint.Align.LEFT);
         }
+        button(c,880,1116,1028,1176,"TRX SETTINGS",true);
         button(c,880,1188,1028,1250,"✎  EDIT",false);
     }
     private List<AppEntry> quickApps(){
@@ -590,8 +594,9 @@ public final class DashboardView extends View {
             if(selected!=null&&yy>actionTop&&yy<actionTop+88&&xx>110&&xx<805&&moveX<x(18)&&moveY<x(18)){if(xx<342)activity.toggleAppFavoriteFromDashboard(selected);else if(xx<568)activity.openAppInformationFromDashboard(selected);else activity.requestAppUninstallFromDashboard(selected);selectedAppPackage="";selectedAppIndex=-1;invalidate();return true;}
             if(yy>248&&yy<338&&moveX<x(18)&&moveY<x(18)){selectedAppPackage="";if(xx<445){activity.showAppSearch(appSearch);return true;}favoriteAppsOnly=false;appScroll=0;if(xx<542)appCategory=0;else if(xx<646)appCategory=1;else if(xx<740)appCategory=2;else if(xx<840)appCategory=3;refreshDisplayedApps();invalidate();return true;}
             if(xx>812&&xx<858&&yy>390&&yy<1280&&moveX<x(18)&&moveY<x(18)){List<Character> letters=appLetters();if(!letters.isEmpty()){int li=Math.round((yy-418)/Math.max(1,(1238-418f)/Math.max(1,letters.size()-1)));jumpToLetter(li);}return true;}
-            if(xx>860&&yy>330&&yy<1170&&moveX<x(18)&&moveY<x(18)){int qi=(int)((yy-340)/158);List<AppEntry> quick=quickApps();if(qi>=0&&qi<quick.size())activity.launch(quick.get(qi));return true;}
-            if(xx>860&&yy>1170&&yy<1270&&moveX<x(18)&&moveY<x(18)){favoriteAppsOnly=true;appCategory=0;appScroll=0;refreshDisplayedApps();invalidate();return true;}
+            if(xx>860&&yy>330&&yy<1112&&moveX<x(18)&&moveY<x(18)){int qi=(int)((yy-340)/158);List<AppEntry> quick=quickApps();if(qi>=0&&qi<quick.size())activity.launch(quick.get(qi));return true;}
+            if(xx>860&&yy>1112&&yy<1182&&moveX<x(18)&&moveY<x(18)){activity.openSettingsScreen();return true;}
+            if(xx>860&&yy>1182&&yy<1270&&moveX<x(18)&&moveY<x(18)){favoriteAppsOnly=true;appCategory=0;appScroll=0;refreshDisplayedApps();invalidate();return true;}
             if(moveX>x(24)||moveY>x(24)){invalidate();return true;}int index=appIndexAt(xx,yy);if(index>=0){selectedAppPackage="";activity.launch(displayApps.get(index));}else{selectedAppPackage="";invalidate();}
         }
         invalidate();return true;
