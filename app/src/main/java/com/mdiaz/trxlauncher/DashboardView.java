@@ -318,14 +318,15 @@ public final class DashboardView extends View {
     }
     private void drawNowPlayingCockpit(Canvas c){
         panel(c,160,238,720,1138,"//  NOW PLAYING");text(c,MediaBridge.hasAccess(activity)?"●  MEDIA SESSION CONNECTED":"●  MEDIA ACCESS REQUIRED",500,272,9,MediaBridge.hasAccess(activity)?0xff50dc83:RED,true);
-        paint(MUTED,12,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(trim(MediaBridge.artist.toUpperCase(Locale.US),34),x(440),y(318),p);paint(WHITE,24,true);c.drawText(trim(MediaBridge.title.toUpperCase(Locale.US),30),x(440),y(355),p);p.setTextAlign(Paint.Align.LEFT);
-        drawPlaybackDial(c,440,605,205);drawWaveform(c,190,866,690,70);text(c,"DRAG WAVEFORM TO SEEK",190,973,9,MUTED,true);
+        drawPlaybackDial(c,440,620,180);
+        paint(MUTED,12,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(trim(MediaBridge.artist.toUpperCase(Locale.US),34),x(440),y(315),p);paint(WHITE,22,true);c.drawText(trim(MediaBridge.title.toUpperCase(Locale.US),34),x(440),y(350),p);p.setTextAlign(Paint.Align.LEFT);
+        drawWaveform(c,190,866,690,70);text(c,"DRAG WAVEFORM TO SEEK",190,973,9,MUTED,true);
     }
     private void drawPlaybackDial(Canvas c,float cx,float cy,float radius){
         long duration=MediaBridge.durationMs,position=MediaBridge.currentPositionMs();float level=duration>0?Math.max(0,Math.min(1,position/(float)duration)):0;
         p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(24));p.setColor(0xff1c2026);c.drawCircle(x(cx),y(cy),x(radius),p);p.setStrokeWidth(x(5));p.setColor(0xff5c626b);c.drawCircle(x(cx),y(cy),x(radius-12),p);
         RectF arc=new RectF(x(cx-radius+22),y(cy)-x(radius-22),x(cx+radius-22),y(cy)+x(radius-22));p.setStrokeWidth(x(8));p.setColor(0xff2f343b);c.drawArc(arc,-90,360,false,p);p.setColor(RED);c.drawArc(arc,-90,360*level,false,p);p.setStyle(Paint.Style.FILL);
-        float ar=142;RectF art=new RectF(x(cx-ar),y(cy)-x(ar),x(cx+ar),y(cy)+x(ar));path.reset();path.addCircle(x(cx),y(cy),x(ar),Path.Direction.CW);c.save();c.clipPath(path);p.setColor(0xff28080d);c.drawRect(art,p);if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);c.restore();
+        float ar=Math.max(96,radius-54);RectF art=new RectF(x(cx-ar),y(cy)-x(ar),x(cx+ar),y(cy)+x(ar));path.reset();path.addCircle(x(cx),y(cy),x(ar),Path.Direction.CW);c.save();c.clipPath(path);p.setColor(0xff28080d);c.drawRect(art,p);if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);c.restore();
         p.setColor(0x99000000);c.drawCircle(x(cx),y(cy),x(58),p);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(3));p.setColor(RED);c.drawCircle(x(cx),y(cy),x(58),p);p.setStyle(Paint.Style.FILL);paint(WHITE,35,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(MediaBridge.playing?"Ⅱ":"▶",x(cx),y(cy)+x(12),p);p.setTextAlign(Paint.Align.LEFT);
         button(c,176,550,272,670,"|◀",false);button(c,608,550,704,670,"▶|",false);
     }
@@ -336,9 +337,17 @@ public final class DashboardView extends View {
         text(c,formatMediaTime(position),l,top+height+24,11,WHITE,true);p.setTextAlign(Paint.Align.RIGHT);text(c,duration>0?"-"+formatMediaTime(Math.max(0,duration-position)):"--:--",r,top+height+24,11,WHITE,true);p.setTextAlign(Paint.Align.LEFT);
     }
     private void drawMediaQueue(Canvas c){
-        panel(c,730,238,1062,835,"//  UP NEXT");p.setTextAlign(Paint.Align.RIGHT);text(c,"LIVE QUEUE",1034,270,9,MUTED,true);p.setTextAlign(Paint.Align.LEFT);String[] titles=MediaBridge.queueTitles,artists=MediaBridge.queueArtists;
+        panel(c,730,238,1062,835,"//  UP NEXT");p.setTextAlign(Paint.Align.RIGHT);text(c,"LIVE QUEUE",1034,270,9,MUTED,true);p.setTextAlign(Paint.Align.LEFT);
+        String[] titles=MediaBridge.queueTitles,artists=MediaBridge.queueArtists;Bitmap[] images=MediaBridge.queueArtwork;
         if(titles.length==0){text(c,"QUEUE UNAVAILABLE",760,390,16,WHITE,true);text(c,"Active player did not publish",760,426,11,MUTED,false);text(c,"its MediaSession queue.",760,450,11,MUTED,false);return;}
-        for(int i=0;i<Math.min(3,titles.length);i++){float top=320+i*150;RectF thumb=new RectF(x(758),y(top),x(834),y(top+76));p.setColor(0xff191d22);c.drawRoundRect(thumb,x(8),x(8),p);text(c,String.valueOf(i+1),786,top+50,22,RED,true);text(c,trim(titles[i],20),850,top+31,13,WHITE,true);text(c,trim(i<artists.length?artists[i]:"",22),850,top+57,10,MUTED,false);line(c,756,top+112,1038,top+112,0xff343940,1);}
+        for(int i=0;i<Math.min(3,titles.length);i++){
+            float top=320+i*150;RectF thumb=new RectF(x(758),y(top),x(834),y(top+76));
+            p.setShader(new LinearGradient(thumb.left,thumb.top,thumb.left,thumb.bottom,0xff2a2f36,0xff080a0d,Shader.TileMode.CLAMP));c.drawRoundRect(thumb,x(9),x(9),p);p.setShader(null);
+            if(i<images.length&&images[i]!=null){path.reset();path.addRoundRect(thumb,x(9),x(9),Path.Direction.CW);c.save();c.clipPath(path);c.drawBitmap(images[i],null,thumb,p);c.restore();}
+            else{paint(RED,25,true);p.setTextAlign(Paint.Align.CENTER);c.drawText("♫",(thumb.left+thumb.right)/2,(thumb.top+thumb.bottom)/2+x(9),p);p.setTextAlign(Paint.Align.LEFT);}
+            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0xff3b424b);c.drawRoundRect(thumb,x(9),x(9),p);p.setStyle(Paint.Style.FILL);
+            text(c,trim(titles[i],20),850,top+31,13,WHITE,true);text(c,trim(i<artists.length?artists[i]:"",22),850,top+57,10,MUTED,false);line(c,756,top+112,1038,top+112,0xff343940,1);
+        }
     }
     private void drawAudioRoute(Canvas c){panel(c,730,845,1062,1138,"//  AUDIO ROUTE");text(c,"ᛒ",762,955,33,WHITE,true);text(c,trim(activity.audioRouteName(),25),820,934,13,WHITE,true);text(c,"●  CONNECTED OUTPUT",820,970,10,0xff50dc83,true);button(c,890,1022,1034,1092,"CHANGE",false);}
     private void drawDriveSound(Canvas c){
@@ -436,7 +445,7 @@ public final class DashboardView extends View {
         List<AppEntry> quick=quickApps();
         for(int i=0;i<quick.size();i++){
             AppEntry app=quick.get(i);float top=340+i*158;RectF slot=new RectF(x(880),y(top),x(1028),y(top+134));
-            p.setColor(0xff111419);c.drawRoundRect(slot,x(12),x(12),p);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0xff343a42);c.drawRoundRect(slot,x(12),x(12),p);p.setStyle(Paint.Style.FILL);
+            p.setShader(new LinearGradient(slot.left,slot.top,slot.left,slot.bottom,0xff272c33,0xff06080b,Shader.TileMode.CLAMP));c.drawRoundRect(slot,x(12),x(12),p);p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0xff3b424b);c.drawRoundRect(slot,x(12),x(12),p);p.setStyle(Paint.Style.FILL);line(c,898,top+8,1010,top+8,0x446f7781,1);
             int cx=(int)x(954),iy=(int)y(top+12),sz=(int)x(70);try{app.icon.setBounds(cx-sz/2,iy,cx+sz/2,iy+sz);app.icon.draw(c);}catch(Throwable ignored){}
             paint(WHITE,11,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(trim(app.label,16),x(954),y(top+112),p);p.setTextAlign(Paint.Align.LEFT);
         }
@@ -483,13 +492,14 @@ public final class DashboardView extends View {
     private void arrow(Canvas c,float xx,float yy){p.setColor(RED);path.reset();path.moveTo(x(xx),y(yy));path.lineTo(x(xx+72),y(yy+42));path.lineTo(x(xx),y(yy+84));path.close();c.drawPath(path,p);}
     private void appTile(Canvas c,AppEntry a,float l,float t,float r,float b){
         boolean selected=a.packageName.equals(selectedAppPackage);float scale=Math.min(u,usableH/1440f);int cx=(int)x((l+r)/2);
-        RectF well=new RectF(x((l+r)/2-49),y(t+5),x((l+r)/2+49),y(t+103));p.setColor(selected?0xff1d2228:0xff111419);c.drawRoundRect(well,x(22),x(22),p);
-        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(selected?2:1));p.setColor(selected?0xffd9dde2:0xff2f353d);c.drawRoundRect(well,x(22),x(22),p);p.setStyle(Paint.Style.FILL);
+        RectF card=new RectF(x(l+4),y(t+2),x(r-4),y(b));
+        p.setShader(new LinearGradient(card.left,card.top,card.left,card.bottom,selected?0xff343a42:0xff242930,0xff050608,Shader.TileMode.CLAMP));c.drawRoundRect(card,x(18),x(18),p);p.setShader(null);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(selected?2:1));p.setColor(selected?0xffe2e5e9:0xff333941);c.drawRoundRect(card,x(18),x(18),p);p.setStyle(Paint.Style.FILL);
+        line(c,l+22,t+9,r-22,t+9,selected?0x99ffffff:0x446f7781,1);
         Drawable icon=a.icon;int top=(int)y(t+17),sz=Math.max(1,Math.round(74*scale));try{icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);icon.draw(c);}catch(Throwable ignored){}
-        RectF label=new RectF(x(l+4),y(t+112),x(r-4),y(b));p.setColor(0xcc101318);c.drawRoundRect(label,x(14),x(14),p);
-        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0xff30363e);c.drawRoundRect(label,x(14),x(14),p);p.setStyle(Paint.Style.FILL);
+        line(c,l+17,t+107,r-17,t+107,selected?0x88aab0b8:0x443b424b,1);
         drawAppLabel(c,a.label,cx,l+10,r-10,b+1,scale);
-        if(isFavorite(a)){paint(RED,12,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText("★",x(r-12),y(t+22),p);p.setTextAlign(Paint.Align.LEFT);}
+        if(isFavorite(a)){paint(RED,12,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText("★",x(r-13),y(t+23),p);p.setTextAlign(Paint.Align.LEFT);}
     }
     private void drawAppLabel(Canvas c,String label,float center,float l,float r,float bottom,float scale){
         String value=label==null?"":label.trim();p.setShader(null);p.setTypeface(Typeface.create("sans",Typeface.NORMAL));p.setTextSize(14*scale);p.setColor(WHITE);p.setTextAlign(Paint.Align.CENTER);

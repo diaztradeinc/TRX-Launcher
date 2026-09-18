@@ -161,6 +161,7 @@ final class FirstRunView extends View {
     @Override protected void onDetachedFromWindow(){ticker.removeCallbacks(animate);super.onDetachedFromWindow();}
     private float x(float value){return value*sx;}private float y(float value){return safeTop+value*sy;}
     private void text(Canvas c,String value,float xx,float yy,float size,int color,boolean bold){p.setShader(null);p.setStyle(Paint.Style.FILL);p.setColor(color);p.setTextSize(size*scale);p.setTypeface(Typeface.create("sans",bold?Typeface.BOLD:Typeface.NORMAL));p.setTextAlign(Paint.Align.LEFT);c.drawText(value,x(xx),y(yy),p);}
+    private void centerText(Canvas c,String value,float xx,float yy,float size,int color,boolean bold){p.setShader(null);p.setStyle(Paint.Style.FILL);p.setColor(color);p.setTextSize(size*scale);p.setTypeface(Typeface.create("sans",bold?Typeface.BOLD:Typeface.NORMAL));p.setTextAlign(Paint.Align.CENTER);c.drawText(value,x(xx),y(yy),p);p.setTextAlign(Paint.Align.LEFT);}
     private void box(Canvas c,float l,float t,float r,float b,int fill,int stroke,float radius){p.setShader(null);p.setStyle(Paint.Style.FILL);p.setColor(fill);RectF q=new RectF(x(l),y(t),x(r),y(b));c.drawRoundRect(q,radius*scale,radius*scale,p);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1.5f*scale);p.setColor(stroke);c.drawRoundRect(q,radius*scale,radius*scale,p);p.setStyle(Paint.Style.FILL);}
     private float ease(float duration){float q=Math.max(0,Math.min(1,(SystemClock.uptimeMillis()-phaseAt)/duration));return 1-(1-q)*(1-q)*(1-q);}
 
@@ -179,9 +180,9 @@ final class FirstRunView extends View {
         p.setShader(new LinearGradient(0,y(0),0,y(bottom),0x00000000,0xff030405,Shader.TileMode.CLAMP));c.drawRect(0,y(0),W,y(bottom),p);p.setShader(null);
         float scan=Math.min(1,(SystemClock.uptimeMillis()-phaseAt)/1900f);if(scan<1){p.setColor(0x99ff2338);p.setStrokeWidth(2*scale);c.drawLine(0,y(35+bottom*scan),W,y(35+bottom*scan),p);}
         text(c,"RAM",30,48,25,WHITE,true);
-        String badge="FIRST-RUN SETUP  •  v1.5";p.setTextSize(12*scale);p.setTypeface(Typeface.DEFAULT_BOLD);float badgeWidth=p.measureText(badge)/sx+30;float left=1080-30-badgeWidth;
+        String badge="FIRST-RUN SETUP  •  v1.5.1";p.setTextSize(12*scale);p.setTypeface(Typeface.DEFAULT_BOLD);float badgeWidth=p.measureText(badge)/sx+30;float left=1080-30-badgeWidth;
         box(c,left,18,1050,58,0xdd090b0e,0xff7a1722,20);text(c,badge,left+15,45,12,0xffff6573,true);
-        float rise=(1-ease(850))*25;text(c,"WELCOME TO",390,276+rise,14,RED,true);text(c,"TRX",260,356+rise,58,WHITE,true);text(c,"LAUNCHER",442,356+rise,58,RED,true);
+        float rise=(1-ease(850))*25;centerText(c,"WELCOME TO",540,276+rise,14,RED,true);text(c,"TRX",310,356+rise,58,WHITE,true);text(c,"LAUNCHER",492,356+rise,58,RED,true);
         box(c,330,382,750,430,0xcc050608,RED,4);text(c,"SUPERCHARGED",353,413,14,RED,true);text(c,"6.2L V8",590,413,14,WHITE,true);
     }
 
@@ -193,7 +194,7 @@ final class FirstRunView extends View {
         feature(c,58,828,500,918,"➤","INTEGRATED NAVIGATION");feature(c,530,828,1022,918,"♫","LIVE MEDIA CONTROLS");
         feature(c,58,938,500,1028,"⌁","PERFORMANCE PAGES");feature(c,530,938,1022,1028,"▦","COMPLETE APP DRAWER");
         primary(c,58,1160,1022,1280,"BEGIN ONE-TIME SETUP");
-        text(c,"This screen appears once after installation.",334,1330,12,MUTED,false);
+        centerText(c,"This screen appears once after installation.",540,1330,12,MUTED,false);
     }
 
     private void feature(Canvas c,float l,float t,float r,float b,String icon,String label){box(c,l,t,r,b,0xff090b0e,0xff30363e,12);text(c,icon,l+22,t+57,22,RED,true);text(c,label,l+72,t+54,14,WHITE,true);}
@@ -235,7 +236,7 @@ final class FirstRunView extends View {
         text(c,"PROFILE",734,936+rise,11,MUTED,true);text(c,"6.2L V8",734,982+rise,22,RED,true);
         text(c,"BUILT TO DOMINATE",86,1080+rise,13,MUTED,true);
         primary(c,86,1122+rise,994,1245+rise,"ENTER TRX LAUNCHER");
-        p.setTextAlign(Paint.Align.CENTER);text(c,"All settings can be changed later.",445,1292+rise,11,MUTED,false);p.setTextAlign(Paint.Align.LEFT);
+        centerText(c,"All settings can be changed later.",540,1292+rise,11,MUTED,false);
     }
 
     private void line(Canvas c,float l,float t,float r,float b,int color,float width){

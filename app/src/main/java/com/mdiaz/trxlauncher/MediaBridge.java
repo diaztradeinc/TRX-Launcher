@@ -25,6 +25,7 @@ public class MediaBridge extends NotificationListenerService {
     public static volatile long durationMs;
     public static volatile String[] queueTitles=new String[0];
     public static volatile String[] queueArtists=new String[0];
+    public static volatile Bitmap[] queueArtwork=new Bitmap[0];
     private static volatile long positionMs;
     private static volatile long positionCapturedAt;
 
@@ -148,7 +149,7 @@ public class MediaBridge extends NotificationListenerService {
             source = "";
             artwork = null;
             playing = false;
-            queueTitles=new String[0];queueArtists=new String[0];
+            queueTitles=new String[0];queueArtists=new String[0];queueArtwork=new Bitmap[0];
             return;
         }
         try {
@@ -183,18 +184,28 @@ public class MediaBridge extends NotificationListenerService {
         } catch (Throwable ignored) { }
     }
     private static void updateQueue(MediaController active){
-        if(active==null){queueTitles=new String[0];queueArtists=new String[0];return;}
+        if(active==null){queueTitles=new String[0];queueArtists=new String[0];queueArtwork=new Bitmap[0];return;}
         try{
             List<android.media.session.MediaSession.QueueItem> items=active.getQueue();
-            if(items==null||items.isEmpty()){queueTitles=new String[0];queueArtists=new String[0];return;}
+            if(items==null||items.isEmpty()){queueTitles=new String[0];queueArtists=new String[0];queueArtwork=new Bitmap[0];return;}
             long currentId=active.getPlaybackState()==null?-1:active.getPlaybackState().getActiveQueueItemId();
             java.util.ArrayList<String> titles=new java.util.ArrayList<>(),artists=new java.util.ArrayList<>();
+            java.util.ArrayList<Bitmap> images=new java.util.ArrayList<>();
             for(android.media.session.MediaSession.QueueItem item:items){
-                if(item==null||item.getQueueId()==currentId)continue;android.media.MediaDescription d=item.getDescription();
-                CharSequence t=d==null?null:d.getTitle(),a=d==null?null:d.getSubtitle();titles.add(t==null?"UPCOMING TRACK":t.toString());artists.add(a==null?"":a.toString());if(titles.size()>=3)break;
+                if(item==null||item.getQueueId()==currentId)continue;
+                android.media.MediaDescription d=item.getDescription();
+                CharSequence t=d==null?null:d.getTitle(),a=d==null?null:d.getSubtitle();
+                titles.add(t==null?"UPCOMING TRACK":t.toString());artists.add(a==null?"":a.toString());
+                Bitmap image=d==null?null:d.getIconBitmap();
+                if(image==null&&d!=null&&d.getIconUri()!=null&&instance!=null){
+                    java.io.InputStream stream=null;
+                    try{stream=instance.getContentResolver().openInputStream(d.getIconUri());image=android.graphics.BitmapFactory.decodeStream(stream);}
+                    catch(Throwable ignored){}finally{try{if(stream!=null)stream.close();}catch(Throwable ignored){}}
+                }
+                images.add(image);if(titles.size()>=3)break;
             }
-            queueTitles=titles.toArray(new String[0]);queueArtists=artists.toArray(new String[0]);
-        }catch(Throwable ignored){queueTitles=new String[0];queueArtists=new String[0];}
+            queueTitles=titles.toArray(new String[0]);queueArtists=artists.toArray(new String[0]);queueArtwork=images.toArray(new Bitmap[0]);
+        }catch(Throwable ignored){queueTitles=new String[0];queueArtists=new String[0];queueArtwork=new Bitmap[0];}
     }
 
     public static long currentPositionMs(){
