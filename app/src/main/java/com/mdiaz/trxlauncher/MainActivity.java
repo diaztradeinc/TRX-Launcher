@@ -473,6 +473,10 @@ public class MainActivity extends Activity {
         try{startActivity(new Intent(Intent.ACTION_DELETE,Uri.parse("package:"+app.packageName)));}
         catch(Throwable error){Toast.makeText(this,"This app cannot be uninstalled",Toast.LENGTH_LONG).show();}
     }
+    public void toggleAppFavoriteFromDashboard(AppEntry app){toggleAppFavorite(app);}
+    public void openAppInformationFromDashboard(AppEntry app){openAppInformation(app);}
+    public void requestAppUninstallFromDashboard(AppEntry app){requestAppUninstall(app);}
+
 
     public void openSettingsScreen(){
         try{startActivity(new Intent(this,SettingsActivity.class));}

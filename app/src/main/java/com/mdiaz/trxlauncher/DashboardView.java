@@ -40,16 +40,17 @@ public final class DashboardView extends View {
     private List<AppEntry> displayApps=new ArrayList<>();
     private List<AppEntry> mediaApps=new ArrayList<>();
     private boolean favoriteAppsOnly;
-    private String appSearch="";
+    private int appCategory,selectedAppIndex=-1;
+    private String appSearch="",selectedAppPackage="";
     private android.widget.OverScroller appScroller;
     private android.view.VelocityTracker appVelocity;
     private int heldAppIndex=-1;
     private boolean appLongPressOpened;
     private final Runnable openHeldAppOptions=new Runnable(){public void run(){
         if(page==4&&heldAppIndex>=0&&heldAppIndex<displayApps.size()){
-            appLongPressOpened=true;touchX=touchY=-1;
-            performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-            activity.showAppOptions(displayApps.get(heldAppIndex));invalidate();
+            appLongPressOpened=true;selectedAppIndex=heldAppIndex;
+            selectedAppPackage=displayApps.get(heldAppIndex).packageName;touchX=touchY=-1;
+            performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);invalidate();
         }
     }};
     private int page, appPage, safeTop, safeBottom;
@@ -371,30 +372,69 @@ public final class DashboardView extends View {
         p.setTextAlign(Paint.Align.RIGHT);text(c,"TRANS TEMP AWAITS VERIFIED RAM PID",1030,1262,10,MUTED,true);p.setTextAlign(Paint.Align.LEFT);
     }
     private void apps(Canvas c){
-        hero(c,63,205,1);text(c,"ALL APPS",38,118,36,WHITE,true);
-        text(c,displayApps.size()+" OF "+apps.size()+" INSTALLED  •  COMMAND GRID",38,163,13,MUTED,true);
-        panel(c,18,214,1062,1292,"");
-        button(c,36,246,536,318,appSearch.isEmpty()?"⌕   SEARCH APPS":"⌕   "+trim(appSearch,26),false);
-        button(c,550,246,684,318,"ALL",!favoriteAppsOnly);
-        button(c,698,246,902,318,"★ FAVORITES",favoriteAppsOnly);
-        button(c,916,246,1044,318,"⚙",false);
-        text(c,"FLICK TO SCROLL  •  HOLD AN APP FOR TRX OPTIONS",42,350,12,MUTED,true);
-        c.save();c.clipRect(x(28),y(365),x(1008),y(1270));
+        hero(c,63,228,1);text(c,"//  APP COMMAND",30,122,34,WHITE,true);
+        text(c,apps.size()+" INSTALLED",50,170,14,MUTED,true);text(c,"BUILT FOR MORE  /",907,157,10,WHITE,true);
+        panel(c,18,238,1062,1292,"");
+        button(c,34,260,438,326,appSearch.isEmpty()?"⌕   SEARCH ALL APPS":"⌕   "+trim(appSearch,22),false);
+        button(c,452,260,536,326,"ALL",appCategory==0&&!favoriteAppsOnly);
+        button(c,546,260,640,326,"DRIVING",appCategory==1);
+        button(c,650,260,734,326,"MEDIA",appCategory==2);
+        button(c,744,260,828,326,"TOOLS",appCategory==3);
+        text(c,favoriteAppsOnly?"FAVORITES  •  TAP ALL TO RETURN":"FLICK TO SCROLL  •  HOLD FOR TRX OPTIONS",38,360,11,favoriteAppsOnly?RED:MUTED,true);
+        text(c,currentAppSection(),38,392,16,WHITE,true);line(c,84,387,805,387,0xff3e444c,1);
+        c.save();c.clipRect(x(26),y(398),x(810),y(1270));
         for(int i=0;i<displayApps.size();i++){
-            int col=i%5,row=i/5;float l=36+col*194,t=375+row*165-appScroll;
-            if(t>-10&&t<1270)appTile(c,displayApps.get(i),l,t,l+164,t+150);
+            int col=i%4,row=i/4;float l=34+col*194,t=405+row*170-appScroll;
+            if(t>-20&&t<1270)appTile(c,displayApps.get(i),l,t,l+170,t+154);
         }
         c.restore();
-        drawAppRail(c);
-        if(displayApps.isEmpty())text(c,favoriteAppsOnly?"No favorite apps yet":"No matching apps",60,430,23,MUTED,false);
+        drawAppActions(c);drawAppRail(c);drawQuickLaunch(c);
+        if(displayApps.isEmpty())text(c,favoriteAppsOnly?"NO FAVORITES YET":"NO APPS IN THIS CATEGORY",58,455,20,MUTED,true);
+    }
+    private String currentAppSection(){
+        if(favoriteAppsOnly)return "★  FAVORITES";
+        if(appCategory==1)return "DRIVING";if(appCategory==2)return "MEDIA";if(appCategory==3)return "TOOLS";return "A–Z";
     }
     private void drawAppRail(Canvas c){
         List<Character> letters=appLetters();if(letters.isEmpty())return;
-        float top=385,bottom=1245,step=(bottom-top)/Math.max(1,letters.size()-1);
-        RectF rail=new RectF(x(1017),y(367),x(1049),y(1268));p.setColor(0x77090b0f);c.drawRoundRect(rail,x(14),x(14),p);
-        paint(MUTED,11,true);p.setTextAlign(Paint.Align.CENTER);
-        for(int i=0;i<letters.size();i++)c.drawText(String.valueOf(letters.get(i)),x(1033),y(top+i*step),p);
+        float top=418,bottom=1238,step=(bottom-top)/Math.max(1,letters.size()-1);
+        RectF rail=new RectF(x(816),y(398),x(852),y(1268));p.setColor(0x99080a0d);c.drawRoundRect(rail,x(14),x(14),p);
+        int active=Math.max(0,Math.min(letters.size()-1,Math.round((appScroll/Math.max(1,maxAppScroll()))*(letters.size()-1))));
+        p.setTextAlign(Paint.Align.CENTER);
+        for(int i=0;i<letters.size();i++){if(i==active){p.setColor(RED);c.drawCircle(x(834),y(top+i*step-4),x(4),p);}paint(i==active?RED:MUTED,i==active?14:10,true);c.drawText(String.valueOf(letters.get(i)),x(834),y(top+i*step),p);}
         p.setTextAlign(Paint.Align.LEFT);
+    }
+    private void drawQuickLaunch(Canvas c){
+        RectF rail=new RectF(x(862),y(260),x(1046),y(1268));raisedBox(c,rail,false,12);
+        text(c,"QUICK LAUNCH //",880,302,13,WHITE,true);line(c,878,320,1030,320,0xff3e444c,1);
+        List<AppEntry> quick=quickApps();
+        for(int i=0;i<quick.size();i++){
+            AppEntry app=quick.get(i);float top=340+i*158;RectF slot=new RectF(x(880),y(top),x(1028),y(top+134));
+            p.setColor(0xff111419);c.drawRoundRect(slot,x(12),x(12),p);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0xff343a42);c.drawRoundRect(slot,x(12),x(12),p);p.setStyle(Paint.Style.FILL);
+            int cx=(int)x(954),iy=(int)y(top+12),sz=(int)x(70);try{app.icon.setBounds(cx-sz/2,iy,cx+sz/2,iy+sz);app.icon.draw(c);}catch(Throwable ignored){}
+            paint(WHITE,11,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(trim(app.label,16),x(954),y(top+112),p);p.setTextAlign(Paint.Align.LEFT);
+        }
+        button(c,880,1188,1028,1250,"✎  EDIT",false);
+    }
+    private List<AppEntry> quickApps(){
+        List<AppEntry> result=new ArrayList<>();
+        for(AppEntry app:apps)if(isFavorite(app)&&!containsPackage(result,app.packageName)&&result.size()<5)result.add(app);
+        String[] priority={"com.google.android.apps.maps","com.waze","com.spotify.music","com.google.android.apps.youtube.music","com.android.chrome","camera","music"};
+        for(String token:priority)for(AppEntry app:apps)if(result.size()<5&&(app.packageName.equals(token)||app.packageName.toLowerCase(Locale.US).contains(token))&&!containsPackage(result,app.packageName)){result.add(app);break;}
+        for(AppEntry app:apps)if(result.size()<5&&!containsPackage(result,app.packageName))result.add(app);
+        return result;
+    }
+    private boolean containsPackage(List<AppEntry> list,String pkg){for(AppEntry app:list)if(app.packageName.equals(pkg))return true;return false;}
+    private AppEntry selectedApp(){for(AppEntry app:apps)if(app.packageName.equals(selectedAppPackage))return app;return null;}
+    private float appActionTop(){int index=-1;for(int i=0;i<displayApps.size();i++)if(displayApps.get(i).packageName.equals(selectedAppPackage)){index=i;break;}if(index<0)return 0;float top=405+(index/4)*170-appScroll+106;return Math.max(430,Math.min(1168,top));}
+    private void drawAppActions(Canvas c){
+        AppEntry selected=selectedApp();if(selected==null)return;float top=appActionTop();
+        RectF q=new RectF(x(116),y(top),x(796),y(top+82));p.setColor(0xf20b0e12);c.drawRoundRect(q,x(13),x(13),p);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(2));p.setColor(0xff7b838d);c.drawRoundRect(q,x(13),x(13),p);p.setStyle(Paint.Style.FILL);
+        line(c,342,top+14,342,top+68,0xff343a42,1);line(c,568,top+14,568,top+68,0xff343a42,1);
+        paint(WHITE,11,true);p.setTextAlign(Paint.Align.CENTER);
+        c.drawText(isFavorite(selected)?"★  UNFAVORITE":"★  FAVORITE",x(229),y(top+49),p);
+        c.drawText("ⓘ  INFO",x(455),y(top+49),p);p.setColor(0xffff5b6c);c.drawText("▱  UNINSTALL",x(682),y(top+49),p);p.setTextAlign(Paint.Align.LEFT);
     }
     private void mediaShelf(Canvas c){
         float tileW=184,gap=16,start=42-mediaScroll,top=978,bottom=1228;
@@ -416,14 +456,14 @@ public final class DashboardView extends View {
     private void button(Canvas c,float l,float t,float r,float b,String label,boolean active){RectF q=new RectF(x(l),y(t),x(r),y(b));boolean hit=touchX>=q.left&&touchX<=q.right&&touchY>=q.top&&touchY<=q.bottom;raisedBox(c,q,active||hit,12);paint(WHITE,15,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(label,(q.left+q.right)/2,(q.top+q.bottom)/2+x(6),p);p.setTextAlign(Paint.Align.LEFT);}
     private void arrow(Canvas c,float xx,float yy){p.setColor(RED);path.reset();path.moveTo(x(xx),y(yy));path.lineTo(x(xx+72),y(yy+42));path.lineTo(x(xx),y(yy+84));path.close();c.drawPath(path,p);}
     private void appTile(Canvas c,AppEntry a,float l,float t,float r,float b){
-        RectF q=new RectF(x(l),y(t),x(r),y(b));
-        boolean hit=touchX>=q.left&&touchX<=q.right&&touchY>=q.top&&touchY<=q.bottom;
-        raisedBox(c,q,hit,12);
-        float scale=Math.min(u,usableH/1440f);Drawable icon=a.icon;int cx=(int)x((l+r)/2),top=(int)y(t+15),sz=Math.max(1,Math.round(72*scale));
-        try{icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);icon.draw(c);}catch(Throwable ignored){}
-        line(c,l+18,t+101,r-18,t+101,0xff2e333a,1);
-        drawAppLabel(c,a.label,cx,l+10,r-10,b-3,scale);
-        if(isFavorite(a)){p.setShader(null);p.setTypeface(Typeface.DEFAULT_BOLD);p.setTextSize(13*scale);p.setColor(RED);p.setTextAlign(Paint.Align.RIGHT);c.drawText("★",x(r-10),y(t+20),p);p.setTextAlign(Paint.Align.LEFT);}
+        boolean selected=a.packageName.equals(selectedAppPackage);float scale=Math.min(u,usableH/1440f);int cx=(int)x((l+r)/2);
+        RectF well=new RectF(x((l+r)/2-49),y(t+5),x((l+r)/2+49),y(t+103));p.setColor(selected?0xff1d2228:0xff111419);c.drawRoundRect(well,x(22),x(22),p);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(selected?2:1));p.setColor(selected?0xffd9dde2:0xff2f353d);c.drawRoundRect(well,x(22),x(22),p);p.setStyle(Paint.Style.FILL);
+        Drawable icon=a.icon;int top=(int)y(t+17),sz=Math.max(1,Math.round(74*scale));try{icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);icon.draw(c);}catch(Throwable ignored){}
+        RectF label=new RectF(x(l+4),y(t+112),x(r-4),y(b));p.setColor(0xcc101318);c.drawRoundRect(label,x(14),x(14),p);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0xff30363e);c.drawRoundRect(label,x(14),x(14),p);p.setStyle(Paint.Style.FILL);
+        drawAppLabel(c,a.label,cx,l+10,r-10,b+1,scale);
+        if(isFavorite(a)){paint(RED,12,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText("★",x(r-12),y(t+22),p);p.setTextAlign(Paint.Align.LEFT);}
     }
     private void drawAppLabel(Canvas c,String label,float center,float l,float r,float bottom,float scale){
         String value=label==null?"":label.trim();p.setShader(null);p.setTypeface(Typeface.create("sans",Typeface.NORMAL));p.setTextSize(14*scale);p.setColor(WHITE);p.setTextAlign(Paint.Align.CENTER);
@@ -442,21 +482,30 @@ public final class DashboardView extends View {
     public void setAppSearch(String query){appSearch=query==null?"":query.trim();appScroll=0;refreshDisplayedApps();invalidate();}
     private void refreshDisplayedApps(){
         displayApps=new ArrayList<>();String needle=appSearch.toLowerCase(Locale.US);
-        for(AppEntry app:apps)if((!favoriteAppsOnly||isFavorite(app))&&(needle.isEmpty()||app.label.toLowerCase(Locale.US).contains(needle)))displayApps.add(app);
-        float rows=(displayApps.size()+4)/5f,max=Math.max(0,375+rows*165-1260);appScroll=Math.max(0,Math.min(max,appScroll));
+        for(AppEntry app:apps)if((!favoriteAppsOnly||isFavorite(app))&&matchesCategory(app)&&(needle.isEmpty()||app.label.toLowerCase(Locale.US).contains(needle)))displayApps.add(app);
+        float rows=(displayApps.size()+3)/4f,max=Math.max(0,405+rows*170-1260);appScroll=Math.max(0,Math.min(max,appScroll));
+        if(selectedApp()!=null){boolean shown=false;for(AppEntry app:displayApps)if(app.packageName.equals(selectedAppPackage)){shown=true;break;}if(!shown){selectedAppPackage="";selectedAppIndex=-1;}}
     }
+    private boolean matchesCategory(AppEntry app){
+        if(appCategory==0)return true;String value=(app.label+" "+app.packageName).toLowerCase(Locale.US);
+        if(appCategory==1)return containsAny(value,"map","waze","car","auto","drive","nav","parking","gas","fuel","obd","torque","weather","uber","lyft");
+        if(appCategory==2)return containsAny(value,"music","spotify","youtube","radio","audio","media","pandora","sound","podcast","netflix","hulu","tv");
+        return containsAny(value,"setting","calculator","calendar","clock","file","drive","auth","assistant","camera","phone","contact","vpn","mail","gmail","browser","chrome");
+    }
+    private boolean containsAny(String value,String...tokens){for(String token:tokens)if(value.contains(token))return true;return false;}
     private boolean isFavorite(AppEntry app){return prefs.getStringSet("favorite_apps",java.util.Collections.emptySet()).contains(app.packageName);}
     private List<Character> appLetters(){List<Character> result=new ArrayList<>();for(AppEntry app:displayApps){char letter=Character.toUpperCase(app.label.charAt(0));if(!result.contains(letter))result.add(letter);}return result;}
     private void jumpToLetter(int letterIndex){
         List<Character> letters=appLetters();if(letters.isEmpty())return;letterIndex=Math.max(0,Math.min(letters.size()-1,letterIndex));char target=letters.get(letterIndex);
-        for(int i=0;i<displayApps.size();i++)if(Character.toUpperCase(displayApps.get(i).label.charAt(0))==target){float rows=(displayApps.size()+4)/5f,max=Math.max(0,375+rows*165-1260);appScroll=Math.max(0,Math.min(max,(i/5)*165));break;}invalidate();
+        for(int i=0;i<displayApps.size();i++)if(Character.toUpperCase(displayApps.get(i).label.charAt(0))==target){float rows=(displayApps.size()+3)/4f,max=Math.max(0,405+rows*170-1260);appScroll=Math.max(0,Math.min(max,(i/4)*170));break;}invalidate();
     }
     private int appIndexAt(float xx,float yy){
-        float localX=xx-36,localY=yy-375+appScroll;if(localX<0||localY<0)return -1;
-        int col=(int)(localX/194),row=(int)(localY/165);if(col<0||col>=5||localX-col*194>164||localY-row*165>150)return -1;
-        int index=row*5+col;return index<displayApps.size()?index:-1;
+        float localX=xx-34,localY=yy-405+appScroll;if(localX<0||localY<0||xx>810)return -1;
+        int col=(int)(localX/194),row=(int)(localY/170);if(col<0||col>=4||localX-col*194>170||localY-row*170>154)return -1;
+        int index=row*4+col;return index<displayApps.size()?index:-1;
     }
-    private int maxAppScroll(){float rows=(displayApps.size()+4)/5f;return Math.max(0,Math.round(375+rows*165-1260));}
+    private int maxAppScroll(){float rows=(displayApps.size()+3)/4f;return Math.max(0,Math.round(405+rows*170-1260));}
+    
     private void startAppTracking(MotionEvent e){
         if(appScroller!=null&&!appScroller.isFinished())appScroller.abortAnimation();
         if(appVelocity!=null)appVelocity.recycle();appVelocity=android.view.VelocityTracker.obtain();appVelocity.addMovement(e);
@@ -466,57 +515,33 @@ public final class DashboardView extends View {
     }
     private void cancelHeldApp(){clock.removeCallbacks(openHeldAppOptions);heldAppIndex=-1;}
     @Override public boolean onTouchEvent(MotionEvent e){
-        if(e.getAction()==MotionEvent.ACTION_DOWN){
-            downX=e.getX();downY=e.getY();scrollAtDown=appScroll;mediaScrollAtDown=mediaScroll;touchX=downX;touchY=downY;
-            if(page==4)startAppTracking(e);invalidate();return true;
-        }
+        if(e.getAction()==MotionEvent.ACTION_DOWN){downX=e.getX();downY=e.getY();scrollAtDown=appScroll;mediaScrollAtDown=mediaScroll;touchX=downX;touchY=downY;if(page==4)startAppTracking(e);invalidate();return true;}
         if(e.getAction()==MotionEvent.ACTION_MOVE){
-            touchX=e.getX();touchY=e.getY();if(page==4&&appVelocity!=null)appVelocity.addMovement(e);
-            float movedX=Math.abs(e.getX()-downX),movedY=Math.abs(e.getY()-downY);
-            if(movedX>x(16)||movedY>x(16))cancelHeldApp();
+            touchX=e.getX();touchY=e.getY();if(page==4&&appVelocity!=null)appVelocity.addMovement(e);float movedX=Math.abs(e.getX()-downX),movedY=Math.abs(e.getY()-downY);if(movedX>x(16)||movedY>x(16))cancelHeldApp();
             if(page==2&&e.getY()>y(960)&&e.getY()<y(1245)){float max=Math.max(0,(mediaApps.size()+1)*200-1000);mediaScroll=Math.max(0,Math.min(max,mediaScrollAtDown+(downX-e.getX())/Math.max(.01f,u)));}
-            if(page==4&&e.getY()>y(365)){appScroll=Math.max(0,Math.min(maxAppScroll(),scrollAtDown+(downY-e.getY())/Math.max(.01f,usableH)*1440f));}
-            invalidate();return true;
+            if(page==4&&e.getY()>y(390)&&e.getX()<x(810)){appScroll=Math.max(0,Math.min(maxAppScroll(),scrollAtDown+(downY-e.getY())/Math.max(.01f,usableH)*1440f));}invalidate();return true;
         }
-        if(e.getAction()!=MotionEvent.ACTION_UP&&e.getAction()!=MotionEvent.ACTION_CANCEL)return true;
-        clock.removeCallbacks(openHeldAppOptions);
-        float upX=e.getX(),upY=e.getY(),xx=upX/u,yy=(upY-safeTop)*1440f/usableH;
-        float moveX=Math.abs(upX-downX),moveY=Math.abs(upY-downY);touchX=touchY=-1;
+        if(e.getAction()!=MotionEvent.ACTION_UP&&e.getAction()!=MotionEvent.ACTION_CANCEL)return true;clock.removeCallbacks(openHeldAppOptions);
+        float upX=e.getX(),upY=e.getY(),xx=upX/u,yy=(upY-safeTop)*1440f/usableH;float moveX=Math.abs(upX-downX),moveY=Math.abs(upY-downY);touchX=touchY=-1;
         if(appLongPressOpened){cancelHeldApp();if(appVelocity!=null){appVelocity.recycle();appVelocity=null;}return true;}
         if(page==4&&appVelocity!=null){appVelocity.addMovement(e);appVelocity.computeCurrentVelocity(1000);float vy=appVelocity.getYVelocity();if(moveY>x(24)&&Math.abs(vy)>180){int logicalVelocity=Math.round(-vy*1440f/Math.max(1,usableH));appScroller.fling(0,Math.round(appScroll),0,logicalVelocity,0,0,0,maxAppScroll());postInvalidateOnAnimation();}}
         if(appVelocity!=null){appVelocity.recycle();appVelocity=null;}cancelHeldApp();
-        if(yy>=1300){selectPage((int)(xx/216),xx/216>page?1:-1);return true;}
-        if(page==0&&yy>365&&yy<462){
-            int quick=Math.max(0,Math.min(3,(int)((xx-18)/262)));activity.openQuickPanel(quick);return true;
-        }
-        if(page==0&&xx<530&&yy>468&&yy<905){
-            String recent=recentDestination(0);
-            if(yy>=730&&yy<782){activity.openNavigation();return true;}
-            if(yy>=782&&yy<829){activity.openNavigationTo(prefs.getString("work_destination","Work"));return true;}
-            if(yy>=829){if(recent.isEmpty())selectPage(1,1);else activity.openNavigationTo(recent);return true;}
-            selectPage(1,1);return true;
-        }
-        if(page==0&&xx>=530&&yy>468&&yy<905){
-            if(!MediaBridge.hasAccess(activity)){MediaBridge.requestAccess(activity);return true;}
-            if(yy>705){if(xx<837)MediaBridge.previous(activity);else if(xx<944)MediaBridge.toggle(activity);else MediaBridge.next(activity);}
-            else selectPage(2,1);return true;
-        }
-        if(page==0&&yy>900&&yy<1068){selectPage(3,1);return true;}
-        if(page==0&&xx>530&&yy>1070&&yy<1295){selectPage(3,1);return true;}
-        if(page==1&&xx>700&&yy>1080){activity.openNavigation();return true;}
+        if(yy>=1300){selectedAppPackage="";selectPage((int)(xx/216),xx/216>page?1:-1);return true;}
+        if(page==0&&yy>365&&yy<462){int quick=Math.max(0,Math.min(3,(int)((xx-18)/262)));activity.openQuickPanel(quick);return true;}
+        if(page==0&&xx<530&&yy>468&&yy<905){String recent=recentDestination(0);if(yy>=730&&yy<782){activity.openNavigation();return true;}if(yy>=782&&yy<829){activity.openNavigationTo(prefs.getString("work_destination","Work"));return true;}if(yy>=829){if(recent.isEmpty())selectPage(1,1);else activity.openNavigationTo(recent);return true;}selectPage(1,1);return true;}
+        if(page==0&&xx>=530&&yy>468&&yy<905){if(!MediaBridge.hasAccess(activity)){MediaBridge.requestAccess(activity);return true;}if(yy>705){if(xx<837)MediaBridge.previous(activity);else if(xx<944)MediaBridge.toggle(activity);else MediaBridge.next(activity);}else selectPage(2,1);return true;}
+        if(page==0&&yy>900&&yy<1068){selectPage(3,1);return true;}if(page==0&&xx>530&&yy>1070&&yy<1295){selectPage(3,1);return true;}if(page==1&&xx>700&&yy>1080){activity.openNavigation();return true;}
         if(page==2&&yy>570&&yy<770){if(xx<620)MediaBridge.previous(activity);else if(xx<820)MediaBridge.toggle(activity);else MediaBridge.next(activity);return true;}
         if(page==2&&yy>960&&yy<1245){if(moveX>x(24)){invalidate();return true;}int item=(int)((xx-42+mediaScroll)/200);if(item>=0&&item<mediaApps.size())activity.launch(mediaApps.get(item));else if(item==mediaApps.size())activity.openMediaAppPicker();return true;}
         if(page==3&&yy>665&&yy<810){if(xx<258)armRun();else if(xx<520)resetRun();return true;}
         if(page==4){
-            if(yy>235&&yy<330&&moveX<x(18)&&moveY<x(18)){
-                if(xx<565){activity.showAppSearch(appSearch);return true;}
-                if(xx<712){favoriteAppsOnly=false;appScroll=0;refreshDisplayedApps();invalidate();return true;}
-                if(xx<910){favoriteAppsOnly=true;appScroll=0;refreshDisplayedApps();invalidate();return true;}
-                activity.openSettingsScreen();return true;
-            }
-            if(xx>995&&yy>355&&yy<1280&&moveX<x(18)&&moveY<x(18)){List<Character> letters=appLetters();if(!letters.isEmpty()){int li=Math.round((yy-385)/Math.max(1,(1245-385f)/Math.max(1,letters.size()-1)));jumpToLetter(li);}return true;}
-            if(moveX>x(24)||moveY>x(24)){invalidate();return true;}
-            int index=appIndexAt(xx,yy);if(index>=0)activity.launch(displayApps.get(index));
+            AppEntry selected=selectedApp();float actionTop=appActionTop();
+            if(selected!=null&&yy>actionTop&&yy<actionTop+88&&xx>110&&xx<805&&moveX<x(18)&&moveY<x(18)){if(xx<342)activity.toggleAppFavoriteFromDashboard(selected);else if(xx<568)activity.openAppInformationFromDashboard(selected);else activity.requestAppUninstallFromDashboard(selected);selectedAppPackage="";selectedAppIndex=-1;invalidate();return true;}
+            if(yy>248&&yy<338&&moveX<x(18)&&moveY<x(18)){selectedAppPackage="";if(xx<445){activity.showAppSearch(appSearch);return true;}favoriteAppsOnly=false;appScroll=0;if(xx<542)appCategory=0;else if(xx<646)appCategory=1;else if(xx<740)appCategory=2;else if(xx<840)appCategory=3;refreshDisplayedApps();invalidate();return true;}
+            if(xx>812&&xx<858&&yy>390&&yy<1280&&moveX<x(18)&&moveY<x(18)){List<Character> letters=appLetters();if(!letters.isEmpty()){int li=Math.round((yy-418)/Math.max(1,(1238-418f)/Math.max(1,letters.size()-1)));jumpToLetter(li);}return true;}
+            if(xx>860&&yy>330&&yy<1170&&moveX<x(18)&&moveY<x(18)){int qi=(int)((yy-340)/158);List<AppEntry> quick=quickApps();if(qi>=0&&qi<quick.size())activity.launch(quick.get(qi));return true;}
+            if(xx>860&&yy>1170&&yy<1270&&moveX<x(18)&&moveY<x(18)){favoriteAppsOnly=true;appCategory=0;appScroll=0;refreshDisplayedApps();invalidate();return true;}
+            if(moveX>x(24)||moveY>x(24)){invalidate();return true;}int index=appIndexAt(xx,yy);if(index>=0){selectedAppPackage="";activity.launch(displayApps.get(index));}else{selectedAppPackage="";invalidate();}
         }
         invalidate();return true;
     }
