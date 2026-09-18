@@ -22,6 +22,9 @@ public class MediaBridge extends NotificationListenerService {
     public static volatile String source = "";
     public static volatile Bitmap artwork;
     public static volatile boolean playing;
+    public static volatile long durationMs;
+    private static volatile long positionMs;
+    private static volatile long positionCapturedAt;
 
     @Override public void onListenerConnected() {
         super.onListenerConnected();
@@ -76,6 +79,8 @@ public class MediaBridge extends NotificationListenerService {
             artist = "Tap play and enable TRX Media Controls";
             artwork = null;
             playing = false;
+            durationMs = 0;
+            positionMs = 0;
             return;
         }
         try {
@@ -144,6 +149,8 @@ public class MediaBridge extends NotificationListenerService {
             source = active.getPackageName();
             PlaybackState state = active.getPlaybackState();
             playing = state != null && state.getState() == PlaybackState.STATE_PLAYING;
+            positionMs = state == null ? 0 : Math.max(0,state.getPosition());
+            positionCapturedAt = android.os.SystemClock.elapsedRealtime();
             MediaMetadata metadata = active.getMetadata();
             if (metadata == null) {
                 title = "WAITING FOR TRACK INFO";
@@ -151,6 +158,7 @@ public class MediaBridge extends NotificationListenerService {
                 artwork = null;
                 return;
             }
+            durationMs = Math.max(0,metadata.getLong(MediaMetadata.METADATA_KEY_DURATION));
             String nextTitle = metadata.getString(MediaMetadata.METADATA_KEY_TITLE);
             if (nextTitle == null || nextTitle.trim().isEmpty())
                 nextTitle = metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE);
@@ -166,6 +174,13 @@ public class MediaBridge extends NotificationListenerService {
             if (art == null) art = metadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
             artwork = art;
         } catch (Throwable ignored) { }
+    }
+
+    public static long currentPositionMs(){
+        long result=positionMs;
+        if(playing)result+=Math.max(0,android.os.SystemClock.elapsedRealtime()-positionCapturedAt);
+        if(durationMs>0)result=Math.min(result,durationMs);
+        return Math.max(0,result);
     }
 
     public static void previous(Context context) {

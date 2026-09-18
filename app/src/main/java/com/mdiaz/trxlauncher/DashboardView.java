@@ -132,12 +132,127 @@ public final class DashboardView extends View {
     private float introGauge(){return Math.max(0,Math.min(1f,(SystemClock.uptimeMillis()-launchAt-250)/1000f));}
     private void gauge(Canvas c,float l,float t,float r,String label,String value,String unit,float level){RectF q=new RectF(x(l),y(t),x(r),y(t+138));raisedBox(c,q,false,10);p.setStyle(Paint.Style.STROKE);RectF arc=new RectF(x(l+24),y(t+46),x(r-24),y(t+154));p.setStrokeWidth(x(7));p.setColor(0xff333840);c.drawArc(arc,195,150,false,p);p.setColor(RED);c.drawArc(arc,195,Math.max(8,150*level*introGauge()),false,p);p.setStyle(Paint.Style.FILL);text(c,label,l+18,t+32,14,MUTED,true);text(c,value,l+18,t+92,31,WHITE,true);text(c,unit,r-58,t+92,13,MUTED,true);}
 
+    private void quickControl(Canvas c,float l,float r,String icon,String label,String state,float level){
+        RectF q=new RectF(x(l),y(370),x(r),y(455));raisedBox(c,q,false,9);
+        text(c,icon,l+16,421,25,WHITE,true);text(c,label,l+58,405,14,WHITE,true);
+        text(c,state,l+58,431,11,MUTED,false);
+        float barL=r-86,barR=r-18,barY=423;
+        p.setColor(0xff3c424a);c.drawRoundRect(new RectF(x(barL),y(barY),x(barR),y(barY+7)),x(4),x(4),p);
+        p.setColor(RED);c.drawRoundRect(new RectF(x(barL),y(barY),x(barL+(barR-barL)*Math.max(0,Math.min(1,level))),y(barY+7)),x(4),x(4),p);
+    }
+    private void compactGauge(Canvas c,float l,float r,String label,String value,String unit,float level){
+        RectF q=new RectF(x(l),y(915),x(r),y(1058));raisedBox(c,q,false,9);
+        text(c,label,l+16,945,13,MUTED,true);
+        RectF arc=new RectF(x(l+24),y(954),x(r-24),y(1068));
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(7));p.setColor(0xff333840);c.drawArc(arc,195,150,false,p);
+        p.setColor(RED);c.drawArc(arc,195,Math.max(7,150*level*introGauge()),false,p);p.setStyle(Paint.Style.FILL);
+        paint(WHITE,27,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(value,x((l+r)/2),y(1020),p);
+        paint(MUTED,11,true);c.drawText(unit,x((l+r)/2),y(1043),p);p.setTextAlign(Paint.Align.LEFT);
+    }
+    private float deviceLevel(int kind){
+        try{
+            if(kind==0){
+                android.net.ConnectivityManager cm=(android.net.ConnectivityManager)activity.getSystemService(Context.CONNECTIVITY_SERVICE);
+                android.net.Network n=cm.getActiveNetwork();android.net.NetworkCapabilities caps=cm.getNetworkCapabilities(n);
+                return caps!=null&&caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)?1f:0f;
+            }
+            if(kind==1){
+                android.bluetooth.BluetoothAdapter adapter=android.bluetooth.BluetoothAdapter.getDefaultAdapter();
+                return adapter!=null&&adapter.isEnabled()?1f:0f;
+            }
+            if(kind==2)return android.provider.Settings.System.getInt(activity.getContentResolver(),android.provider.Settings.System.SCREEN_BRIGHTNESS,128)/255f;
+            android.media.AudioManager audio=(android.media.AudioManager)activity.getSystemService(Context.AUDIO_SERVICE);
+            int max=Math.max(1,audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC));
+            return audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)/(float)max;
+        }catch(Throwable ignored){return 0f;}
+    }
+    private String deviceState(int kind,float level){
+        if(kind==0)return level>.5f?"Connected":"Tap to connect";
+        if(kind==1)return level>.5f?"Connected":"Tap to connect";
+        return Math.round(level*100)+"%";
+    }
+    private String recentDestination(int index){
+        String raw=prefs.getString("recent_destinations","");
+        if(raw==null||raw.isEmpty())return "";
+        String[] items=raw.split("\\n");
+        return index>=0&&index<items.length?items[index].trim():"";
+    }
+    private String destinationName(String value){
+        if(value==null||value.isEmpty())return "SEARCH DESTINATION";
+        int comma=value.indexOf(',');return trim((comma>0?value.substring(0,comma):value).toUpperCase(Locale.US),25);
+    }
+    private void destinationRow(Canvas c,float top,String icon,String label,String detail){
+        RectF row=new RectF(x(42),y(top),x(493),y(top+42));p.setColor(0xff0b0e12);c.drawRoundRect(row,x(8),x(8),p);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0xff353a42);c.drawRoundRect(row,x(8),x(8),p);p.setStyle(Paint.Style.FILL);
+        text(c,icon,56,top+28,15,WHITE,true);text(c,label,92,top+27,13,WHITE,true);
+        p.setTextAlign(Paint.Align.RIGHT);text(c,detail,474,top+27,11,MUTED,false);p.setTextAlign(Paint.Align.LEFT);
+    }
+    private String formatMediaTime(long millis){
+        if(millis<0)millis=0;long seconds=millis/1000;
+        return String.format(Locale.US,"%d:%02d",seconds/60,seconds%60);
+    }
+    private void mediaProgress(Canvas c,float l,float t,float r){
+        long duration=MediaBridge.durationMs,position=MediaBridge.currentPositionMs();
+        float level=duration>0?Math.max(0,Math.min(1,position/(float)duration)):0;
+        p.setColor(0xff3b4047);c.drawRoundRect(new RectF(x(l),y(t),x(r),y(t+7)),x(4),x(4),p);
+        p.setColor(RED);c.drawRoundRect(new RectF(x(l),y(t),x(l+(r-l)*level),y(t+7)),x(4),x(4),p);
+        text(c,formatMediaTime(position),l,t+27,10,MUTED,false);
+        p.setTextAlign(Paint.Align.RIGHT);text(c,duration>0?formatMediaTime(duration):"--:--",r,t+27,10,MUTED,false);p.setTextAlign(Paint.Align.LEFT);
+    }
+
     private void home(Canvas c,float intro){
-        hero(c,63,492,intro);text(c,"BUILT TO",735,116,18,WHITE,true);text(c,"DOMINATE",868,116,18,RED,true);
-        gauge(c,18,500,258,"BOOST","0","PSI",.08f);gauge(c,274,500,514,"RPM","700","RPM",.13f);gauge(c,530,500,770,"COOLANT","194","°F",.62f);gauge(c,786,500,1062,"TRANS TEMP","178","°F",.55f);
-        panel(c,18,652,650,1025,"NAVIGATION");text(c,"Tap to begin navigation",52,744,25,MUTED,false);text(c,"HOME",52,801,43,WHITE,true);text(c,"Route and traffic open in Maps",52,850,18,MUTED,false);arrow(c,548,818);
-        panel(c,668,652,1062,1025,"MEDIA");marquee(c,MediaBridge.artist,700,750,1030,18,MUTED,true);marquee(c,MediaBridge.title,700,807,1030,29,WHITE,true);button(c,700,885,792,976,"|◀",false);button(c,804,872,932,989,MediaBridge.playing?"Ⅱ":"▶",true);button(c,944,885,1036,976,"▶|",false);
-        panel(c,18,1042,1062,1292,"PERFORMANCE");text(c,"0–60",58,1129,17,MUTED,true);text(c,runTime(),58,1192,39,WHITE,true);text(c,"GPS SPEED",295,1129,17,MUTED,true);text(c,Math.round(speedMph)+" MPH",295,1192,39,WHITE,true);text(c,"OBD",585,1129,17,MUTED,true);float pulse=.55f+.45f*(float)Math.sin(SystemClock.uptimeMillis()/330.0);paint(RED,31,true);p.setAlpha((int)(150+105*pulse));c.drawText("DISCONNECTED",x(585),y(1192),p);p.setAlpha(255);
+        hero(c,63,360,intro);
+        text(c,"COMMAND CENTER",34,102,13,MUTED,true);
+        text(c,"BUILT TO",747,112,17,WHITE,true);text(c,"DOMINATE",869,112,17,RED,true);
+
+        float wifi=deviceLevel(0),bluetooth=deviceLevel(1),brightness=deviceLevel(2),volume=deviceLevel(3);
+        quickControl(c,18,270,"⌁","Wi-Fi",deviceState(0,wifi),wifi);
+        quickControl(c,280,532,"ᛒ","Bluetooth",deviceState(1,bluetooth),bluetooth);
+        quickControl(c,542,794,"☀","Brightness",deviceState(2,brightness),brightness);
+        quickControl(c,804,1062,"◖","Volume",deviceState(3,volume),volume);
+
+        panel(c,18,468,520,900,"//  NAVIGATION");
+        text(c,"VIEW MAP  ›",403,501,11,MUTED,true);
+        text(c,"Tap to begin navigation",42,555,17,MUTED,false);
+        text(c,"HOME",42,607,38,WHITE,true);
+        text(c,"⌂",359,594,28,RED,true);
+        path.reset();path.moveTo(x(320),y(690));path.cubicTo(x(350),y(620),x(422),y(690),x(468),y(610));
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(8));p.setColor(DEEP_RED);c.drawPath(path,p);
+        p.setStrokeWidth(x(3));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);
+        text(c,"RECENT DESTINATIONS",42,722,11,MUTED,true);
+        String recent=recentDestination(0);
+        destinationRow(c,738,"⌂","HOME","GO");
+        destinationRow(c,785,"▣","WORK","GO");
+        destinationRow(c,832,"●",destinationName(recent),recent.isEmpty()?"SEARCH":"GO");
+
+        panel(c,540,468,1062,900,"//  MEDIA");
+        text(c,"NOW PLAYING",945,501,10,MUTED,true);
+        RectF art=new RectF(x(563),y(538),x(747),y(722));p.setColor(0xff16080b);c.drawRoundRect(art,x(10),x(10),p);
+        if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);
+        else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);
+        marquee(c,MediaBridge.title,770,578,1035,23,WHITE,true);
+        marquee(c,MediaBridge.artist,770,612,1035,14,MUTED,false);
+        mediaProgress(c,770,650,1034);
+        button(c,749,734,832,820,"|◀",false);
+        button(c,842,721,939,833,MediaBridge.playing?"Ⅱ":"▶",true);
+        button(c,949,734,1037,820,"▶|",false);
+        text(c,MediaBridge.hasAccess(activity)?"TRX MEDIA CONTROLS CONNECTED":"TAP PLAY TO ENABLE MEDIA",565,872,11,MediaBridge.hasAccess(activity)?MUTED:RED,true);
+
+        compactGauge(c,18,267,"BOOST","0","PSI",.08f);
+        compactGauge(c,280,529,"COOLANT","194","°F",.62f);
+        compactGauge(c,542,791,"TRANS","178","°F",.55f);
+        compactGauge(c,804,1062,"BATTERY","14.4","V",.72f);
+
+        panel(c,18,1074,520,1292,"//  WEATHER");
+        text(c,activity.weatherTemp(),45,1166,45,WHITE,true);
+        text(c,activity.weatherCondition(),45,1207,17,MUTED,true);
+        text(c,"PLAINSBORO, NJ",45,1242,13,MUTED,false);
+        text(c,"☀",370,1202,54,0xffffc849,false);
+
+        panel(c,540,1074,1062,1292,"//  PERFORMANCE");
+        text(c,"0–60",570,1150,14,MUTED,true);text(c,runTime(),570,1213,38,WHITE,true);
+        line(c,760,1127,760,1250,0xff41464e,1);
+        text(c,"GPS SPEED",800,1150,14,MUTED,true);text(c,Math.round(speedMph)+" MPH",800,1213,38,WHITE,true);
     }
     private void navigation(Canvas c){hero(c,63,236,1);text(c,"NAVIGATION",38,125,36,WHITE,true);text(c,"Plainsboro, NJ  •  "+activity.weatherTemp()+"  •  "+activity.weatherCondition(),38,170,20,MUTED,false);panel(c,18,248,1062,1290,"");p.setColor(0xff111820);c.drawRect(x(34),y(266),x(1046),y(1270),p);for(int i=0;i<9;i++)line(c,40,330+i*104,1040,286+i*110,0xff303d47,4);for(int i=0;i<7;i++)line(c,95+i*148,270,65+i*151,1260,0xff27323a,3);path.reset();path.moveTo(x(470),y(1240));path.cubicTo(x(380),y(1050),x(690),y(800),x(590),y(610));path.cubicTo(x(540),y(510),x(700),y(430),x(760),y(300));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(12));p.setColor(DEEP_RED);c.drawPath(path,p);p.setStrokeWidth(x(5));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);panel(c,50,290,505,490,"NEXT TURN");text(c,"0.8 mi",80,380,43,WHITE,true);text(c,"Turn right onto Scudders Mill Rd",80,432,16,MUTED,false);button(c,744,1125,1007,1218,"OPEN MAPS",true);}
     private void media(Canvas c){hero(c,63,250,1);text(c,"MEDIA",38,137,39,WHITE,true);panel(c,18,270,1062,875,"NOW PLAYING");RectF art=new RectF(x(48),y(334),x(470),y(756));p.setShader(new LinearGradient(art.left,art.top,art.right,art.bottom,0xff5a0710,0xff111318,Shader.TileMode.CLAMP));c.drawRoundRect(art,x(14),x(14),p);p.setShader(null);if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);marquee(c,MediaBridge.artist,520,395,1030,18,MUTED,true);marquee(c,MediaBridge.title,520,460,1030,32,WHITE,true);text(c,MediaBridge.hasAccess(activity)?"Android MediaSession connected":"Tap play to enable media access",520,508,17,MUTED,false);button(c,520,630,690,742,"◀",false);button(c,710,610,880,762,MediaBridge.playing?"Ⅱ":"▶",true);button(c,900,630,1030,742,"▶|",false);panel(c,18,895,1062,1290,"MEDIA SOURCES");mediaShelf(c);text(c,"Swipe left or right • Add any installed audio app",46,1218,17,MUTED,false);}
@@ -258,12 +373,23 @@ public final class DashboardView extends View {
         if(page==4&&appVelocity!=null){appVelocity.addMovement(e);appVelocity.computeCurrentVelocity(1000);float vy=appVelocity.getYVelocity();if(moveY>x(24)&&Math.abs(vy)>180){int logicalVelocity=Math.round(-vy*1440f/Math.max(1,usableH));appScroller.fling(0,Math.round(appScroll),0,logicalVelocity,0,0,0,maxAppScroll());postInvalidateOnAnimation();}}
         if(appVelocity!=null){appVelocity.recycle();appVelocity=null;}cancelHeldApp();
         if(yy>=1300){selectPage((int)(xx/216),xx/216>page?1:-1);return true;}
-        if(page==0&&xx<650&&yy>652&&yy<1025){activity.openNavigation();return true;}
-        if(page==0&&xx>668&&yy>652&&yy<1025){
-            if(!MediaBridge.hasAccess(activity)){activity.openMedia();return true;}
-            if(yy>850){if(xx<798)MediaBridge.previous(activity);else if(xx<938)MediaBridge.toggle(activity);else MediaBridge.next(activity);}
-            else MediaBridge.toggle(activity);return true;
+        if(page==0&&yy>365&&yy<462){
+            int quick=Math.max(0,Math.min(3,(int)((xx-18)/262)));activity.openQuickPanel(quick);return true;
         }
+        if(page==0&&xx<530&&yy>468&&yy<905){
+            String recent=recentDestination(0);
+            if(yy>=730&&yy<782){activity.openNavigation();return true;}
+            if(yy>=782&&yy<829){activity.openNavigationTo(prefs.getString("work_destination","Work"));return true;}
+            if(yy>=829){if(recent.isEmpty())selectPage(1,1);else activity.openNavigationTo(recent);return true;}
+            selectPage(1,1);return true;
+        }
+        if(page==0&&xx>=530&&yy>468&&yy<905){
+            if(!MediaBridge.hasAccess(activity)){MediaBridge.requestAccess(activity);return true;}
+            if(yy>705){if(xx<837)MediaBridge.previous(activity);else if(xx<944)MediaBridge.toggle(activity);else MediaBridge.next(activity);}
+            else selectPage(2,1);return true;
+        }
+        if(page==0&&yy>900&&yy<1068){selectPage(3,1);return true;}
+        if(page==0&&xx>530&&yy>1070&&yy<1295){selectPage(3,1);return true;}
         if(page==1&&xx>700&&yy>1080){activity.openNavigation();return true;}
         if(page==2&&yy>600&&yy<790){if(xx<700)MediaBridge.previous(activity);else if(xx<895)MediaBridge.toggle(activity);else MediaBridge.next(activity);return true;}
         if(page==2&&yy>930&&yy<1190){if(moveX>x(24)){invalidate();return true;}int item=(int)((xx-42+mediaScroll)/198);if(item>=0&&item<mediaApps.size())activity.launch(mediaApps.get(item));else if(item==mediaApps.size())activity.openMediaAppPicker();return true;}

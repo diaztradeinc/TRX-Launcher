@@ -508,6 +508,20 @@ public class MainActivity extends Activity {
         } catch (Throwable ignored) { return false; }
     }
 
+    public void openQuickPanel(int kind){
+        try{
+            Intent intent;
+            if(kind==0){
+                intent=android.os.Build.VERSION.SDK_INT>=29?
+                    new Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY):
+                    new Intent(Settings.ACTION_WIFI_SETTINGS);
+            }else if(kind==1)intent=new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
+            else if(kind==2)intent=new Intent(Settings.ACTION_DISPLAY_SETTINGS);
+            else intent=new Intent(Settings.ACTION_SOUND_SETTINGS);
+            startActivity(intent);
+        }catch(Throwable error){openSystemSettings();}
+    }
+
     public void openSystemSettings() {
         try { startActivity(new Intent(Settings.ACTION_SETTINGS)); }
         catch (Throwable ignored) { }

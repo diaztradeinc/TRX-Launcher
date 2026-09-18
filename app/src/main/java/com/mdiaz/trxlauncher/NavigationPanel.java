@@ -225,6 +225,7 @@ public class NavigationPanel extends FrameLayout {
         if(remember.isChecked())prefs.edit().putInt("nav_choice",choice).apply();
         chooser.setVisibility(GONE);
         String address=destination.getText().toString().trim();
+        rememberDestination(address);
         if(choice==1)activity.openWazeNavigation(address);
         else activity.openGoogleMapsNavigation(address);
     }
@@ -356,8 +357,25 @@ public class NavigationPanel extends FrameLayout {
                 .getSystemService(Context.INPUT_METHOD_SERVICE);
             if(keyboard!=null)keyboard.hideSoftInputFromWindow(destination.getWindowToken(),0);
             destination.clearFocus();
+            rememberDestination(full);
             showChooser();
         });
+    }
+
+    private void rememberDestination(String value){
+        if(value==null||value.trim().isEmpty())return;
+        String selected=value.trim();
+        java.util.LinkedHashSet<String> ordered=new java.util.LinkedHashSet<>();
+        ordered.add(selected);
+        String old=prefs.getString("recent_destinations","");
+        if(old!=null)for(String item:old.split("\\n"))if(!item.trim().isEmpty())ordered.add(item.trim());
+        StringBuilder saved=new StringBuilder();int count=0;
+        for(String item:ordered){
+            if(count++>=3)break;
+            if(saved.length()>0)saved.append('\n');
+            saved.append(item);
+        }
+        prefs.edit().putString("recent_destinations",saved.toString()).apply();
     }
 
     private void enableLocation(){
