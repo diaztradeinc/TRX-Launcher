@@ -91,7 +91,7 @@ public class MainActivity extends Activity {
         if (mapView != null) mapView.onResume();
         MediaBridge.ensureConnected(this);
         ObdBridge.start(this);
-        if (dashboard != null) { dashboard.reloadMediaApps(); dashboard.reloadApps(); dashboard.postInvalidate(); }
+        if (dashboard != null) { dashboard.reloadTheme(); dashboard.reloadMediaApps(); dashboard.reloadApps(); dashboard.postInvalidate(); }
     }
 
     @Override protected void onStart(){super.onStart();if(mapView!=null)mapView.onStart();}

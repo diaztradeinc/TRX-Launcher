@@ -244,7 +244,10 @@ public class MediaBridge extends NotificationListenerService {
         return ((track==null?"":track)+"|"+(performer==null?"":performer)).trim().toLowerCase(java.util.Locale.US);
     }
 
+    public static void clearArtworkCache(){artworkCache.clear();queueArtwork=new Bitmap[queueTitles.length];}
+
     private static void requestArtwork(final String track,final String performer){
+        if(instance!=null&&!instance.getSharedPreferences("launcher",MODE_PRIVATE).getBoolean("online_artwork",true))return;
         final String key=trackKey(track,performer);
         if(key.length()<2||artworkCache.containsKey(key)||!artworkRequests.add(key))return;
         artworkExecutor.execute(()->{

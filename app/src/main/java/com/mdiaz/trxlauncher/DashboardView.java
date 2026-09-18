@@ -26,8 +26,9 @@ import java.util.List;
 import java.util.Locale;
 
 public final class DashboardView extends View {
-    private static final int RED=0xffff2338, DEEP_RED=0xff6e0713, WHITE=0xfff5f5f7;
-    private static final int MUTED=0xffaeb2ba, PANEL=0xf20a0c10, LINE=0xff555b64;
+    private static final int WHITE=0xfff5f5f7, PANEL=0xf20a0c10, LINE=0xff555b64;
+    private int RED=0xffff2338, DEEP_RED=0xff6e0713, MUTED=0xffaeb2ba, BACKGROUND=0xff050608;
+    private long lastThemeRefresh;
     private static final String[] PAGES={"Home","Navigation","Media","Performance","Apps"};
     private final MainActivity activity;
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -65,7 +66,9 @@ public final class DashboardView extends View {
         super(context);activity=context;setFocusable(true);
         appScroller=new android.widget.OverScroller(context);
         prefs=context.getSharedPreferences("launcher",Context.MODE_PRIVATE);
-        page=Math.max(0,Math.min(4,prefs.getInt("page",0)));
+        reloadTheme();
+        int startup=prefs.getInt("startup_page",-1);
+        page=startup<0?Math.max(0,Math.min(4,prefs.getInt("page",0))):Math.max(0,Math.min(4,startup));
         hero=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_banner);
         defaultMediaArt=BitmapFactory.decodeResource(getResources(),R.drawable.default_media_art);
         reloadMediaApps();clock.post(ticker);
@@ -78,10 +81,23 @@ public final class DashboardView extends View {
     }
     @Override protected void onDetachedFromWindow(){clock.removeCallbacks(ticker);clock.removeCallbacks(openHeldAppOptions);if(appVelocity!=null){appVelocity.recycle();appVelocity=null;}super.onDetachedFromWindow();}
     @Override public void computeScroll(){super.computeScroll();if(appScroller!=null&&appScroller.computeScrollOffset()){appScroll=appScroller.getCurrY();postInvalidateOnAnimation();}}
-    @Override protected void onDraw(Canvas c){try{drawLauncher(c);}catch(Throwable error){c.drawColor(0xff050607);p.setColor(RED);p.setTextSize(28);c.drawText("TRX LAUNCHER DIAGNOSTIC",30,90,p);p.setColor(WHITE);p.setTextSize(18);c.drawText(error.getClass().getSimpleName()+": "+String.valueOf(error.getMessage()),30,135,p);}}
+    public void reloadTheme(){
+        int choice=prefs.getInt("theme_choice",0);
+        if(choice==1)RED=0xffff9f1a;
+        else if(choice==2)RED=0xffd9dde3;
+        else if(choice==3)RED=0xff438cff;
+        else if(choice==4)RED=prefs.getInt("custom_accent",0xffff2338);
+        else RED=0xffff2338;
+        float[] hsv=new float[3];android.graphics.Color.colorToHSV(RED,hsv);hsv[2]=Math.max(.12f,hsv[2]*.42f);hsv[1]=Math.min(1f,hsv[1]*1.12f);DEEP_RED=android.graphics.Color.HSVToColor(hsv);
+        int display=prefs.getInt("display_mode",0),hour=java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY);
+        boolean night=display==2||(display==0&&(hour<7||hour>=19));
+        BACKGROUND=night?0xff020305:0xff07090d;MUTED=night?0xff9da2ab:0xffb8bdc5;lastThemeRefresh=SystemClock.uptimeMillis();invalidate();
+    }
+
+    @Override protected void onDraw(Canvas c){try{if(SystemClock.uptimeMillis()-lastThemeRefresh>60000)reloadTheme();drawLauncher(c);}catch(Throwable error){c.drawColor(0xff050607);p.setColor(RED);p.setTextSize(28);c.drawText("TRX LAUNCHER DIAGNOSTIC",30,90,p);p.setColor(WHITE);p.setTextSize(18);c.drawText(error.getClass().getSimpleName()+": "+String.valueOf(error.getMessage()),30,135,p);}}
 
     private void drawLauncher(Canvas c){
-        W=getWidth();H=getHeight();u=W/1080f;usableH=Math.max(1,H-safeTop-safeBottom);c.drawColor(0xff050608);carbon(c);status(c);
+        W=getWidth();H=getHeight();u=W/1080f;usableH=Math.max(1,H-safeTop-safeBottom);c.drawColor(BACKGROUND);carbon(c);status(c);
         if(SystemClock.uptimeMillis()-lastMediaRefresh>1000){MediaBridge.refresh(activity);lastMediaRefresh=SystemClock.uptimeMillis();}
         float intro=Math.min(1f,(SystemClock.uptimeMillis()-launchAt)/900f),slide=0;
         if(transitionAt>0){float q=Math.min(1f,(SystemClock.uptimeMillis()-transitionAt)/360f);q=1-(1-q)*(1-q)*(1-q);slide=transitionDirection*(1-q)*W;if(q>=1)transitionAt=0;}
@@ -446,7 +462,7 @@ public final class DashboardView extends View {
         for(int i=0;i<quick.size();i++){
             AppEntry app=quick.get(i);float top=340+i*158;RectF slot=new RectF(x(880),y(top),x(1028),y(top+134));
             p.setShader(new LinearGradient(slot.left,slot.top,slot.left,slot.bottom,0xff272c33,0xff06080b,Shader.TileMode.CLAMP));c.drawRoundRect(slot,x(12),x(12),p);p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0xff3b424b);c.drawRoundRect(slot,x(12),x(12),p);p.setStyle(Paint.Style.FILL);line(c,898,top+8,1010,top+8,0x446f7781,1);
-            int cx=(int)x(954),iy=(int)y(top+12),sz=(int)x(70);try{app.icon.setBounds(cx-sz/2,iy,cx+sz/2,iy+sz);app.icon.draw(c);}catch(Throwable ignored){}
+            float iconScale=Math.max(.8f,Math.min(1.2f,prefs.getInt("app_icon_percent",100)/100f));int cx=(int)x(954),sz=(int)x(70*iconScale),iy=(int)y(top+12+(70-70*iconScale)/2f);try{app.icon.setBounds(cx-sz/2,iy,cx+sz/2,iy+sz);app.icon.draw(c);}catch(Throwable ignored){}
             paint(WHITE,11,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(trim(app.label,16),x(954),y(top+112),p);p.setTextAlign(Paint.Align.LEFT);
         }
         button(c,880,1188,1028,1250,"✎  EDIT",false);
@@ -496,7 +512,7 @@ public final class DashboardView extends View {
         p.setShader(new LinearGradient(card.left,card.top,card.left,card.bottom,selected?0xff343a42:0xff242930,0xff050608,Shader.TileMode.CLAMP));c.drawRoundRect(card,x(18),x(18),p);p.setShader(null);
         p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(selected?2:1));p.setColor(selected?0xffe2e5e9:0xff333941);c.drawRoundRect(card,x(18),x(18),p);p.setStyle(Paint.Style.FILL);
         line(c,l+22,t+9,r-22,t+9,selected?0x99ffffff:0x446f7781,1);
-        Drawable icon=a.icon;int top=(int)y(t+17),sz=Math.max(1,Math.round(74*scale));try{icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);icon.draw(c);}catch(Throwable ignored){}
+        Drawable icon=a.icon;float iconScale=Math.max(.8f,Math.min(1.2f,prefs.getInt("app_icon_percent",100)/100f));int sz=Math.max(1,Math.round(74*scale*iconScale)),top=(int)y(t+17+(74-74*iconScale)/2f);try{icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);icon.draw(c);}catch(Throwable ignored){}
         line(c,l+17,t+107,r-17,t+107,selected?0x88aab0b8:0x443b424b,1);
         drawAppLabel(c,a.label,cx,l+10,r-10,b+1,scale);
         if(isFavorite(a)){paint(RED,12,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText("★",x(r-13),y(t+23),p);p.setTextAlign(Paint.Align.LEFT);}
