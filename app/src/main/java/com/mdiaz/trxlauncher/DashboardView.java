@@ -200,6 +200,16 @@ public final class DashboardView extends View {
         p.setTextAlign(Paint.Align.RIGHT);text(c,duration>0?formatMediaTime(duration):"--:--",r,t+27,10,MUTED,false);p.setTextAlign(Paint.Align.LEFT);
     }
 
+    private String weatherIcon(){
+        String condition=activity.weatherCondition();
+        condition=condition==null?"":condition.toUpperCase(Locale.US);
+        if(condition.contains("THUNDER"))return "ϟ";
+        if(condition.contains("SNOW")||condition.contains("ICE"))return "❄";
+        if(condition.contains("RAIN")||condition.contains("DRIZZLE")||condition.contains("SHOWER"))return "☂";
+        if(condition.contains("CLOUD")||condition.contains("FOG")||condition.contains("OVERCAST"))return "☁";
+        return "☀";
+    }
+
     private void home(Canvas c,float intro){
         hero(c,63,360,intro);
         text(c,"COMMAND CENTER",34,102,13,MUTED,true);
@@ -230,8 +240,8 @@ public final class DashboardView extends View {
         RectF art=new RectF(x(563),y(538),x(747),y(722));p.setColor(0xff16080b);c.drawRoundRect(art,x(10),x(10),p);
         if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);
         else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);
-        marquee(c,MediaBridge.title,770,578,1035,23,WHITE,true);
-        marquee(c,MediaBridge.artist,770,612,1035,14,MUTED,false);
+        text(c,trim(MediaBridge.title,28),770,578,17,WHITE,true);
+        text(c,trim(MediaBridge.artist,30),770,612,13,MUTED,false);
         mediaProgress(c,770,650,1034);
         button(c,749,734,832,820,"|◀",false);
         button(c,842,721,939,833,MediaBridge.playing?"Ⅱ":"▶",true);
@@ -247,7 +257,7 @@ public final class DashboardView extends View {
         text(c,activity.weatherTemp(),45,1166,45,WHITE,true);
         text(c,activity.weatherCondition(),45,1207,17,MUTED,true);
         text(c,"PLAINSBORO, NJ",45,1242,13,MUTED,false);
-        text(c,"☀",370,1202,54,0xffffc849,false);
+        text(c,weatherIcon(),370,1202,54,0xffffc849,false);
 
         panel(c,540,1074,1062,1292,"//  PERFORMANCE");
         text(c,"0–60",570,1150,14,MUTED,true);text(c,runTime(),570,1213,38,WHITE,true);

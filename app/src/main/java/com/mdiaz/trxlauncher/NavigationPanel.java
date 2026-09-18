@@ -62,9 +62,9 @@ public class NavigationPanel extends FrameLayout {
         // so the launcher never depends on a paid tile provider or API key.
         map.setTileSource(TileSourceFactory.MAPNIK);
         ColorMatrix darkTiles=new ColorMatrix(new float[]{
-            -0.72f,0,0,0,210,
-            0,-0.72f,0,0,210,
-            0,0,-0.72f,0,210,
+            0.11f,0.22f,0.05f,0,5,
+            0.12f,0.24f,0.05f,0,7,
+            0.14f,0.27f,0.06f,0,10,
             0,0,0,1,0
         });
         map.getOverlayManager().getTilesOverlay().setColorFilter(
