@@ -89,6 +89,7 @@ public class MainActivity extends Activity {
         super.onResume();
         if (mapView != null) mapView.onResume();
         MediaBridge.ensureConnected(this);
+        ObdBridge.start(this);
         if (dashboard != null) { dashboard.reloadMediaApps(); dashboard.reloadApps(); dashboard.postInvalidate(); }
     }
 
@@ -351,6 +352,7 @@ public class MainActivity extends Activity {
             if (locationManager != null) locationManager.removeUpdates(gpsListener);
         } catch (Throwable ignored) { }
         if(mapView!=null)mapView.onDestroy();
+        ObdBridge.stop();
         super.onDestroy();
     }
 

@@ -248,10 +248,10 @@ public final class DashboardView extends View {
         button(c,949,734,1037,820,"▶|",false);
         text(c,MediaBridge.hasAccess(activity)?"TRX MEDIA CONTROLS CONNECTED":"TAP PLAY TO ENABLE MEDIA",565,872,11,MediaBridge.hasAccess(activity)?MUTED:RED,true);
 
-        compactGauge(c,18,267,"BOOST","0","PSI",.08f);
-        compactGauge(c,280,529,"COOLANT","194","°F",.62f);
-        compactGauge(c,542,791,"TRANS","178","°F",.55f);
-        compactGauge(c,804,1062,"BATTERY","14.4","V",.72f);
+        compactGauge(c,18,267,"BOOST",obdText(ObdBridge.boostPsi,1),"PSI",obdLevel(ObdBridge.boostPsi,0,15));
+        compactGauge(c,280,529,"COOLANT",obdText(ObdBridge.coolantF,0),"°F",obdLevel(ObdBridge.coolantF,100,240));
+        compactGauge(c,542,791,"TRANS",obdText(ObdBridge.transmissionF,0),"°F",obdLevel(ObdBridge.transmissionF,100,240));
+        compactGauge(c,804,1062,"BATTERY",obdText(ObdBridge.batteryV,1),"V",obdLevel(ObdBridge.batteryV,11,15));
 
         panel(c,18,1074,520,1292,"//  WEATHER");
         text(c,activity.weatherTemp(),45,1166,45,WHITE,true);
@@ -263,10 +263,48 @@ public final class DashboardView extends View {
         text(c,"0–60",570,1150,14,MUTED,true);text(c,runTime(),570,1213,38,WHITE,true);
         line(c,760,1127,760,1250,0xff41464e,1);
         text(c,"GPS SPEED",800,1150,14,MUTED,true);text(c,Math.round(speedMph)+" MPH",800,1213,38,WHITE,true);
+        text(c,trim(ObdBridge.status,42),570,1264,10,ObdBridge.connected?0xff50dc83:RED,true);
     }
     private void navigation(Canvas c){hero(c,63,236,1);text(c,"NAVIGATION",38,125,36,WHITE,true);text(c,"Plainsboro, NJ  •  "+activity.weatherTemp()+"  •  "+activity.weatherCondition(),38,170,20,MUTED,false);panel(c,18,248,1062,1290,"");p.setColor(0xff111820);c.drawRect(x(34),y(266),x(1046),y(1270),p);for(int i=0;i<9;i++)line(c,40,330+i*104,1040,286+i*110,0xff303d47,4);for(int i=0;i<7;i++)line(c,95+i*148,270,65+i*151,1260,0xff27323a,3);path.reset();path.moveTo(x(470),y(1240));path.cubicTo(x(380),y(1050),x(690),y(800),x(590),y(610));path.cubicTo(x(540),y(510),x(700),y(430),x(760),y(300));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(12));p.setColor(DEEP_RED);c.drawPath(path,p);p.setStrokeWidth(x(5));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);panel(c,50,290,505,490,"NEXT TURN");text(c,"0.8 mi",80,380,43,WHITE,true);text(c,"Turn right onto Scudders Mill Rd",80,432,16,MUTED,false);button(c,744,1125,1007,1218,"OPEN MAPS",true);}
     private void media(Canvas c){hero(c,63,250,1);text(c,"MEDIA",38,137,39,WHITE,true);panel(c,18,270,1062,875,"NOW PLAYING");RectF art=new RectF(x(48),y(334),x(470),y(756));p.setShader(new LinearGradient(art.left,art.top,art.right,art.bottom,0xff5a0710,0xff111318,Shader.TileMode.CLAMP));c.drawRoundRect(art,x(14),x(14),p);p.setShader(null);if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);marquee(c,MediaBridge.artist,520,395,1030,18,MUTED,true);marquee(c,MediaBridge.title,520,460,1030,32,WHITE,true);text(c,MediaBridge.hasAccess(activity)?"Android MediaSession connected":"Tap play to enable media access",520,508,17,MUTED,false);button(c,520,630,690,742,"◀",false);button(c,710,610,880,762,MediaBridge.playing?"Ⅱ":"▶",true);button(c,900,630,1030,742,"▶|",false);panel(c,18,895,1062,1290,"MEDIA SOURCES");mediaShelf(c);text(c,"Swipe left or right • Add any installed audio app",46,1218,17,MUTED,false);}
-    private void performance(Canvas c){hero(c,63,270,1);text(c,"PERFORMANCE",38,130,36,WHITE,true);gauge(c,18,285,258,"GPS SPEED",String.valueOf(Math.round(speedMph)),"MPH",Math.min(1,speedMph/120f));gauge(c,274,285,514,"RPM","--","RPM",.03f);gauge(c,530,285,770,"COOLANT","--","°F",.03f);gauge(c,786,285,1062,"TRANS TEMP","--","°F",.03f);panel(c,18,442,520,825,"0–60 GPS TIMER");text(c,"0–60",60,538,18,MUTED,true);text(c,runTime(),60,610,49,WHITE,true);text(c,"STATUS",280,538,18,MUTED,true);text(c,runActive?"RUNNING":(runArmed?"ARMED":"READY"),280,610,31,runActive?RED:WHITE,true);button(c,55,685,245,785,"START",true);button(c,270,685,475,785,"RESET",false);panel(c,540,442,1062,825,"ACCELERATION");for(int i=0;i<5;i++)line(c,570,520+i*58,1035,520+i*58,0xff30343a,1);for(int i=0;i<6;i++)line(c,590+i*85,500,590+i*85,790,0xff30343a,1);text(c,"Timer begins automatically above 1 MPH",615,655,18,MUTED,false);panel(c,18,845,1062,1135,"LIVE DATA");gauge(c,38,900,280,"GPS SPEED",String.valueOf(Math.round(speedMph)),"MPH",Math.min(1,speedMph/120f));gauge(c,294,900,536,"ENGINE LOAD","--","%",.03f);gauge(c,550,900,792,"INTAKE TEMP","--","°F",.03f);gauge(c,806,900,1042,"BATTERY","--","V",.03f);panel(c,18,1150,1062,1290,"SESSION HISTORY");text(c,zeroToSixty>0?"Last 0–60: "+String.format(Locale.US,"%.1f seconds",zeroToSixty):"No completed runs",50,1235,20,MUTED,false);}
+    private String obdText(float value,int decimals){
+        if(Float.isNaN(value))return "--";
+        return decimals==0?String.valueOf(Math.round(value)):String.format(Locale.US,"%."+decimals+"f",value);
+    }
+    private float obdLevel(float value,float min,float max){
+        if(Float.isNaN(value)||max<=min)return .02f;
+        return Math.max(.02f,Math.min(1f,(value-min)/(max-min)));
+    }
+
+    private void performance(Canvas c){
+        hero(c,63,270,1);text(c,"PERFORMANCE",38,130,36,WHITE,true);
+        gauge(c,18,285,258,"GPS SPEED",String.valueOf(Math.round(speedMph)),"MPH",Math.min(1,speedMph/120f));
+        gauge(c,274,285,514,"RPM",obdText(ObdBridge.rpm,0),"RPM",obdLevel(ObdBridge.rpm,0,7000));
+        gauge(c,530,285,770,"COOLANT",obdText(ObdBridge.coolantF,0),"°F",obdLevel(ObdBridge.coolantF,100,240));
+        gauge(c,786,285,1062,"TRANS TEMP",obdText(ObdBridge.transmissionF,0),"°F",obdLevel(ObdBridge.transmissionF,100,240));
+
+        panel(c,18,442,520,825,"0–60 GPS TIMER");
+        text(c,"0–60",60,538,18,MUTED,true);text(c,runTime(),60,610,49,WHITE,true);
+        text(c,"STATUS",280,538,18,MUTED,true);
+        text(c,runActive?"RUNNING":(runArmed?"ARMED":"READY"),280,610,31,runActive?RED:WHITE,true);
+        button(c,55,685,245,785,"START",true);button(c,270,685,475,785,"RESET",false);
+
+        panel(c,540,442,1062,825,"ACCELERATION");
+        for(int i=0;i<5;i++)line(c,570,520+i*58,1035,520+i*58,0xff30343a,1);
+        for(int i=0;i<6;i++)line(c,590+i*85,500,590+i*85,790,0xff30343a,1);
+        text(c,"Timer begins automatically above 1 MPH",615,655,18,MUTED,false);
+
+        panel(c,18,845,1062,1135,"LIVE OBD-II DATA");
+        gauge(c,38,900,280,"BOOST",obdText(ObdBridge.boostPsi,1),"PSI",obdLevel(ObdBridge.boostPsi,0,15));
+        gauge(c,294,900,536,"ENGINE LOAD",obdText(ObdBridge.engineLoad,0),"%",obdLevel(ObdBridge.engineLoad,0,100));
+        gauge(c,550,900,792,"INTAKE TEMP",obdText(ObdBridge.intakeF,0),"°F",obdLevel(ObdBridge.intakeF,40,180));
+        gauge(c,806,900,1042,"BATTERY",obdText(ObdBridge.batteryV,1),"V",obdLevel(ObdBridge.batteryV,11,15));
+
+        panel(c,18,1150,1062,1290,"OBD STATUS • SESSION HISTORY");
+        text(c,ObdBridge.status,50,1213,17,ObdBridge.connected?0xff50dc83:RED,true);
+        text(c,zeroToSixty>0?"Last 0–60: "+String.format(Locale.US,"%.1f seconds",zeroToSixty):"No completed runs",50,1252,16,MUTED,false);
+        p.setTextAlign(Paint.Align.RIGHT);text(c,"TRANS TEMP REQUIRES VERIFIED RAM PID",1030,1252,11,MUTED,true);p.setTextAlign(Paint.Align.LEFT);
+    }
     private void apps(Canvas c){
         hero(c,63,216,1);text(c,"ALL APPS",38,126,38,WHITE,true);
         text(c,displayApps.size()+" OF "+apps.size()+" INSTALLED",38,173,16,MUTED,true);
