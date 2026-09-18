@@ -28,6 +28,12 @@ public class MediaBridge extends NotificationListenerService {
     public static volatile Bitmap[] queueArtwork=new Bitmap[0];
     private static volatile long positionMs;
     private static volatile long positionCapturedAt;
+    private static final java.util.Map<String,Bitmap> artworkCache=java.util.Collections.synchronizedMap(
+        new java.util.LinkedHashMap<String,Bitmap>(64,.75f,true){
+            @Override protected boolean removeEldestEntry(java.util.Map.Entry<String,Bitmap> eldest){return size()>64;}
+        });
+    private static final java.util.Set<String> artworkRequests=java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+    private static final java.util.concurrent.ExecutorService artworkExecutor=java.util.concurrent.Executors.newFixedThreadPool(2);
 
     @Override public void onListenerConnected() {
         super.onListenerConnected();
@@ -180,6 +186,7 @@ public class MediaBridge extends NotificationListenerService {
             if (art == null) art = metadata.getBitmap(MediaMetadata.METADATA_KEY_ART);
             if (art == null) art = metadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
             artwork = art;
+            if(art!=null)artworkCache.put(trackKey(title,artist),art);
             updateQueue(active);
         } catch (Throwable ignored) { }
     }
@@ -195,17 +202,82 @@ public class MediaBridge extends NotificationListenerService {
                 if(item==null||item.getQueueId()==currentId)continue;
                 android.media.MediaDescription d=item.getDescription();
                 CharSequence t=d==null?null:d.getTitle(),a=d==null?null:d.getSubtitle();
-                titles.add(t==null?"UPCOMING TRACK":t.toString());artists.add(a==null?"":a.toString());
-                Bitmap image=d==null?null:d.getIconBitmap();
-                if(image==null&&d!=null&&d.getIconUri()!=null&&instance!=null){
-                    java.io.InputStream stream=null;
-                    try{stream=instance.getContentResolver().openInputStream(d.getIconUri());image=android.graphics.BitmapFactory.decodeStream(stream);}
-                    catch(Throwable ignored){}finally{try{if(stream!=null)stream.close();}catch(Throwable ignored){}}
-                }
+                String track=t==null?"UPCOMING TRACK":t.toString(),performer=a==null?"":a.toString();
+                titles.add(track);artists.add(performer);
+                Bitmap image=descriptionArtwork(d);
+                if(image==null)image=artworkCache.get(trackKey(track,performer));
                 images.add(image);if(titles.size()>=3)break;
             }
             queueTitles=titles.toArray(new String[0]);queueArtists=artists.toArray(new String[0]);queueArtwork=images.toArray(new Bitmap[0]);
+            for(int i=0;i<queueTitles.length;i++)if(i>=queueArtwork.length||queueArtwork[i]==null)requestArtwork(queueTitles[i],i<queueArtists.length?queueArtists[i]:"");
         }catch(Throwable ignored){queueTitles=new String[0];queueArtists=new String[0];queueArtwork=new Bitmap[0];}
+    }
+
+    private static Bitmap descriptionArtwork(android.media.MediaDescription description){
+        if(description==null)return null;
+        Bitmap result=description.getIconBitmap();if(result!=null)return result;
+        result=loadLocalArtwork(description.getIconUri());if(result!=null)return result;
+        try{
+            android.os.Bundle extras=description.getExtras();
+            if(extras!=null)for(String key:extras.keySet()){
+                String lower=key==null?"":key.toLowerCase(java.util.Locale.US);
+                if(!(lower.contains("art")||lower.contains("album")||lower.contains("icon")||lower.contains("image")||lower.contains("thumb")))continue;
+                Object value;try{value=extras.get(key);}catch(Throwable ignored){continue;}
+                if(value instanceof Bitmap)return (Bitmap)value;
+                if(value instanceof android.net.Uri){result=loadLocalArtwork((android.net.Uri)value);if(result!=null)return result;}
+                if(value instanceof String){try{result=loadLocalArtwork(android.net.Uri.parse((String)value));if(result!=null)return result;}catch(Throwable ignored){}}
+            }
+        }catch(Throwable ignored){}
+        return null;
+    }
+
+    private static Bitmap loadLocalArtwork(android.net.Uri uri){
+        if(uri==null||instance==null)return null;
+        String scheme=uri.getScheme();
+        if(scheme==null||(!scheme.equals("content")&&!scheme.equals("file")&&!scheme.equals("android.resource")))return null;
+        java.io.InputStream stream=null;
+        try{stream=instance.getContentResolver().openInputStream(uri);return android.graphics.BitmapFactory.decodeStream(stream);}
+        catch(Throwable ignored){return null;}finally{try{if(stream!=null)stream.close();}catch(Throwable ignored){}}
+    }
+
+    private static String trackKey(String track,String performer){
+        return ((track==null?"":track)+"|"+(performer==null?"":performer)).trim().toLowerCase(java.util.Locale.US);
+    }
+
+    private static void requestArtwork(final String track,final String performer){
+        final String key=trackKey(track,performer);
+        if(key.length()<2||artworkCache.containsKey(key)||!artworkRequests.add(key))return;
+        artworkExecutor.execute(()->{
+            try{
+                Bitmap found=lookupArtwork(track,performer);
+                if(found!=null){
+                    artworkCache.put(key,found);
+                    String[] titles=queueTitles,artists=queueArtists;Bitmap[] current=queueArtwork;
+                    Bitmap[] updated=java.util.Arrays.copyOf(current,Math.max(current.length,titles.length));
+                    for(int i=0;i<titles.length;i++)if(key.equals(trackKey(titles[i],i<artists.length?artists[i]:"")))updated[i]=found;
+                    queueArtwork=updated;
+                }
+            }catch(Throwable ignored){}finally{artworkRequests.remove(key);}
+        });
+    }
+
+    private static Bitmap lookupArtwork(String track,String performer){
+        java.net.HttpURLConnection connection=null;java.io.InputStream stream=null;
+        try{
+            String query=(track==null?"":track)+" "+(performer==null?"":performer);
+            String encoded=java.net.URLEncoder.encode(query,"UTF-8");
+            java.net.URL search=new java.net.URL("https://itunes.apple.com/search?media=music&entity=song&country=US&limit=1&term="+encoded);
+            connection=(java.net.HttpURLConnection)search.openConnection();connection.setConnectTimeout(4500);connection.setReadTimeout(5500);connection.setRequestProperty("User-Agent","TRX-Launcher/1.5.2");
+            stream=connection.getInputStream();java.io.ByteArrayOutputStream data=new java.io.ByteArrayOutputStream();byte[] buffer=new byte[4096];int count;
+            while((count=stream.read(buffer))!=-1)data.write(buffer,0,count);
+            org.json.JSONObject root=new org.json.JSONObject(data.toString("UTF-8"));org.json.JSONArray results=root.optJSONArray("results");
+            if(results==null||results.length()==0)return null;String artworkUrl=results.getJSONObject(0).optString("artworkUrl100","");
+            if(artworkUrl.isEmpty())return null;artworkUrl=artworkUrl.replace("100x100bb","300x300bb");
+            try{stream.close();}catch(Throwable ignored){}stream=null;connection.disconnect();connection=null;
+            connection=(java.net.HttpURLConnection)new java.net.URL(artworkUrl).openConnection();connection.setConnectTimeout(4500);connection.setReadTimeout(5500);connection.setRequestProperty("User-Agent","TRX-Launcher/1.5.2");
+            stream=connection.getInputStream();return android.graphics.BitmapFactory.decodeStream(stream);
+        }catch(Throwable ignored){return null;}
+        finally{try{if(stream!=null)stream.close();}catch(Throwable ignored){}if(connection!=null)connection.disconnect();}
     }
 
     public static long currentPositionMs(){
