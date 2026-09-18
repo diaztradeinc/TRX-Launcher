@@ -179,7 +179,7 @@ final class FirstRunView extends View {
         p.setShader(new LinearGradient(0,y(0),0,y(bottom),0x00000000,0xff030405,Shader.TileMode.CLAMP));c.drawRect(0,y(0),W,y(bottom),p);p.setShader(null);
         float scan=Math.min(1,(SystemClock.uptimeMillis()-phaseAt)/1900f);if(scan<1){p.setColor(0x99ff2338);p.setStrokeWidth(2*scale);c.drawLine(0,y(35+bottom*scan),W,y(35+bottom*scan),p);}
         text(c,"RAM",30,48,25,WHITE,true);
-        String badge="FIRST-RUN SETUP  •  v1.1";p.setTextSize(12*scale);p.setTypeface(Typeface.DEFAULT_BOLD);float badgeWidth=p.measureText(badge)/sx+30;float left=1080-30-badgeWidth;
+        String badge="FIRST-RUN SETUP  •  v1.3";p.setTextSize(12*scale);p.setTypeface(Typeface.DEFAULT_BOLD);float badgeWidth=p.measureText(badge)/sx+30;float left=1080-30-badgeWidth;
         box(c,left,18,1050,58,0xdd090b0e,0xff7a1722,20);text(c,badge,left+15,45,12,0xffff6573,true);
         float rise=(1-ease(850))*25;text(c,"WELCOME TO",390,276+rise,14,RED,true);text(c,"TRX",260,356+rise,58,WHITE,true);text(c,"LAUNCHER",442,356+rise,58,RED,true);
         box(c,330,382,750,430,0xcc050608,RED,4);text(c,"SUPERCHARGED",353,413,14,RED,true);text(c,"6.2L V8",590,413,14,WHITE,true);
@@ -217,11 +217,30 @@ final class FirstRunView extends View {
     }
 
     private void drawComplete(Canvas c){
-        p.setColor(0xee030405);c.drawRect(0,y(0),W,H-safeBottom,p);box(c,300,430,780,910,0xff0b0e12,RED,24);
-        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3*scale);p.setColor(RED);c.drawCircle(W/2,y(545),58*scale,p);p.setStyle(Paint.Style.FILL);
-        text(c,"✓",510,565,44,RED,true);text(c,"SETUP COMPLETE",372,660,28,WHITE,true);text(c,"TRX Launcher is ready to dominate.",372,705,14,MUTED,false);primary(c,350,760,730,850,"LAUNCH TRX");
+        float enter=ease(650),rise=(1-enter)*34;
+        p.setColor(0x66030405);c.drawRect(0,y(0),W,H-safeBottom,p);
+        box(c,58,680+rise,1022,1328+rise,0xf40b0e12,0xff515761,22);
+        line(c,86,705+rise,994,705+rise,0xffff2338,3);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(4*scale);p.setColor(RED);
+        c.drawCircle(x(154),y(790+rise),64*scale,p);p.setStyle(Paint.Style.FILL);
+        text(c,"✓",128,813+rise,45,RED,true);
+        text(c,"SYSTEM READY",250,760+rise,13,RED,true);
+        text(c,"TRX COMMAND CENTER",250,810+rise,31,WHITE,true);
+        text(c,"Setup complete. Your launcher is configured for the road.",250,850+rise,14,MUTED,false);
+        box(c,86,900+rise,370,1012+rise,0xff080a0d,0xff30363e,12);
+        box(c,398,900+rise,682,1012+rise,0xff080a0d,0xff30363e,12);
+        box(c,710,900+rise,994,1012+rise,0xff080a0d,0xff30363e,12);
+        text(c,"ACCESS",110,936+rise,11,MUTED,true);text(c,"READY",110,982+rise,22,GREEN,true);
+        text(c,"HOME",422,936+rise,11,MUTED,true);text(c,"TRX DEFAULT",422,982+rise,22,WHITE,true);
+        text(c,"PROFILE",734,936+rise,11,MUTED,true);text(c,"6.2L V8",734,982+rise,22,RED,true);
+        text(c,"BUILT TO DOMINATE",86,1080+rise,13,MUTED,true);
+        primary(c,86,1122+rise,994,1245+rise,"ENTER TRX LAUNCHER");
+        p.setTextAlign(Paint.Align.CENTER);text(c,"All settings can be changed later.",445,1292+rise,11,MUTED,false);p.setTextAlign(Paint.Align.LEFT);
     }
 
+    private void line(Canvas c,float l,float t,float r,float b,int color,float width){
+        p.setShader(null);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(width*scale);p.setColor(color);c.drawLine(x(l),y(t),x(r),y(b),p);p.setStyle(Paint.Style.FILL);
+    }
     boolean isSetup(){return phase==1;}
     void showSetup(){phase=1;activeStep=-1;phaseAt=SystemClock.uptimeMillis();invalidate();}
     void showIntro(){phase=0;activeStep=-1;phaseAt=SystemClock.uptimeMillis();invalidate();}
@@ -235,7 +254,7 @@ final class FirstRunView extends View {
         if(Math.abs(e.getX()-downX)>20*scale||Math.abs(e.getY()-downY)>20*scale)return true;
         if(phase==0&&yy>1130&&yy<1310){activity.beginSetup();return true;}
         if(phase==1&&yy>1240&&yy<1390){activity.beginPermissionSequence();return true;}
-        if(phase==2&&yy>730&&yy<890){activity.finishSetup();return true;}
+        if(phase==2&&yy>1090&&yy<1285){activity.finishSetup();return true;}
         return true;
     }
 }
