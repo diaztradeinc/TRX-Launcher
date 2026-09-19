@@ -29,7 +29,7 @@ for page in 108 324 540 756 972; do
     adb shell input tap "$tab" 355
     sleep 1
     test -n "$(adb shell pidof com.mdiaz.trxlauncher)"
-    adb shell dumpsys activity activities | grep 'mResumedActivity' | grep -q 'com.mdiaz.trxlauncher'
+    adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | grep -q 'com.mdiaz.trxlauncher'
     adb exec-out screencap -p > "verification/page-${page}-tab-${tab}.png"
     if [ "$page" = 324 ] && { [ "$tab" = 574 ] || [ "$tab" = 791 ]; }; then adb shell input keyevent BACK; sleep 2; fi
   done
