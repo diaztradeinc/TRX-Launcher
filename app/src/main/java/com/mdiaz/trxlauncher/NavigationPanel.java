@@ -30,6 +30,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.libraries.navigation.ListenableResultFuture;
 import com.google.android.libraries.navigation.NavigationApi;
@@ -62,6 +63,7 @@ public class NavigationPanel extends FrameLayout {
     private Navigator navigator;
     private GoogleMap googleMap;
     private boolean trafficEnabled = true;
+    private boolean satelliteEnabled;
     private int suggestionRequest;
     private boolean selectingSuggestion;
     private boolean guiding;
@@ -171,7 +173,8 @@ public class NavigationPanel extends FrameLayout {
         addMapTool("−", () -> zoomBy(-1f), "Zoom out");
         addMapTool("◎", this::recenterMap, "Recenter map");
         addMapTool("T", this::toggleTraffic, "Toggle live traffic");
-        LayoutParams toolsLp = new LayoutParams(dp(58), dp(226), Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        addMapTool("L", this::toggleMapLayer, "Toggle map layer");
+        LayoutParams toolsLp = new LayoutParams(dp(58), dp(280), Gravity.RIGHT | Gravity.CENTER_VERTICAL);
         toolsLp.setMargins(0, 0, dp(16), 0);
         addView(mapTools, toolsLp);
 
@@ -326,6 +329,8 @@ public class NavigationPanel extends FrameLayout {
                     map.getUiSettings().setCompassEnabled(true);
                     map.getUiSettings().setMyLocationButtonEnabled(true);
                     map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                    try { map.setMapStyle(MapStyleOptions.loadRawResourceStyle(activity, R.raw.map_dark)); }
+                    catch (Throwable ignored) { }
                     map.setTrafficEnabled(trafficEnabled);
 
                     LatLng start = new LatLng(40.3323, -74.5819);
@@ -698,6 +703,17 @@ public class NavigationPanel extends FrameLayout {
             ? "GOOGLE LIVE TRAFFIC  •  PINCH TO ZOOM"
             : "TRAFFIC OFF  •  PINCH TO ZOOM");
         Toast.makeText(activity, trafficEnabled ? "Live traffic on" : "Live traffic off", Toast.LENGTH_SHORT).show();
+    }
+
+    private void toggleMapLayer() {
+        satelliteEnabled = !satelliteEnabled;
+        if (googleMap != null) {
+            googleMap.setMapType(satelliteEnabled ? GoogleMap.MAP_TYPE_HYBRID : GoogleMap.MAP_TYPE_NORMAL);
+            if (!satelliteEnabled) try {
+                googleMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(activity, R.raw.map_dark));
+            } catch (Throwable ignored) { }
+        }
+        Toast.makeText(activity, satelliteEnabled ? "Hybrid map" : "Dark road map", Toast.LENGTH_SHORT).show();
     }
 
     private void showRecentDestinations() {
