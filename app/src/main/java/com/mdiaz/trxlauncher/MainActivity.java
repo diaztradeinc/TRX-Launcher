@@ -229,9 +229,9 @@ public class MainActivity extends Activity {
             int usable=Math.max(1,h-topInset-bottomInset);
             int side=Math.round(w*18f/1080f);
             FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(
-                Math.max(1,w-side*2),Math.max(1,Math.round(usable*1042f/1440f)));
+                Math.max(1,w-side*2),Math.max(1,Math.round(usable*868f/1440f)));
             lp.leftMargin=side;
-            lp.topMargin=topInset+Math.round(usable*248f/1440f);
+            lp.topMargin=topInset+Math.round(usable*410f/1440f);
             mapPanel.setLayoutParams(lp);
             if(mapPanel.getParent()==null)root.addView(mapPanel);
             mapPanel.setVisibility(View.VISIBLE);mapPanel.bringToFront();
@@ -403,6 +403,20 @@ public class MainActivity extends Activity {
             startActivity(new Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_APP_MUSIC));
         }catch(Throwable ignored){openSystemSettings();}
+    }
+
+    public void requestMediaAccess() {
+        if (MediaBridge.hasAccess(this)) {
+            MediaBridge.ensureConnected(this);
+            android.widget.Toast.makeText(this,"TRX media controls are connected",android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Connect TRX Media Controls")
+            .setMessage("One Android confirmation lets TRX Launcher show artwork, track details, queues, and playback controls. This is required only once and can be turned off later in system settings.")
+            .setNegativeButton("Not now",null)
+            .setPositiveButton("Continue",(dialog,which)->MediaBridge.requestAccess(this))
+            .show();
     }
 
     public void openMediaAppPicker(){
