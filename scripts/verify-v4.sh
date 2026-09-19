@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
+mkdir -p verification
+capture_diagnostics() {
+  adb logcat -d | python3 -c 'import sys,re; lines=[re.sub(r"AIza[0-9A-Za-z_-]+", "[REDACTED]",s) for s in sys.stdin if re.search(r"TRXNavigation|Authorization failure|not authorized|API project|API key|Google Maps Android API",s,re.I)];print("".join(lines))' > verification/navigation-diagnostics.txt
+  cat verification/navigation-diagnostics.txt
+}
+trap capture_diagnostics EXIT
 adb install app/build/outputs/apk/debug/app-debug.apk
 adb shell wm size 1080x1440
 adb shell wm density 160
@@ -15,14 +21,17 @@ adb shell am start -W -n com.mdiaz.trxlauncher/.MainActivity
 sleep 8
 mkdir -p verification
 for page in 108 324 540 756 972; do
+  adb shell am start -W -n com.mdiaz.trxlauncher/.MainActivity
+  sleep 1
   adb shell input tap "$page" 1360
   sleep 2
   for tab in 140 357 574 791; do
     adb shell input tap "$tab" 355
     sleep 1
     test -n "$(adb shell pidof com.mdiaz.trxlauncher)"
+    adb shell dumpsys activity activities | grep 'mResumedActivity' | grep -q 'com.mdiaz.trxlauncher'
     adb exec-out screencap -p > "verification/page-${page}-tab-${tab}.png"
-    if [ "$page" = 324 ] && { [ "$tab" = 574 ] || [ "$tab" = 791 ]; }; then adb shell input keyevent BACK; fi
+    if [ "$page" = 324 ] && { [ "$tab" = 574 ] || [ "$tab" = 791 ]; }; then adb shell input keyevent BACK; sleep 2; fi
   done
 done
 adb logcat -d -b crash > verification/crash-log.txt

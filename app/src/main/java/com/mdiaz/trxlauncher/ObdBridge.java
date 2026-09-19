@@ -144,23 +144,24 @@ public final class ObdBridge {
         float[] data;
 
         data=pid("0C",2);
-        if(data!=null)rpm=(data[0]*256f+data[1])/4f;
+        rpm=data==null?Float.NaN:(data[0]*256f+data[1])/4f;
 
         data=pid("05",1);
-        if(data!=null)coolantF=toF(data[0]-40f);
+        coolantF=data==null?Float.NaN:toF(data[0]-40f);
 
         data=pid("04",1);
-        if(data!=null)engineLoad=data[0]*100f/255f;
+        engineLoad=data==null?Float.NaN:data[0]*100f/255f;
 
         data=pid("0F",1);
-        if(data!=null)intakeF=toF(data[0]-40f);
+        intakeF=data==null?Float.NaN:toF(data[0]-40f);
 
         data=pid("0D",1);
-        if(data!=null)obdSpeedMph=data[0]*0.621371f;
+        obdSpeedMph=data==null?Float.NaN:data[0]*0.621371f;
 
         data=pid("42",2);
         if(data!=null)batteryV=(data[0]*256f+data[1])/1000f;
         else{
+            batteryV=Float.NaN;
             String voltage=command("ATRV",1000).replaceAll("[^0-9.]","");
             try{if(!voltage.isEmpty())batteryV=Float.parseFloat(voltage);}catch(Throwable ignored){}
         }
@@ -168,8 +169,8 @@ public final class ObdBridge {
         float map=Float.NaN,baro=Float.NaN;
         data=pid("0B",1);if(data!=null)map=data[0];
         data=pid("33",1);if(data!=null)baro=data[0];
-        if(!Float.isNaN(map)){
-            if(Float.isNaN(baro)||baro<70)baro=101.3f;
+        boostPsi=Float.NaN;
+        if(!Float.isNaN(map)&&!Float.isNaN(baro)&&baro>0){
             boostPsi=Math.max(0,(map-baro)*0.1450377f);
         }
         // Transmission temperature is manufacturer-specific on this vehicle.
