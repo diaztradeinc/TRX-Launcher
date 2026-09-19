@@ -46,7 +46,7 @@ public class SettingsActivity extends Activity {
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(24),dp(22),dp(24),dp(44));scroll.addView(root);
 
-        TextView eyebrow=text("// TRX COMMAND SYSTEM  •  v1.7",12,accent,true);root.addView(eyebrow);
+        TextView eyebrow=text("// TRX COMMAND SYSTEM  •  v1.8",12,accent,true);root.addView(eyebrow);
         TextView title=text("SETTINGS COMMAND CENTER",30,WHITE,true);title.setPadding(0,dp(4),0,0);root.addView(title);
         TextView subtitle=text("Personalize the cockpit, startup behavior, apps and vehicle alerts.",14,MUTED,false);subtitle.setPadding(0,dp(5),0,dp(18));root.addView(subtitle);
 

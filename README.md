@@ -1,6 +1,11 @@
 # TRX Launcher
 
-Current source: **v1.7.0**
+Current source: **v1.8.0**
+
+Google Navigation SDK 7.9 now powers the Navigation page directly inside the launcher,
+including live traffic, rerouting, voice guidance, ETA, speed-limit display, themed map
+controls, and compact destination suggestions. GitHub Actions injects the restricted
+`MAPS_API_KEY` repository secret at build time; the key is never committed to source.
 
 Theme Studio now coordinates the launcher accent with matching realistic TRX hero artwork: TRX Red / Sunset Ridge, Baja Amber / Desert Dusk, Stealth Black / Moon Ridge, OEM Blue / Glacier Night, and a custom-accent mode. The exact approved truck composition, lift, wheels, stance, and black RamBar are preserved across the preset artwork.
 

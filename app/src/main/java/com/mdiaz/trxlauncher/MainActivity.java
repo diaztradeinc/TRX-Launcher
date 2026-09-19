@@ -88,21 +88,21 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        if (mapView != null) mapView.onResume();
+        if (mapPanel instanceof NavigationPanel) ((NavigationPanel)mapPanel).onResumePanel();
         MediaBridge.ensureConnected(this);
         ObdBridge.start(this);
         if (dashboard != null) { dashboard.reloadTheme(); dashboard.reloadMediaApps(); dashboard.reloadApps(); dashboard.postInvalidate(); }
     }
 
-    @Override protected void onStart(){super.onStart();if(mapView!=null)mapView.onStart();}
-    @Override protected void onPause(){if(mapView!=null)mapView.onPause();super.onPause();}
-    @Override protected void onStop(){if(mapView!=null)mapView.onStop();super.onStop();}
-    @Override public void onLowMemory(){super.onLowMemory();if(mapView!=null)mapView.onTrimMemory(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW);}
+    @Override protected void onStart(){super.onStart();if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onStartPanel();}
+    @Override protected void onPause(){if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onPausePanel();super.onPause();}
+    @Override protected void onStop(){if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onStopPanel();super.onStop();}
+    @Override public void onLowMemory(){super.onLowMemory();if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onLowMemoryPanel();}
     @Override public void onConfigurationChanged(Configuration config){super.onConfigurationChanged(config);if(mapView!=null)mapView.onConfigurationChanged(config);}
-    @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);if(mapView!=null)mapView.onSaveInstanceState(out);}
+    @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onSaveInstanceStatePanel(out);}
 
     private void setupLiveMap(Bundle state){
-        mapPanel=new NavigationPanel(this);
+        mapPanel=new NavigationPanel(this,state);
         mapPanel.setVisibility(View.GONE);
         mapPanel.setElevation(12f);
     }
@@ -352,7 +352,7 @@ public class MainActivity extends Activity {
         try {
             if (locationManager != null) locationManager.removeUpdates(gpsListener);
         } catch (Throwable ignored) { }
-        if(mapView!=null)mapView.onDestroy();
+        if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onDestroyPanel();
         ObdBridge.stop();
         super.onDestroy();
     }
