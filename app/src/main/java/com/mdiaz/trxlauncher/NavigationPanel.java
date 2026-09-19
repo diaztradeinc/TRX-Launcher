@@ -29,7 +29,6 @@ import android.widget.Toast;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MapColorScheme;
 import com.google.android.libraries.navigation.ListenableResultFuture;
 import com.google.android.libraries.navigation.NavigationApi;
 import com.google.android.libraries.navigation.NavigationView;
@@ -132,6 +131,9 @@ public class NavigationPanel extends FrameLayout {
         status.setGravity(Gravity.CENTER);
         status.setBackground(panel(0xf2080a0d, accent, 1, 14));
         status.setElevation(dp(12));
+        status.setOnClickListener(v -> {
+            if (!mapLoaded) openGoogleMapsFallback();
+        });
         LayoutParams statusLp = new LayoutParams(dp(330), dp(48), Gravity.CENTER);
         addView(status, statusLp);
 
@@ -174,8 +176,6 @@ public class NavigationPanel extends FrameLayout {
             map.getUiSettings().setMyLocationButtonEnabled(true);
             map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
             map.setTrafficEnabled(true);
-            try { map.setMapColorScheme(MapColorScheme.DARK); }
-            catch (Throwable ignored) { }
             LatLng start = new LatLng(40.3323, -74.5819);
             try {
                 if (activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -196,10 +196,26 @@ public class NavigationPanel extends FrameLayout {
             status.postDelayed(() -> {
                 if (!mapLoaded && !guiding) {
                     status.setVisibility(VISIBLE);
-                    status.setText("BASEMAP NOT LOADED • CHECK NETWORK + GOOGLE KEY");
+                    status.setText("EMBEDDED MAP UNAVAILABLE • TAP TO OPEN GOOGLE MAPS");
                 }
             }, 9000);
         });
+    }
+
+    private void openGoogleMapsFallback() {
+        try {
+            android.content.Intent launch = activity.getPackageManager()
+                .getLaunchIntentForPackage("com.google.android.apps.maps");
+            if (launch != null) {
+                activity.startActivity(launch);
+            } else {
+                activity.startActivity(new android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse("https://www.google.com/maps")));
+            }
+        } catch (Throwable error) {
+            Toast.makeText(activity, "Google Maps is unavailable", Toast.LENGTH_LONG).show();
+        }
     }
 
     private void initializeNavigator() {
