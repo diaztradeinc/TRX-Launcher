@@ -40,7 +40,7 @@ public class SettingsActivity extends Activity {
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
         prefs=getSharedPreferences("launcher",MODE_PRIVATE);
-        selectedTheme=prefs.getInt("theme_choice",0);accent=currentAccent();
+        selectedTheme=prefs.getInt("theme_choice",1);accent=currentAccent();
         getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
 
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(BG);
