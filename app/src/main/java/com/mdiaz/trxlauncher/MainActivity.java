@@ -75,6 +75,8 @@ public class MainActivity extends Activity {
             setContentView(root);
             setupLiveMap(state);
             root.addView(mapPanel);
+            if (mapPanel instanceof NavigationPanel)
+                ((NavigationPanel) mapPanel).onCreatePanel();
             root.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{
                 if((r-l)!=(or-ol)||(b-t)!=(ob-ot))showLiveMap(dashboard.currentPage()==1);
             });
@@ -103,7 +105,8 @@ public class MainActivity extends Activity {
 
     private void setupLiveMap(Bundle state){
         mapPanel=new NavigationPanel(this,state);
-        mapPanel.setVisibility(View.GONE);
+        // INVISIBLE keeps the native map surface measured without drawing it.
+        mapPanel.setVisibility(View.INVISIBLE);
         mapPanel.setElevation(12f);
     }
 
@@ -235,7 +238,7 @@ public class MainActivity extends Activity {
             if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onShownPanel();
         }else{
             if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onHiddenPanel();
-            mapPanel.setVisibility(View.GONE);
+            mapPanel.setVisibility(View.INVISIBLE);
         }
     }
 
