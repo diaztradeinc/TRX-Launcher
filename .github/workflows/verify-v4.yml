@@ -8,6 +8,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -21,3 +22,12 @@ jobs:
         env:
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
         run: gradle --no-daemon :app:assembleRelease :app:lintRelease
+      - name: Print lint failures
+        if: failure()
+        run: test ! -f app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt || cat app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt
+      - name: Upload verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-verification-reports
+          path: app/build/reports

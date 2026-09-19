@@ -38,6 +38,12 @@ import com.google.android.libraries.navigation.NavigationView;
 import com.google.android.libraries.navigation.Navigator;
 import com.google.android.libraries.navigation.RoutingOptions;
 import com.google.android.libraries.navigation.Waypoint;
+import com.google.android.libraries.navigation.StylingOptions;
+import com.google.android.gms.maps.model.FollowMyLocationOptions;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest;
+import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
 
 import java.util.HashSet;
 import java.util.List;
@@ -59,7 +65,10 @@ public class NavigationPanel extends FrameLayout {
     private final TextView status;
     private final TextView modeBadge;
     private final Handler suggestionHandler = new Handler(Looper.getMainLooper());
-    private final int accent;
+    private int accent;
+    private PlacesClient places;
+    private AutocompleteSessionToken placesSession;
+    private final java.util.Map<String,String> placeIds=new java.util.HashMap<>();
     private Navigator navigator;
     private GoogleMap googleMap;
     private boolean trafficEnabled = true;
@@ -198,13 +207,6 @@ public class NavigationPanel extends FrameLayout {
         });
         LayoutParams statusLp = new LayoutParams(dp(330), dp(48), Gravity.CENTER);
         addView(status, statusLp);
-
-        Button home = button("⌂  HOME", true);
-        home.setTextSize(14);
-        LayoutParams homeLp = new LayoutParams(dp(150), dp(56), Gravity.LEFT | Gravity.BOTTOM);
-        homeLp.setMargins(dp(16), 0, 0, dp(16));
-        addView(home, homeLp);
-        home.setOnClickListener(v -> beginNavigation(prefs.getString("home_destination", "Home")));
 
         modeBadge = new TextView(context);
         modeBadge.setText("GOOGLE LIVE TRAFFIC  •  PINCH TO ZOOM");
@@ -446,20 +448,21 @@ public class NavigationPanel extends FrameLayout {
         if ("Home".equalsIgnoreCase(query)) query = prefs.getString("home_destination", "Home");
         if ("Work".equalsIgnoreCase(query)) query = prefs.getString("work_destination", "Work");
         final String address = query;
+        final String placeId=placeIds.get(address);
         hideKeyboard();
         suggestionScroller.setVisibility(GONE);
         status.setText("BUILDING ROUTE TO " + address.toUpperCase(Locale.US) + "…");
         status.setVisibility(VISIBLE);
         new Thread(() -> {
             try {
-                List<Address> matches = new Geocoder(activity, Locale.US).getFromLocationName(address, 1);
-                if (matches == null || matches.isEmpty()) throw new IllegalArgumentException("Destination not found");
-                Address found = matches.get(0);
-                Waypoint waypoint = new Waypoint.Builder()
-                    .setLatLng(found.getLatitude(), found.getLongitude())
-                    .setTitle(address)
-                    .setVehicleStopover(true)
-                    .build();
+                Waypoint waypoint;
+                if(placeId!=null)waypoint=new Waypoint.Builder().setPlaceIdString(placeId).setTitle(address).setVehicleStopover(true).build();
+                else{
+                    List<Address> matches=new Geocoder(activity,Locale.US).getFromLocationName(address,1);
+                    if(matches==null||matches.isEmpty())throw new IllegalArgumentException("Destination not found");
+                    Address found=matches.get(0);
+                    waypoint=new Waypoint.Builder().setLatLng(found.getLatitude(),found.getLongitude()).setTitle(address).setVehicleStopover(true).build();
+                }
                 RoutingOptions options = new RoutingOptions();
                 options.travelMode(RoutingOptions.TravelMode.DRIVING);
                 activity.runOnUiThread(() -> {
@@ -469,6 +472,8 @@ public class NavigationPanel extends FrameLayout {
                         if (routeStatus == Navigator.RouteStatus.OK) {
                             navigator.startGuidance();
                             guiding = true;
+                            followRoad();
+                            placesSession=null;
                             rememberDestination(address);
                             destination.setVisibility(GONE);
                             routeButton.setVisibility(GONE);
@@ -529,8 +534,50 @@ public class NavigationPanel extends FrameLayout {
         }
         suggestionHandler.postDelayed(() -> {
             if (request != suggestionRequest || !destination.hasFocus()) return;
-            new Thread(() -> loadAddressSuggestions(query, request), "trx-address-search").start();
+            loadGoogleSuggestions(query,request);
         }, 300);
+    }
+
+    private void loadGoogleSuggestions(String query,int request){
+        try{
+            if(places==null){
+                if(!Places.isInitialized())Places.initializeWithNewPlacesApiEnabled(activity.getApplicationContext(),BuildConfig.MAPS_API_KEY);
+                places=Places.createClient(activity);
+            }
+            if(placesSession==null)placesSession=AutocompleteSessionToken.newInstance();
+            places.findAutocompletePredictions(FindAutocompletePredictionsRequest.builder().setQuery(query).setSessionToken(placesSession).build())
+                .addOnSuccessListener(response->{
+                    if(request!=suggestionRequest)return;
+                    suggestions.removeAllViews();placeIds.clear();
+                    for(com.google.android.libraries.places.api.model.AutocompletePrediction item:response.getAutocompletePredictions()){
+                        String full=item.getFullText(null).toString();placeIds.put(full,item.getPlaceId());
+                        addAddressSuggestion(item.getPrimaryText(null).toString(),full);
+                    }
+                    TextView attribution=new TextView(activity);attribution.setText("Google Maps");attribution.setTextColor(Color.WHITE);attribution.setPadding(dp(14),dp(8),dp(14),dp(8));suggestions.addView(attribution);
+                    suggestionScroller.setVisibility(VISIBLE);suggestionScroller.bringToFront();
+                }).addOnFailureListener(error->{
+                    if(request!=suggestionRequest)return;
+                    status.setText("GOOGLE PLACES UNAVAILABLE • CHECK API ACCESS / CONNECTION");status.setVisibility(VISIBLE);
+                });
+        }catch(RuntimeException error){status.setText("GOOGLE PLACES SETUP REQUIRED");status.setVisibility(VISIBLE);}
+    }
+
+    private void followRoad(){
+        if(googleMap!=null)googleMap.followMyLocation(GoogleMap.CameraPerspective.TILTED,
+            FollowMyLocationOptions.builder().setZoomLevel(18f).build());
+    }
+
+    public void applyTheme(){
+        accent=currentAccent();
+        navigationView.setStylingOptions(new StylingOptions()
+            .primaryDayModeThemeColor(0xff151519).primaryNightModeThemeColor(0xff09090c)
+            .secondaryDayModeThemeColor(0xff420a12).secondaryNightModeThemeColor(0xff420a12)
+            .headerLargeManeuverIconColor(accent).headerSmallManeuverIconColor(accent)
+            .headerInstructionsTextColor(Color.WHITE).headerDistanceValueTextColor(Color.WHITE)
+            .headerDistanceUnitsTextColor(Color.WHITE).headerNextStepTextColor(Color.WHITE)
+            .headerGuidanceRecommendedLaneColor(accent));
+        destination.setBackground(panel(0xee05070a,accent,2,18));
+        routeButton.setBackground(panel(0xff420a12,accent,2,14));
     }
 
     private void loadAddressSuggestions(String query, int request) {
@@ -679,6 +726,10 @@ public class NavigationPanel extends FrameLayout {
 
     private void recenterMap() {
         if (googleMap == null) return;
+        if (guiding) {
+            followRoad();
+            return;
+        }
         try {
             if (activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -747,6 +798,24 @@ public class NavigationPanel extends FrameLayout {
         suggestionScroller.setVisibility(VISIBLE);
         suggestionScroller.bringToFront();
         routeButton.bringToFront();
+    }
+
+    public void showSection(int tab) {
+        hideKeyboard();
+        suggestionScroller.setVisibility(GONE);
+        if(tab==0)return;
+        if(tab==1){showRecentDestinations();return;}
+        if(tab==2){
+            String[] saved={prefs.getString("home_destination",""),prefs.getString("work_destination","")};
+            new android.app.AlertDialog.Builder(activity).setTitle("Saved destinations")
+                .setItems(new String[]{"Home: "+saved[0],"Work: "+saved[1],"Edit saved destinations"},(d,i)->{
+                    if(i==2)activity.openSettingsScreen();else beginNavigation(saved[i]);
+                }).show();return;
+        }
+        new android.app.AlertDialog.Builder(activity).setTitle("Map options")
+            .setItems(new String[]{trafficEnabled?"Turn traffic off":"Turn traffic on",satelliteEnabled?"Road map":"Satellite + labels","Recenter / follow","End guidance"},(d,i)->{
+                if(i==0)toggleTraffic();else if(i==1)toggleMapLayer();else if(i==2)recenterMap();else stopGuidance();
+            }).show();
     }
 
     private void hideKeyboard() {

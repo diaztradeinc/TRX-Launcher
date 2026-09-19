@@ -190,7 +190,15 @@ public class MediaBridge extends NotificationListenerService {
             updateQueue(active);
         } catch (Throwable ignored) { }
     }
+    private static volatile long[] queueIds=new long[0];
+    public static void playQueueItem(Context context,int index){
+        long[] ids=queueIds;
+        if(controller!=null&&index>=0&&index<ids.length){
+            try{controller.getTransportControls().skipToQueueItem(ids[index]);}catch(RuntimeException e){android.widget.Toast.makeText(context,"Player does not support queue selection",0).show();}
+        }
+    }
     private static void updateQueue(MediaController active){
+        queueIds=new long[0];
         if(active==null){queueTitles=new String[0];queueArtists=new String[0];queueArtwork=new Bitmap[0];return;}
         try{
             List<android.media.session.MediaSession.QueueItem> items=active.getQueue();
@@ -198,17 +206,20 @@ public class MediaBridge extends NotificationListenerService {
             long currentId=active.getPlaybackState()==null?-1:active.getPlaybackState().getActiveQueueItemId();
             java.util.ArrayList<String> titles=new java.util.ArrayList<>(),artists=new java.util.ArrayList<>();
             java.util.ArrayList<Bitmap> images=new java.util.ArrayList<>();
+            java.util.ArrayList<Long> ids=new java.util.ArrayList<>();
             for(android.media.session.MediaSession.QueueItem item:items){
                 if(item==null||item.getQueueId()==currentId)continue;
                 android.media.MediaDescription d=item.getDescription();
                 CharSequence t=d==null?null:d.getTitle(),a=d==null?null:d.getSubtitle();
                 String track=t==null?"UPCOMING TRACK":t.toString(),performer=a==null?"":a.toString();
                 titles.add(track);artists.add(performer);
+                ids.add(item.getQueueId());
                 Bitmap image=descriptionArtwork(d);
                 if(image==null)image=artworkCache.get(trackKey(track,performer));
                 images.add(image);if(titles.size()>=3)break;
             }
             queueTitles=titles.toArray(new String[0]);queueArtists=artists.toArray(new String[0]);queueArtwork=images.toArray(new Bitmap[0]);
+            long[] result=new long[ids.size()];for(int i=0;i<result.length;i++)result[i]=ids.get(i);queueIds=result;
             for(int i=0;i<queueTitles.length;i++)if(i>=queueArtwork.length||queueArtwork[i]==null)requestArtwork(queueTitles[i],i<queueArtists.length?queueArtists[i]:"");
         }catch(Throwable ignored){queueTitles=new String[0];queueArtists=new String[0];queueArtwork=new Bitmap[0];}
     }

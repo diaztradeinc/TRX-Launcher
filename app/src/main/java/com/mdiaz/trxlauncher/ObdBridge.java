@@ -77,7 +77,7 @@ public final class ObdBridge {
                 if(target==null){status="PAIR OBDLINK MX+";sleep(4000);continue;}
                 deviceName=safeName(target);
                 status="CONNECTING "+deviceName.toUpperCase(Locale.US)+"…";
-                adapter.cancelDiscovery();
+                // Only connect to a paired adapter; do not require scan permission.
                 BluetoothSocket next=target.createRfcommSocketToServiceRecord(SPP);
                 socket=next;
                 next.connect();

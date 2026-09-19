@@ -16,8 +16,8 @@ android {
         applicationId 'com.mdiaz.trxlauncher'
         minSdk 26
         targetSdk 36
-        versionCode 70
-        versionName '4.0.0'
+        versionCode 122
+        versionName '4.1.0'
         manifestPlaceholders = [MAPS_API_KEY: mapsApiKey]
         buildConfigField 'String', 'MAPS_API_KEY', "\"${escapedMapsApiKey}\""
     }
@@ -38,5 +38,8 @@ android {
 dependencies {
     // Google-native map and turn-by-turn Navigation SDK.
     api 'com.google.android.libraries.navigation:navigation:7.9.0'
+    implementation('com.google.android.libraries.places:places:4.3.1') {
+        exclude group: 'com.google.android.gms', module: 'play-services-maps'
+    }
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
 }
