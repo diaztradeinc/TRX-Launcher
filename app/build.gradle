@@ -26,10 +26,23 @@ android {
         buildConfig true
     }
 
+    signingConfigs {
+        permanent {
+            def keyPath = System.getenv('ANDROID_KEYSTORE_FILE')
+            if (keyPath) storeFile file(keyPath)
+            storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            keyAlias System.getenv('ANDROID_KEY_ALIAS') ?: 'trx'
+            keyPassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            storeType 'PKCS12'
+        }
+    }
     buildTypes {
+        debug {
+            if (System.getenv('ANDROID_KEYSTORE_FILE')) signingConfig signingConfigs.permanent
+        }
         release {
             minifyEnabled false
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.permanent
         }
     }
 }

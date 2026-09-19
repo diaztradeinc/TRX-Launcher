@@ -25,6 +25,6 @@ Compilation and Android lint passed for commit `ef65f4b`. A previous crash-only 
 
 The emulator produced both Maps and Navigation SDK **Authorization failure**, with a message to enable **Google Maps Android API**. Review the Google Cloud project belonging to the existing GitHub `MAPS_API_KEY`: Maps SDK for Android, Navigation SDK and Places API (New), billing, and API/application restrictions. Do not paste keys into issues, source, or logs.
 
-The inherited release configuration uses a runner-generated debug signing key. Reliable in-place updates and Android API-key restrictions need a stable signing identity; it has not been configured in this branch. Do not assume an APK will update an existing installation with a different certificate.
+Both workflows now require `ANDROID_SIGNING_JSON` and restore the permanent signing identity before building. Add the privately supplied signing JSON as that repository secret. The SHA-1 is `CD:F9:7D:63:CC:B9:9F:C8:7E:56:46:B3:82:6E:B2:D0:14:E3:CF:C6`, for Android package `com.mdiaz.trxlauncher`. This identity applies once the secret is installed; it does not match older runner-generated certificates, so the first installation may require uninstalling the old app (which removes its saved settings).
 
 Live tiles, routing, the truck marker and device-dependent media/OBD behavior are not certified complete. No final APK has been published from this branch. Verification reports and redacted navigation diagnostics are attached to GitHub Actions runs.

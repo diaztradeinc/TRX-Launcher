@@ -35,6 +35,11 @@ jobs:
         with:
           gradle-version: "8.13"
 
+      - name: Restore permanent signing key
+        env:
+          ANDROID_SIGNING_JSON: ${{ secrets.ANDROID_SIGNING_JSON }}
+        run: python3 scripts/prepare-signing.py
+
       - name: Verify Google Navigation key
         env:
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
