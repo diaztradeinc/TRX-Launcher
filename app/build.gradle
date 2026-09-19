@@ -10,8 +10,8 @@ android {
         applicationId 'com.mdiaz.trxlauncher'
         minSdk 26
         targetSdk 36
-        versionCode 100
-        versionName '5.0.0-clean'
+        versionCode 101
+        versionName '5.0.1'
         manifestPlaceholders = [MAPS_API_KEY: mapsApiKey]
         buildConfigField 'String', 'MAPS_API_KEY', "\"${escapedKey}\""
     }
