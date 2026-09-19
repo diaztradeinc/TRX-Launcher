@@ -125,8 +125,8 @@ public final class DashboardView extends View {
         RectF inner=new RectF(q);inner.inset(x(6),x(6));p.setStrokeWidth(x(1));
         p.setColor(selected?((RED&0x00ffffff)|0x88000000):0xff2e343b);c.drawRoundRect(inner,x(Math.max(3,radius-5)),x(Math.max(3,radius-5)),p);
         p.setStyle(Paint.Style.FILL);
-        p.setShader(new LinearGradient(q.left,q.top,q.right,q.top,0x00ff2338,
-            selected?0xffff2338:0x006f747d,Shader.TileMode.CLAMP));
+        p.setShader(new LinearGradient(q.left,q.top,q.right,q.top,RED&0x00ffffff,
+            selected?RED:0x006f747d,Shader.TileMode.CLAMP));
         c.drawRoundRect(new RectF(q.left+x(22),q.top,q.right-x(22),q.top+x(selected?4:2)),x(2),x(2),p);
         p.setShader(null);
     }
@@ -209,7 +209,7 @@ public final class DashboardView extends View {
         if(prefs.getInt("theme_choice",1)==4){p.setColor((RED&0x00ffffff)|0x30000000);c.drawRect(target,p);}
         p.setShader(new LinearGradient(0,y(top),0,y(bottom),0x00000000,0xd907090c,Shader.TileMode.CLAMP));c.drawRect(0,y(top),W,y(bottom),p);p.setShader(null);
     }
-    private void panel(Canvas c,float l,float t,float r,float b,String title){RectF q=new RectF(x(l),y(t),x(r),y(b));raisedBox(c,q,false,12);if(!title.isEmpty()){line(c,l+16,t+45,r-16,t+45,0xff42474f,1);text(c,title,l+18,t+32,18,WHITE,true);}line(c,l+28,b-5,r-28,b-5,0xff8f1724,2);}
+    private void panel(Canvas c,float l,float t,float r,float b,String title){RectF q=new RectF(x(l),y(t),x(r),y(b));raisedBox(c,q,false,12);if(!title.isEmpty()){line(c,l+16,t+45,r-16,t+45,0xff42474f,1);text(c,title,l+18,t+32,18,WHITE,true);}line(c,l+28,b-5,r-28,b-5,(RED&0x00ffffff)|0xbb000000,2);}
     private float introGauge(){return Math.max(0,Math.min(1f,(SystemClock.uptimeMillis()-launchAt-250)/1000f));}
     private void gauge(Canvas c,float l,float t,float r,String label,String value,String unit,float level){RectF q=new RectF(x(l),y(t),x(r),y(t+138));raisedBox(c,q,false,10);p.setStyle(Paint.Style.STROKE);RectF arc=new RectF(x(l+24),y(t+46),x(r-24),y(t+154));p.setStrokeWidth(x(7));p.setColor(0xff333840);c.drawArc(arc,195,150,false,p);p.setColor(RED);c.drawArc(arc,195,Math.max(8,150*level*introGauge()),false,p);p.setStyle(Paint.Style.FILL);text(c,label,l+18,t+32,14,MUTED,true);text(c,value,l+18,t+92,31,WHITE,true);text(c,unit,r-58,t+92,13,MUTED,true);}
 
