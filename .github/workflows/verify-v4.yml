@@ -21,7 +21,17 @@ jobs:
       - name: Build and lint
         env:
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
-        run: gradle --no-daemon :app:assembleRelease :app:lintRelease
+        run: gradle --no-daemon :app:assembleRelease :app:assembleDebug :app:lintRelease
+      - name: Enable emulator acceleration
+        run: sudo chmod a+rw /dev/kvm
+      - name: Check screen interactions on Android 16
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: bash scripts/verify-v4.sh
       - name: Print lint failures
         if: failure()
         run: test ! -f app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt || cat app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt
@@ -30,4 +40,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: v4-verification-reports
-          path: app/build/reports
+          path: |
+            app/build/reports
+            verification

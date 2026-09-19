@@ -120,7 +120,7 @@ public final class ObdBridge {
         try{
             String name=device.getName();
             return name==null||name.trim().isEmpty()?"OBDLink MX+":name.trim();
-        }catch(Throwable ignored){return "OBDLink MX+";}
+        }catch(SecurityException denied){return "OBDLink MX+";}
     }
 
     private static void initializeAdapter() throws Exception{

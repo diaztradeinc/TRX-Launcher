@@ -37,6 +37,7 @@ public final class FirstRunActivity extends Activity {
 
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
+        if(Build.VERSION.SDK_INT>=33)getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,this::handleBack);
         getWindow().setStatusBarColor(0xff030405);getWindow().setNavigationBarColor(0xff030405);
         firstRunView=new FirstRunView(this);setContentView(firstRunView);refreshStates();
     }
@@ -130,7 +131,9 @@ public final class FirstRunActivity extends Activity {
         startActivity(launch);overridePendingTransition(android.R.anim.fade_in,android.R.anim.fade_out);finish();
     }
 
-    @Override public void onBackPressed(){if(firstRunView!=null&&firstRunView.isSetup()){firstRunView.showIntro();sequenceRunning=false;awaitingExternal=false;}else super.onBackPressed();}
+    private void handleBack(){if(firstRunView!=null&&firstRunView.isSetup()){firstRunView.showIntro();sequenceRunning=false;awaitingExternal=false;}else finish();}
+    @android.annotation.SuppressLint("GestureBackNavigation")
+    @Override public void onBackPressed(){handleBack();}
 }
 
 final class FirstRunView extends View {

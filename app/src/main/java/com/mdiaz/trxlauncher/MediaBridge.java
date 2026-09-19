@@ -194,7 +194,7 @@ public class MediaBridge extends NotificationListenerService {
     public static void playQueueItem(Context context,int index){
         long[] ids=queueIds;
         if(controller!=null&&index>=0&&index<ids.length){
-            try{controller.getTransportControls().skipToQueueItem(ids[index]);}catch(RuntimeException e){android.widget.Toast.makeText(context,"Player does not support queue selection",0).show();}
+            try{controller.getTransportControls().skipToQueueItem(ids[index]);}catch(RuntimeException e){android.widget.Toast.makeText(context,"Player does not support queue selection",android.widget.Toast.LENGTH_SHORT).show();}
         }
     }
     private static void updateQueue(MediaController active){

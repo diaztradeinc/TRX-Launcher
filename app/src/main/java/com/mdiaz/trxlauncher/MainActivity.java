@@ -62,6 +62,7 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        if(android.os.Build.VERSION.SDK_INT>=33)getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,this::handleBack);
         if(!getSharedPreferences("launcher",MODE_PRIVATE).getBoolean("first_run_complete",false)){
             startActivity(new Intent(this,FirstRunActivity.class));finish();return;
         }
@@ -350,10 +351,12 @@ public class MainActivity extends Activity {
             results[0] == PackageManager.PERMISSION_GRANTED) startGps();
     }
 
-    @Override public void onBackPressed(){
+    private void handleBack(){
         if(mapPanel instanceof NavigationPanel&&((NavigationPanel)mapPanel).closeChooser())return;
-        super.onBackPressed();
+        moveTaskToBack(true);
     }
+    @android.annotation.SuppressLint("GestureBackNavigation")
+    @Override public void onBackPressed(){handleBack();}
 
     @Override protected void onDestroy() {
         try {

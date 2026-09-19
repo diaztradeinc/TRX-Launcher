@@ -563,12 +563,19 @@ public class NavigationPanel extends FrameLayout {
     }
 
     private void followRoad(){
-        if(googleMap!=null)googleMap.followMyLocation(GoogleMap.CameraPerspective.TILTED,
+        if(activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED)return;
+        try{if(googleMap!=null)googleMap.followMyLocation(GoogleMap.CameraPerspective.TILTED,
             FollowMyLocationOptions.builder().setZoomLevel(18f).build());
+        }catch(SecurityException denied){status.setText("LOCATION PERMISSION REQUIRED");status.setVisibility(VISIBLE);}
     }
 
     public void applyTheme(){
         accent=currentAccent();
+        destination.setBackground(panel(0xee05070a,accent,2,18));
+        routeButton.setBackground(panel(0xff420a12,accent,2,14));
+        if(!initialized)return;
+        try{
+        navigationView.setForceNightMode(activity.getSharedPreferences("launcher",Context.MODE_PRIVATE).getInt("display_mode",0));
         navigationView.setStylingOptions(new StylingOptions()
             .primaryDayModeThemeColor(0xff151519).primaryNightModeThemeColor(0xff09090c)
             .secondaryDayModeThemeColor(0xff420a12).secondaryNightModeThemeColor(0xff420a12)
@@ -576,8 +583,7 @@ public class NavigationPanel extends FrameLayout {
             .headerInstructionsTextColor(Color.WHITE).headerDistanceValueTextColor(Color.WHITE)
             .headerDistanceUnitsTextColor(Color.WHITE).headerNextStepTextColor(Color.WHITE)
             .headerGuidanceRecommendedLaneColor(accent));
-        destination.setBackground(panel(0xee05070a,accent,2,18));
-        routeButton.setBackground(panel(0xff420a12,accent,2,14));
+        }catch(RuntimeException error){Log.w("TRXNavigation","Theme pending map initialization",error);}
     }
 
     private void loadAddressSuggestions(String query, int request) {

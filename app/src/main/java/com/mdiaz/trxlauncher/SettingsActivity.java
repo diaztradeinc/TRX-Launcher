@@ -40,13 +40,13 @@ public class SettingsActivity extends Activity {
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
         prefs=getSharedPreferences("launcher",MODE_PRIVATE);
-        selectedTheme=prefs.getInt("theme_choice",1);accent=currentAccent();
+        selectedTheme=prefs.getInt("theme_choice",0);accent=currentAccent();
         getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
 
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(24),dp(22),dp(24),dp(44));scroll.addView(root);
 
-        TextView eyebrow=text("// TRX COMMAND SYSTEM  •  v1.8",12,accent,true);root.addView(eyebrow);
+        TextView eyebrow=text("// TRX COMMAND SYSTEM  •  v"+BuildConfig.VERSION_NAME,12,accent,true);root.addView(eyebrow);
         TextView title=text("SETTINGS COMMAND CENTER",30,WHITE,true);title.setPadding(0,dp(4),0,0);root.addView(title);
         TextView subtitle=text("Personalize the cockpit, startup behavior, apps and vehicle alerts.",14,MUTED,false);subtitle.setPadding(0,dp(5),0,dp(18));root.addView(subtitle);
 
@@ -140,7 +140,8 @@ public class SettingsActivity extends Activity {
     private int darken(int color,float factor){return Color.rgb(Math.round(Color.red(color)*factor),Math.round(Color.green(color)*factor),Math.round(Color.blue(color)*factor));}
 
     private void saveAndClose(){
-        int custom=0xffff2338;try{custom=Color.parseColor(customHex.getText().toString().trim());}catch(Throwable ignored){toast("Custom color must look like #FF2338");}
+        int custom;try{custom=Color.parseColor(customHex.getText().toString().trim());}catch(Throwable ignored){customHex.setError("Use a color such as #FF2338");return;}
+        if(!validNumber(coolantWarning,100,300)||!validNumber(intakeWarning,0,300)||!validNumber(voltageWarning,8,16))return;
         int startup=startupPage.getSelectedItemPosition()==0?-1:startupPage.getSelectedItemPosition()-1;
         prefs.edit().putInt("theme_choice",selectedTheme).putInt("custom_accent",custom).putString("custom_hex",customHex.getText().toString().trim())
             .putInt("display_mode",displayMode.getSelectedItemPosition()).putInt("app_icon_percent",iconSize.getProgress()+80).putInt("startup_page",startup)
@@ -181,6 +182,7 @@ public class SettingsActivity extends Activity {
     private GradientDrawable panelBackground(){GradientDrawable g=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xff141920,0xff080a0e});g.setCornerRadius(dp(16));g.setStroke(dp(1),0xff3a414a);return g;}
     private GradientDrawable background(int fill,int stroke,int radius){GradientDrawable g=new GradientDrawable();g.setColor(fill);g.setCornerRadius(dp(radius));g.setStroke(dp(1),stroke);return g;}
     private float number(EditText field,float fallback){try{return Float.parseFloat(field.getText().toString().trim());}catch(Throwable ignored){return fallback;}}
+    private boolean validNumber(EditText field,float min,float max){float v=number(field,Float.NaN);if(Float.isNaN(v)||Float.isInfinite(v)||v<min||v>max){field.setError("Enter a number from "+min+" to "+max);return false;}return true;}
     private void toast(String value){android.widget.Toast.makeText(this,value,android.widget.Toast.LENGTH_SHORT).show();}
     private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
 }

@@ -219,7 +219,7 @@ public final class DashboardView extends View {
             return true;
         }
         if(page==3){
-            if(tab==1&&yy>850&&yy<950){if(xx<520){if(speedMph<1)armRun();else android.widget.Toast.makeText(activity,"Stop before arming the timer",0).show();}else resetRun();}
+            if(tab==1&&yy>850&&yy<950){if(xx<520){if(speedMph<1)armRun();else android.widget.Toast.makeText(activity,"Stop before arming the timer",android.widget.Toast.LENGTH_SHORT).show();}else resetRun();}
             if(tab==2&&yy>1190)activity.openAudioRouteSettings();
             if(tab==3&&yy>1160)new android.app.AlertDialog.Builder(activity).setTitle("Clear saved runs?").setNegativeButton("Cancel",null).setPositiveButton("Clear",(d,i)->{prefs.edit().remove("performance_runs").apply();invalidate();}).show();
             return true;
