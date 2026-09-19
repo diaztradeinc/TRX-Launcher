@@ -16,6 +16,7 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -65,6 +66,9 @@ public class NavigationPanel extends FrameLayout {
     private boolean activityResumed;
     private boolean panelVisible;
     private boolean initialized;
+    private boolean navigatorRequested;
+    private boolean mapRequested;
+    private int mapAttempt;
 
     public NavigationPanel(MainActivity context, Bundle state) {
         super(context);
@@ -137,7 +141,14 @@ public class NavigationPanel extends FrameLayout {
         status.setBackground(panel(0xf2080a0d, accent, 1, 14));
         status.setElevation(dp(12));
         status.setOnClickListener(v -> {
-            if (!mapLoaded) openGoogleMapsFallback();
+            if (!mapLoaded) retryMap();
+        });
+        status.setOnLongClickListener(v -> {
+            if (!mapLoaded) {
+                openGoogleMapsFallback();
+                return true;
+            }
+            return false;
         });
         LayoutParams statusLp = new LayoutParams(dp(330), dp(48), Gravity.CENTER);
         addView(status, statusLp);
@@ -171,53 +182,180 @@ public class NavigationPanel extends FrameLayout {
     }
 
     /**
-     * NavigationView owns a SurfaceView. Initializing it while this panel is GONE
-     * gives some automotive Android builds a zero-sized render surface that never
-     * recovers. Initialize only after MainActivity has attached and shown us.
+     * NavigationView owns a SurfaceView. Automotive Android boxes can create a
+     * permanently blank surface when the SDK is asked for a map before the
+     * view is attached, measured, started and resumed. Wait for a real surface,
+     * authorize Navigation first, then request the map.
      */
     private void ensureInitialized() {
         if (initialized) return;
-        initialized = true;
-        navigationView.onCreate(initialState);
-        navigationView.post(() -> {
+        if (!isAttachedToWindow() || getWidth() == 0 || getHeight() == 0) {
+            status.setText("WAITING FOR MAP SURFACE…");
+            post(this::ensureInitialized);
+            return;
+        }
+
+        try {
+            initialized = true;
+            navigationView.setVisibility(VISIBLE);
+            navigationView.onCreate(initialState);
+            if (activityStarted) startView();
+            if (activityResumed) resumeView();
+            navigationView.post(this::initializeNavigator);
+        } catch (Throwable error) {
+            initialized = false;
+            showInitializationError("VIEW", error);
+        }
+    }
+
+    private void initializeNavigator() {
+        if (navigator != null) {
             initializeMap();
-            initializeNavigator();
-        });
+            return;
+        }
+        if (navigatorRequested) return;
+        navigatorRequested = true;
+        status.setVisibility(VISIBLE);
+        status.setText("AUTHORIZING GOOGLE NAVIGATION…");
+
+        try {
+            NavigationApi.getNavigator(activity, new NavigationApi.NavigatorListener() {
+                @Override public void onNavigatorReady(Navigator ready) {
+                    navigatorRequested = false;
+                    navigator = ready;
+                    try {
+                        navigationView.setNavigationUiEnabled(true);
+                        navigationView.setHeaderEnabled(true);
+                        navigationView.setEtaCardEnabled(true);
+                        navigationView.setRecenterButtonEnabled(true);
+                        navigationView.setSpeedometerEnabled(true);
+                        navigationView.setSpeedLimitIconEnabled(true);
+                        status.setText("GOOGLE AUTHORIZED • STARTING MAP RENDERER…");
+                        navigationView.post(NavigationPanel.this::initializeMap);
+                    } catch (Throwable error) {
+                        showInitializationError("NAV VIEW", error);
+                    }
+                }
+
+                @Override public void onError(int errorCode) {
+                    navigatorRequested = false;
+                    status.setVisibility(VISIBLE);
+                    if (errorCode == NavigationApi.ErrorCode.NOT_AUTHORIZED)
+                        status.setText("GOOGLE KEY NOT AUTHORIZED • CODE " + errorCode);
+                    else if (errorCode == NavigationApi.ErrorCode.TERMS_NOT_ACCEPTED)
+                        status.setText("GOOGLE NAVIGATION TERMS NOT ACCEPTED • CODE " + errorCode);
+                    else if (errorCode == NavigationApi.ErrorCode.LOCATION_PERMISSION_MISSING)
+                        status.setText("LOCATION PERMISSION REQUIRED • CODE " + errorCode);
+                    else status.setText("GOOGLE NAVIGATION ERROR • CODE " + errorCode);
+                    Log.e("TRXNavigation", "NavigationApi error code " + errorCode);
+                }
+            });
+        } catch (Throwable error) {
+            navigatorRequested = false;
+            showInitializationError("NAV API", error);
+        }
     }
 
     private void initializeMap() {
-        navigationView.getMapAsync(map -> {
-            map.getUiSettings().setZoomGesturesEnabled(true);
-            map.getUiSettings().setScrollGesturesEnabled(true);
-            map.getUiSettings().setRotateGesturesEnabled(true);
-            map.getUiSettings().setCompassEnabled(true);
-            map.getUiSettings().setMyLocationButtonEnabled(true);
-            map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-            map.setTrafficEnabled(true);
-            LatLng start = new LatLng(40.3323, -74.5819);
-            try {
-                if (activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                    == PackageManager.PERMISSION_GRANTED) {
-                    map.setMyLocationEnabled(true);
-                    LocationManager manager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
-                    Location last = manager == null ? null : manager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                    if (last == null && manager != null)
-                        last = manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                    if (last != null) start = new LatLng(last.getLatitude(), last.getLongitude());
+        if (!initialized || navigator == null || mapRequested || mapLoaded) return;
+        mapRequested = true;
+        final int attempt = ++mapAttempt;
+        status.setVisibility(VISIBLE);
+        status.setText("REQUESTING GOOGLE MAP RENDERER • ATTEMPT " + attempt);
+
+        try {
+            navigationView.getMapAsync(map -> {
+                try {
+                    map.getUiSettings().setZoomGesturesEnabled(true);
+                    map.getUiSettings().setScrollGesturesEnabled(true);
+                    map.getUiSettings().setRotateGesturesEnabled(true);
+                    map.getUiSettings().setCompassEnabled(true);
+                    map.getUiSettings().setMyLocationButtonEnabled(true);
+                    map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                    map.setTrafficEnabled(true);
+
+                    LatLng start = new LatLng(40.3323, -74.5819);
+                    try {
+                        if (activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                            == PackageManager.PERMISSION_GRANTED) {
+                            map.setMyLocationEnabled(true);
+                            LocationManager manager = (LocationManager) activity
+                                .getSystemService(Context.LOCATION_SERVICE);
+                            Location last = manager == null ? null
+                                : manager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                            if (last == null && manager != null)
+                                last = manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                            if (last != null)
+                                start = new LatLng(last.getLatitude(), last.getLongitude());
+                        }
+                    } catch (Throwable locationError) {
+                        Log.w("TRXNavigation", "Location setup failed", locationError);
+                    }
+
+                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(start, 14.2f));
+                    status.setText("MAP CONNECTED • LOADING BASEMAP TILES…");
+                    map.setOnMapLoadedCallback(() -> {
+                        if (attempt != mapAttempt) return;
+                        mapLoaded = true;
+                        mapRequested = false;
+                        status.setText("GOOGLE MAP READY");
+                        if (!guiding) status.postDelayed(() -> {
+                            if (mapLoaded && !guiding) status.setVisibility(GONE);
+                        }, 800);
+                    });
+                } catch (Throwable error) {
+                    mapRequested = false;
+                    showInitializationError("MAP SETUP", error);
                 }
-            } catch (Throwable ignored) { }
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(start, 14.2f));
-            map.setOnMapLoadedCallback(() -> {
-                mapLoaded = true;
-                if (navigator != null && !guiding) status.setVisibility(GONE);
             });
-            status.postDelayed(() -> {
-                if (!mapLoaded && !guiding) {
-                    status.setVisibility(VISIBLE);
-                    status.setText("EMBEDDED MAP UNAVAILABLE • TAP TO OPEN GOOGLE MAPS");
-                }
-            }, 9000);
-        });
+        } catch (Throwable error) {
+            mapRequested = false;
+            showInitializationError("GET MAP", error);
+            return;
+        }
+
+        status.postDelayed(() -> {
+            if (attempt == mapAttempt && !mapLoaded && !guiding) {
+                mapRequested = false;
+                status.setVisibility(VISIBLE);
+                status.setText("MAP RENDERER TIMEOUT • TAP TO RETRY • HOLD FOR GOOGLE MAPS");
+                Log.e("TRXNavigation", "Map renderer timed out on attempt " + attempt
+                    + "; view=" + navigationView.getWidth() + "x" + navigationView.getHeight()
+                    + "; attached=" + navigationView.isAttachedToWindow());
+            }
+        }, 30000);
+    }
+
+    private void retryMap() {
+        if (mapLoaded) return;
+        mapRequested = false;
+        mapAttempt++;
+        status.setVisibility(VISIBLE);
+        status.setText("RESTARTING MAP RENDERER…");
+        try {
+            pauseView();
+            stopView();
+            navigationView.postDelayed(() -> {
+                if (activityStarted && panelVisible) startView();
+                if (activityResumed && panelVisible) resumeView();
+                if (navigator == null) initializeNavigator();
+                else initializeMap();
+            }, 350);
+        } catch (Throwable error) {
+            showInitializationError("RETRY", error);
+        }
+    }
+
+    private void showInitializationError(String stage, Throwable error) {
+        mapRequested = false;
+        String name = error == null ? "UNKNOWN" : error.getClass().getSimpleName();
+        String detail = error == null ? "" : error.getMessage();
+        if (detail == null || detail.trim().isEmpty()) detail = name;
+        detail = detail.replace('\n', ' ').trim();
+        if (detail.length() > 48) detail = detail.substring(0, 48);
+        status.setVisibility(VISIBLE);
+        status.setText(stage + " ERROR • " + detail.toUpperCase(Locale.US));
+        Log.e("TRXNavigation", stage + " initialization failure", error);
     }
 
     private void openGoogleMapsFallback() {
@@ -234,33 +372,6 @@ public class NavigationPanel extends FrameLayout {
         } catch (Throwable error) {
             Toast.makeText(activity, "Google Maps is unavailable", Toast.LENGTH_LONG).show();
         }
-    }
-
-    private void initializeNavigator() {
-        NavigationApi.getNavigator(activity, new NavigationApi.NavigatorListener() {
-            @Override public void onNavigatorReady(Navigator ready) {
-                navigator = ready;
-                navigationView.setNavigationUiEnabled(true);
-                navigationView.setHeaderEnabled(true);
-                navigationView.setEtaCardEnabled(true);
-                navigationView.setRecenterButtonEnabled(true);
-                navigationView.setSpeedometerEnabled(true);
-                navigationView.setSpeedLimitIconEnabled(true);
-                status.setText("GOOGLE NAVIGATION READY • LOADING BASEMAP…");
-                if (mapLoaded && !guiding) status.setVisibility(GONE);
-            }
-
-            @Override public void onError(int errorCode) {
-                status.setVisibility(VISIBLE);
-                if (errorCode == NavigationApi.ErrorCode.NOT_AUTHORIZED)
-                    status.setText("GOOGLE KEY NOT AUTHORIZED • ENABLE NAVIGATION SDK");
-                else if (errorCode == NavigationApi.ErrorCode.TERMS_NOT_ACCEPTED)
-                    status.setText("GOOGLE NAVIGATION TERMS MUST BE ACCEPTED");
-                else if (errorCode == NavigationApi.ErrorCode.LOCATION_PERMISSION_MISSING)
-                    status.setText("LOCATION PERMISSION REQUIRED FOR NAVIGATION");
-                else status.setText("GOOGLE NAVIGATION ERROR • " + errorCode);
-            }
-        });
     }
 
     private void beginNavigation(String rawDestination) {
