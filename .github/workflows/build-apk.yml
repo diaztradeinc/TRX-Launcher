@@ -24,12 +24,22 @@ jobs:
         run: |
           AAPT_BIN=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
           "$AAPT_BIN" dump badging app/build/outputs/apk/release/app-release.apk | tee apk-badging.txt
-          grep "versionCode='120' versionName='5.2.0'" apk-badging.txt
+          grep "versionCode='121' versionName='5.2.1'" apk-badging.txt
           grep "application-label:'TRX Launcher 5'" apk-badging.txt
           grep "launchable-activity: name='com.mdiaz.trxlauncher.MainActivity'" apk-badging.txt
-      - run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v5.2.0-FINAL.apk
+      - name: Enable emulator acceleration
+        run: sudo chmod a+rw /dev/kvm
+      - name: Android 16 fresh-install launch smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: bash scripts/smoke-launch.sh
+      - run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v5.2.1-startup-fix.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: TRX-Launcher-v5.2.0-FINAL
-          path: TRX-Launcher-v5.2.0-FINAL.apk
+          name: TRX-Launcher-v5.2.1-startup-fix
+          path: TRX-Launcher-v5.2.1-startup-fix.apk
           retention-days: 30
