@@ -516,7 +516,7 @@ public class NavigationPanel extends FrameLayout {
     }
 
     private int currentAccent() {
-        int theme = prefs.getInt("theme_choice", 0);
+        int theme = prefs.getInt("theme_choice", 1);
         if (theme == 1) return 0xffff9f1a;
         if (theme == 2) return 0xffd9dde3;
         if (theme == 3) return 0xff438cff;
