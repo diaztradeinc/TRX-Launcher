@@ -415,8 +415,24 @@ public class MainActivity extends Activity {
             .setTitle("Connect TRX Media Controls")
             .setMessage("One Android confirmation lets TRX Launcher show artwork, track details, queues, and playback controls. This is required only once and can be turned off later in system settings.")
             .setNegativeButton("Not now",null)
-            .setPositiveButton("Continue",(dialog,which)->MediaBridge.requestAccess(this))
+            .setPositiveButton("Continue",(dialog,which)->openMediaAccessSettings())
             .show();
+    }
+
+    private void openMediaAccessSettings() {
+        try {
+            Intent intent;
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                intent = new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS);
+                intent.putExtra(android.provider.Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
+                    new android.content.ComponentName(this, MediaBridge.class).flattenToString());
+            } else {
+                intent = new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+            }
+            startActivity(intent);
+        } catch (Throwable ignored) {
+            MediaBridge.requestAccess(this);
+        }
     }
 
     public void openMediaAppPicker(){
