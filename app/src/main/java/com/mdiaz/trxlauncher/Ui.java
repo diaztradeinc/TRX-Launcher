@@ -10,7 +10,7 @@ import android.view.ViewGroup;
 import android.widget.*;
 
 final class Ui {
-    static final int BG=0xff050506, CARD=0xff111214, CARD2=0xff17191c, RED=0xffe1192d;
+    static final int BG=0xff050506, CARD=0xff111214, CARD2=0xff17191c; static int RED=0xffe1192d;
     static int dp(Context c,int v){return Math.round(v*c.getResources().getDisplayMetrics().density);}
     static GradientDrawable bg(int color,int stroke,int radius,Context c){
         GradientDrawable g=new GradientDrawable();g.setColor(color);g.setCornerRadius(dp(c,radius));

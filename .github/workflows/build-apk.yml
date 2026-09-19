@@ -20,9 +20,16 @@ jobs:
       - name: Build
         env: { MAPS_API_KEY: "${{ secrets.MAPS_API_KEY }}" }
         run: gradle --no-daemon :app:assembleRelease
-      - run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v5.0.0-clean.apk
+      - name: Verify release identity
+        run: |
+          AAPT_BIN=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
+          "$AAPT_BIN" dump badging app/build/outputs/apk/release/app-release.apk | tee apk-badging.txt
+          grep "versionCode='120' versionName='5.2.0'" apk-badging.txt
+          grep "application-label:'TRX Launcher 5'" apk-badging.txt
+          grep "launchable-activity: name='com.mdiaz.trxlauncher.MainActivity'" apk-badging.txt
+      - run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v5.2.0-FINAL.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: TRX-Launcher-v5.0.0-clean
-          path: TRX-Launcher-v5.0.0-clean.apk
+          name: TRX-Launcher-v5.2.0-FINAL
+          path: TRX-Launcher-v5.2.0-FINAL.apk
           retention-days: 30
