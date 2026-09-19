@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 package=com.mdiaz.trxlauncher
+trap 'adb logcat -d -b crash -s AndroidRuntime:E; echo "Startup smoke test failed at line $LINENO"' ERR
 adb install app/build/outputs/apk/release/app-release.apk
 # Fresh emulator install: no runtime permissions are pre-granted.
-adb shell dumpsys package "$package" | grep 'android.permission.BLUETOOTH_CONNECT: granted=false'
+adb shell pm revoke "$package" android.permission.BLUETOOTH_CONNECT
+permission_dump=$(adb shell dumpsys package "$package")
+if grep -q 'android.permission.BLUETOOTH_CONNECT: granted=true' <<< "$permission_dump"; then
+  echo 'FAIL: Bluetooth permission unexpectedly granted.'
+  exit 1
+fi
 adb logcat -c
 for attempt in 1 2; do
   adb shell am force-stop "$package"
