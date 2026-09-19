@@ -187,25 +187,29 @@ public class NavigationPanel extends FrameLayout {
      * view is attached, measured, started and resumed. Wait for a real surface,
      * authorize Navigation first, then request the map.
      */
-    private void ensureInitialized() {
+    public void onCreatePanel() {
         if (initialized) return;
-        if (!isAttachedToWindow() || getWidth() == 0 || getHeight() == 0) {
-            status.setText("WAITING FOR MAP SURFACE…");
-            post(this::ensureInitialized);
-            return;
-        }
-
         try {
             initialized = true;
-            navigationView.setVisibility(VISIBLE);
             navigationView.onCreate(initialState);
-            if (activityStarted) startView();
-            if (activityResumed) resumeView();
-            navigationView.post(this::initializeNavigator);
         } catch (Throwable error) {
             initialized = false;
             showInitializationError("VIEW", error);
         }
+    }
+
+    private void ensureInitialized() {
+        onCreatePanel();
+        if (!initialized) return;
+        if (!isAttachedToWindow() || getWidth() == 0 || getHeight() == 0
+            || navigationView.getWidth() == 0 || navigationView.getHeight() == 0) {
+            status.setText("WAITING FOR MAP SURFACE…");
+            postDelayed(this::ensureInitialized, 50);
+            return;
+        }
+        if (activityStarted) startView();
+        if (activityResumed) resumeView();
+        navigationView.post(this::initializeNavigator);
     }
 
     private void initializeNavigator() {
@@ -333,11 +337,11 @@ public class NavigationPanel extends FrameLayout {
         status.setVisibility(VISIBLE);
         status.setText("RESTARTING MAP RENDERER…");
         try {
-            pauseView();
-            stopView();
+            navigationView.requestLayout();
+            navigationView.invalidate();
             navigationView.postDelayed(() -> {
-                if (activityStarted && panelVisible) startView();
-                if (activityResumed && panelVisible) resumeView();
+                if (activityStarted) startView();
+                if (activityResumed) resumeView();
                 if (navigator == null) initializeNavigator();
                 else initializeMap();
             }, 350);
@@ -611,15 +615,15 @@ public class NavigationPanel extends FrameLayout {
 
     public void onStartPanel() {
         activityStarted = true;
-        if (panelVisible) startView();
+        onCreatePanel();
+        startView();
     }
     public void onResumePanel() {
         activityResumed = true;
-        if (panelVisible) {
-            ensureInitialized();
-            startView();
-            resumeView();
-        }
+        onCreatePanel();
+        startView();
+        resumeView();
+        if (panelVisible) ensureInitialized();
     }
     public void onPausePanel() {
         activityResumed = false;
@@ -642,9 +646,10 @@ public class NavigationPanel extends FrameLayout {
         });
     }
     public void onHiddenPanel() {
+        // Keep NavigationView started and resumed while the Activity is alive.
+        // Repeatedly destroying an automotive SurfaceView between tabs can leave
+        // the Google renderer permanently white on some Android boxes.
         panelVisible = false;
-        pauseView();
-        stopView();
     }
     private void startView() {
         if (initialized && !panelStarted) {
