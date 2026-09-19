@@ -159,7 +159,7 @@ public final class DashboardView extends View {
                 String[] labels={"BLUETOOTH / AUDIO","SOUND SETTINGS","MEDIA SOURCES","SYSTEM SETTINGS"};
                 for(int i=0;i<4;i++)button(c,70,510+i*160,1010,630+i*160,labels[i],false);
             }else{
-                panel(c,32,420,1048,1278,"WEATHER • PLAINSBORO");
+                panel(c,32,420,1048,1278,"WEATHER • CURRENT LOCATION");
                 text(c,activity.weatherTemp(),70,680,72,WHITE,true);text(c,activity.weatherCondition(),70,790,22,MUTED,false);
                 button(c,70,920,1010,1020,"REFRESH WEATHER",true);
             }return;
@@ -271,6 +271,7 @@ public final class DashboardView extends View {
     private String runTime(){if(runActive)return String.format(Locale.US,"%.1f s",(SystemClock.elapsedRealtime()-runStarted)/1000f);if(zeroToSixty>0)return String.format(Locale.US,"%.1f s",zeroToSixty);return "--.- s";}
     private String trim(String value,int max){if(value==null)return "";return value.length()>max?value.substring(0,max-1)+"…":value;}
     public int currentPage(){return page;}
+    public int currentSection(){return sections[page];}
     public void reloadMediaApps(){try{mediaApps=activity.selectedMediaApps();}catch(Throwable ignored){mediaApps=new ArrayList<>();}invalidate();}
     private void marquee(Canvas c,String value,float l,float t,float r,float size,int color,boolean bold){
         if(value==null||value.isEmpty())value="No media playing";
@@ -390,9 +391,9 @@ public final class DashboardView extends View {
         sectionTabs(c,32,330,new String[]{"Command","Drive","Quick Controls","Weather"},0);
 
         panel(c,32,420,760,1278,"");
-        text(c,"ACTIVE ROUTE",58,462,11,MUTED,true);text(c,"●  LIVE TRAFFIC",610,462,10,0xff55d88a,true);
+        text(c,"GOOGLE MAP",58,462,11,MUTED,true);text(c,"NAVIGATION",610,462,10,MUTED,true);
         String recent=recentDestination(0);text(c,recent.isEmpty()?"Ready to navigate":destinationName(recent),58,515,24,WHITE,true);
-        text(c,recent.isEmpty()?"Tap this card to search a destination":"Recent destination • Google live traffic",58,548,12,MUTED,false);
+        text(c,recent.isEmpty()?"Tap below to search a destination":"Recent destination • tap below to navigate",58,548,12,MUTED,false);
         p.setShader(new LinearGradient(x(48),y(580),x(744),y(1120),0xff161a20,0xff050608,Shader.TileMode.CLAMP));c.drawRoundRect(new RectF(x(48),y(572),x(744),y(1130)),x(14),x(14),p);p.setShader(null);
         for(int i=0;i<7;i++)line(c,55,650+i*78,735,590+i*84,0xff242a31,3);
         for(int i=0;i<6;i++)line(c,110+i*120,580,75+i*128,1125,0xff20262d,2);
@@ -693,6 +694,7 @@ public final class DashboardView extends View {
             if(xx>=900){activity.openSettingsScreen();return true;}
             int tab=Math.max(0,Math.min(3,(int)((xx-32)/217)));
             sections[page]=tab;
+            activity.showLiveMap(page==1);
             if(page==4){favoriteAppsOnly=false;appCategory=tab;appScroll=0;refreshDisplayedApps();}
             if(page==1)activity.navigationSection(tab);
             invalidate();return true;

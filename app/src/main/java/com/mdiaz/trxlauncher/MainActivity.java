@@ -215,6 +215,8 @@ public class MainActivity extends Activity {
 
     public void showLiveMap(boolean visible){
         if(mapPanel==null||root==null)return;
+        boolean compact=dashboard!=null&&dashboard.currentPage()==0&&dashboard.currentSection()==0;
+        visible=visible||compact;
         if(visible){
             int w=Math.max(1,root.getWidth()),h=Math.max(1,root.getHeight());
             int topInset=0,bottomInset=0;
@@ -230,15 +232,15 @@ public class MainActivity extends Activity {
                 }
             }catch(Throwable ignored){}
             int usable=Math.max(1,h-topInset-bottomInset);
-            int side=Math.round(w*18f/1080f);
+            int side=Math.round(w*(compact?48f:18f)/1080f);
             FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(
-                Math.max(1,w-side*2),Math.max(1,Math.round(usable*868f/1440f)));
+                Math.max(1,compact?Math.round(w*696f/1080f):w-side*2),Math.max(1,Math.round(usable*(compact?550f:868f)/1440f)));
             lp.leftMargin=side;
-            lp.topMargin=topInset+Math.round(usable*410f/1440f);
+            lp.topMargin=topInset+Math.round(usable*(compact?572f:410f)/1440f);
             mapPanel.setLayoutParams(lp);
             if(mapPanel.getParent()==null)root.addView(mapPanel);
             mapPanel.setVisibility(View.VISIBLE);mapPanel.bringToFront();
-            if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onShownPanel();
+            if(mapPanel instanceof NavigationPanel){((NavigationPanel)mapPanel).setCompact(compact);((NavigationPanel)mapPanel).onShownPanel();}
         }else{
             if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onHiddenPanel();
             mapPanel.setVisibility(View.INVISIBLE);

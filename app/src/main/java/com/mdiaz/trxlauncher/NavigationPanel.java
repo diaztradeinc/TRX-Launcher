@@ -76,6 +76,7 @@ public class NavigationPanel extends FrameLayout {
     private boolean roadListenerAdded;
     private final com.google.android.libraries.navigation.RoadSnappedLocationProvider.LocationListener roadListener=location->post(()->updateTruck(location));
     private boolean trafficEnabled = true;
+    private boolean compact;
     private boolean satelliteEnabled;
     private int suggestionRequest;
     private boolean selectingSuggestion;
@@ -95,6 +96,8 @@ public class NavigationPanel extends FrameLayout {
         super(context);
         activity = context;
         prefs = context.getSharedPreferences("launcher", Context.MODE_PRIVATE);
+        trafficEnabled=prefs.getBoolean("map_traffic",true);
+        satelliteEnabled=prefs.getBoolean("map_satellite",false);
         initialState = state == null ? null : new Bundle(state);
         accent = currentAccent();
         setBackgroundColor(0xff05070a);
@@ -234,7 +237,7 @@ public class NavigationPanel extends FrameLayout {
         // Rendering and Navigator authorization are intentionally independent.
         // A Navigator delay or authorization response must never block basemap tiles.
         navigationView.post(this::initializeMap);
-        navigationView.post(this::initializeNavigator);
+        if(!compact)navigationView.post(this::initializeNavigator);
     }
 
     /**
@@ -336,7 +339,7 @@ public class NavigationPanel extends FrameLayout {
                     map.getUiSettings().setRotateGesturesEnabled(true);
                     map.getUiSettings().setCompassEnabled(true);
                     map.getUiSettings().setMyLocationButtonEnabled(true);
-                    map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                    map.setMapType(satelliteEnabled?GoogleMap.MAP_TYPE_HYBRID:GoogleMap.MAP_TYPE_NORMAL);
                     try { map.setMapStyle(MapStyleOptions.loadRawResourceStyle(activity, R.raw.map_dark)); }
                     catch (Throwable ignored) { }
                     map.setTrafficEnabled(trafficEnabled);
@@ -601,6 +604,7 @@ public class NavigationPanel extends FrameLayout {
             truckMarker=googleMap.addMarker(new com.google.android.gms.maps.model.MarkerOptions().position(point).anchor(.5f,.5f).flat(true).zIndex(1000).icon(com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(bitmap)));
         }
         if(truckMarker!=null){truckMarker.setPosition(point);if(location.hasBearing())truckMarker.setRotation(location.getBearing());truckMarker.setVisible(true);}
+        try{googleMap.setMyLocationEnabled(false);}catch(SecurityException denied){stopTruckTracking();}
     }
 
     private void stopTruckTracking(){
@@ -795,6 +799,7 @@ public class NavigationPanel extends FrameLayout {
 
     private void toggleTraffic() {
         trafficEnabled = !trafficEnabled;
+        prefs.edit().putBoolean("map_traffic",trafficEnabled).apply();
         if (googleMap != null) googleMap.setTrafficEnabled(trafficEnabled);
         modeBadge.setText(trafficEnabled
             ? "GOOGLE LIVE TRAFFIC  •  PINCH TO ZOOM"
@@ -804,6 +809,7 @@ public class NavigationPanel extends FrameLayout {
 
     private void toggleMapLayer() {
         satelliteEnabled = !satelliteEnabled;
+        prefs.edit().putBoolean("map_satellite",satelliteEnabled).apply();
         if (googleMap != null) {
             googleMap.setMapType(satelliteEnabled ? GoogleMap.MAP_TYPE_HYBRID : GoogleMap.MAP_TYPE_NORMAL);
             if (!satelliteEnabled) try {
@@ -921,6 +927,14 @@ public class NavigationPanel extends FrameLayout {
             navigationView.requestLayout();
             navigationView.invalidate();
         });
+    }
+    public void setCompact(boolean value){
+        compact=value;
+        destination.setVisibility(value?GONE:VISIBLE);routeButton.setVisibility(value?GONE:VISIBLE);
+        commandBar.setVisibility(value?GONE:VISIBLE);mapTools.setVisibility(value?GONE:VISIBLE);
+        modeBadge.setVisibility(value?GONE:VISIBLE);stopButton.setVisibility(!value&&guiding?VISIBLE:GONE);
+        suggestionScroller.setVisibility(GONE);
+        if(initialized)try{navigationView.setHeaderEnabled(!value);navigationView.setEtaCardEnabled(!value);}catch(RuntimeException ignored){}
     }
     public void onHiddenPanel() {
         // Keep NavigationView started and resumed while the Activity is alive.

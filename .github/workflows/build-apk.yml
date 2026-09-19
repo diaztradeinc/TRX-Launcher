@@ -47,20 +47,20 @@ jobs:
       - name: Build release APK
         env:
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
-        run: gradle --no-daemon --stacktrace :app:assembleRelease
+        run: gradle --no-daemon --stacktrace :app:assembleRelease :app:lintRelease
 
       - name: Verify APK internal version
         run: |
           AAPT_BIN=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
-          "$AAPT_BIN" dump badging app/build/outputs/apk/release/app-release.apk | grep "versionCode='70' versionName='4.0.0'"
+          "$AAPT_BIN" dump badging app/build/outputs/apk/release/app-release.apk | grep "versionCode='122' versionName='4.1.0'"
 
       - name: Give APK a friendly name
-        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v4.0.0.apk
+        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v4.1.0.apk
 
       - name: Upload downloadable APK
         uses: actions/upload-artifact@v4
         with:
-          name: TRX-Launcher-v4.0.0
-          path: TRX-Launcher-v4.0.0.apk
+          name: TRX-Launcher-v4.1.0
+          path: TRX-Launcher-v4.1.0.apk
           if-no-files-found: error
           retention-days: 30
