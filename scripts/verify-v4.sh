@@ -54,3 +54,9 @@ if grep -q 'Process: com.mdiaz.trxlauncher' verification/crash-log.txt; then
   cat verification/crash-log.txt
   exit 1
 fi
+capture_diagnostics
+grep -q 'BASEMAP_READY' verification/navigation-diagnostics.txt
+if grep -qi 'Authorization failure' verification/navigation-diagnostics.txt; then
+  echo 'Google authorization failed; withholding APK.'
+  exit 1
+fi

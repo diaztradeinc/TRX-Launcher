@@ -381,6 +381,7 @@ public class NavigationPanel extends FrameLayout {
                     map.setOnMapLoadedCallback(() -> {
                         if (attempt != mapAttempt) return;
                         mapLoaded = true;
+                        Log.i("TRXNavigation","BASEMAP_READY");
                         mapRequested = false;
                         status.setText("GOOGLE MAP READY");
                         if (!guiding) status.postDelayed(() -> {

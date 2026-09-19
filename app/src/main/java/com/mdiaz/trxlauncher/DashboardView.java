@@ -116,6 +116,7 @@ public final class DashboardView extends View {
     private float x(float n){return n*u;}private float y(float n){return safeTop+n*usableH/1440f;}private float sy(float n){return n*usableH/1440f;}
     private void paint(int color,float size,boolean bold){p.setColor(color);p.setTextSize(x(size));p.setTypeface(Typeface.create("sans",bold?Typeface.BOLD:Typeface.NORMAL));p.setStyle(Paint.Style.FILL);p.setShader(null);p.setAlpha(255);}
     private void text(Canvas c,String s,float xx,float yy,float size,int color,boolean bold){paint(color,size,bold);c.drawText(s,x(xx),y(yy),p);}
+    private void fittedText(Canvas c,String s,float left,float baseline,float right,float size,int color,boolean bold){paint(color,size,bold);android.text.TextPaint tp=new android.text.TextPaint(p);String fitted=android.text.TextUtils.ellipsize(s==null?"":s,tp,x(right-left),android.text.TextUtils.TruncateAt.END).toString();c.drawText(fitted,x(left),y(baseline),p);}
     private void line(Canvas c,float a,float b,float d,float e,int color,float width){p.setShader(null);p.setColor(color);p.setAlpha(255);p.setStrokeWidth(x(width));p.setStyle(Paint.Style.STROKE);c.drawLine(x(a),y(b),x(d),y(e),p);p.setStyle(Paint.Style.FILL);}
     private void raisedBox(Canvas c,RectF q,boolean selected,float radius){
         p.setShader(null);p.setStyle(Paint.Style.FILL);p.setColor(0xaa000000);
@@ -436,7 +437,7 @@ public final class DashboardView extends View {
         panel(c,32,420,222,1278,"");text(c,"SOURCES",54,462,11,MUTED,true);
         for(int i=0;i<3;i++){float t=500+i*120;RectF q=new RectF(x(52),y(t),x(202),y(t+98));raisedBox(c,q,i==0,12);String icon=i==0?"♫":i==1?"ᛒ":"+";String label=i==0?(mediaApps.isEmpty()?"MEDIA":trim(mediaApps.get(0).label,12)):i==1?"BLUETOOTH":"ADD SOURCE";text(c,icon,70,t+57,22,i==0?RED:MUTED,true);text(c,label,110,t+56,10,i==0?WHITE:MUTED,true);}
         panel(c,238,420,782,1278,"");
-        drawPlaybackDial(c,430,745,145);text(c,trim(MediaBridge.artist.toUpperCase(Locale.US),28),585,650,11,MUTED,true);text(c,trim(MediaBridge.title,25),585,700,24,WHITE,true);text(c,trim(MediaBridge.artist,26),585,735,12,MUTED,false);
+        drawPlaybackDial(c,430,745,145);fittedText(c,MediaBridge.artist.toUpperCase(Locale.US),585,650,760,11,MUTED,true);fittedText(c,MediaBridge.title,585,700,760,20,WHITE,true);fittedText(c,MediaBridge.artist,585,735,760,12,MUTED,false);
         mediaProgress(c,585,790,750);button(c,572,850,626,915,"|◀",false);button(c,638,835,708,930,MediaBridge.playing?"Ⅱ":"▶",true);button(c,720,850,766,915,"▶|",false);
         text(c,MediaBridge.hasAccess(activity)?"MEDIA SESSION CONNECTED":"ONE-TIME MEDIA SETUP REQUIRED",270,1198,10,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);
         panel(c,798,420,1048,1278,"");text(c,"UP NEXT",820,462,11,MUTED,true);text(c,"●  LIVE",968,462,9,0xff55d88a,true);drawCompactQueue(c,820,510);
@@ -490,8 +491,10 @@ public final class DashboardView extends View {
     }
     private boolean handleMediaTouch(float xx,float yy,float moveX,float moveY){
         if(moveX>x(24)||moveY>x(24))return true;
-        if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}
         if(xx<225&&yy>490&&yy<860){int slot=(int)((yy-500)/120);if(slot==0&&!mediaApps.isEmpty())activity.launch(mediaApps.get(0));else if(slot==1)activity.openAudioRouteSettings();else activity.openMediaAppPicker();return true;}
+        if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}
+        if(xx>285&&xx<570&&yy>600&&yy<890){MediaBridge.toggle(activity);return true;}
+        if(xx>798&&yy>510&&yy<1090){MediaBridge.playQueueItem(activity,(int)((yy-510)/145));return true;}
         if(yy>820&&yy<950&&xx>560&&xx<780){if(xx<635)MediaBridge.previous(activity);else if(xx>710)MediaBridge.next(activity);else MediaBridge.toggle(activity);return true;}
         if(xx>580&&xx<760&&yy>760&&yy<830){long duration=MediaBridge.durationMs;if(duration>0)MediaBridge.seekTo(activity,Math.round(duration*Math.max(0,Math.min(1,(xx-585)/165f))));return true;}
         return false;
