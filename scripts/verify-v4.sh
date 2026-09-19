@@ -19,12 +19,16 @@ printf '%s\n' '<?xml version="1.0" encoding="utf-8"?><map><boolean name="first_r
 adb logcat -c
 adb shell am start -W -n com.mdiaz.trxlauncher/.MainActivity
 sleep 8
+python3 scripts/tap-text.py 'GOT IT' || true
+adb emu geo fix -122.084 37.422
+sleep 3
 mkdir -p verification
 for page in 108 324 540 756 972; do
   adb shell am start -W -n com.mdiaz.trxlauncher/.MainActivity
   sleep 1
   adb shell input tap "$page" 1360
   sleep 2
+  python3 scripts/tap-text.py 'GOT IT' || true
   for tab in 140 357 574 791; do
     adb shell input tap "$tab" 355
     sleep 1
@@ -34,6 +38,25 @@ for page in 108 324 540 756 972; do
     if [ "$page" = 324 ] && { [ "$tab" = 574 ] || [ "$tab" = 791 ]; }; then adb shell input keyevent BACK; sleep 2; fi
   done
 done
+adb shell input tap 324 1360
+sleep 2
+python3 scripts/tap-text.py 'GOT IT' || true
+adb shell input tap 140 375
+sleep 2
+python3 scripts/tap-text.py 'Where to?'
+adb shell input text 'Stanford%sUniversity'
+for attempt in 1 2 3 4 5 6; do
+  sleep 3
+  if python3 scripts/tap-text.py 'STANFORD UNIVERSITY'; then break; fi
+done
+adb emu geo fix -122.084 37.422
+sleep 15
+adb exec-out screencap -p > verification/turn-by-turn.png
+capture_diagnostics
+grep -q 'PLACES_READY' verification/navigation-diagnostics.txt
+grep -q 'ROUTE_READY' verification/navigation-diagnostics.txt
+grep -q 'TRUCK_READY' verification/navigation-diagnostics.txt
+python3 scripts/tap-text.py 'STOP' || true
 adb shell am start -W -n com.mdiaz.trxlauncher/.MainActivity
 sleep 2
 adb shell input tap 108 1360

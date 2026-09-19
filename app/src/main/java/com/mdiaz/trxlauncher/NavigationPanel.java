@@ -496,6 +496,7 @@ public class NavigationPanel extends FrameLayout {
                         if (routeStatus == Navigator.RouteStatus.OK) {
                             navigator.startGuidance();
                             guiding = true;
+                            Log.i("TRXNavigation","ROUTE_READY");
                             followRoad();
                             placesSession=null;
                             rememberDestination(address);
@@ -573,6 +574,7 @@ public class NavigationPanel extends FrameLayout {
                 .addOnSuccessListener(response->{
                     if(request!=suggestionRequest)return;
                     suggestions.removeAllViews();placeIds.clear();
+                    if(!response.getAutocompletePredictions().isEmpty())Log.i("TRXNavigation","PLACES_READY");
                     for(com.google.android.libraries.places.api.model.AutocompletePrediction item:response.getAutocompletePredictions()){
                         String full=item.getFullText(null).toString();placeIds.put(full,item.getPlaceId());
                         addAddressSuggestion(item.getPrimaryText(null).toString(),full);
@@ -581,6 +583,7 @@ public class NavigationPanel extends FrameLayout {
                     suggestionScroller.setVisibility(VISIBLE);suggestionScroller.bringToFront();
                 }).addOnFailureListener(error->{
                     if(request!=suggestionRequest)return;
+                    Log.e("TRXNavigation","PLACES_ERROR "+(error instanceof com.google.android.gms.common.api.ApiException?((com.google.android.gms.common.api.ApiException)error).getStatusCode():-1));
                     status.setText("GOOGLE PLACES UNAVAILABLE • CHECK API ACCESS / CONNECTION");status.setVisibility(VISIBLE);
                 });
         }catch(RuntimeException error){status.setText("GOOGLE PLACES SETUP REQUIRED");status.setVisibility(VISIBLE);}
@@ -616,6 +619,7 @@ public class NavigationPanel extends FrameLayout {
             paint.setColor(0xffffbbc2);canvas.drawRect(13,6,19,10,paint);canvas.drawRect(29,6,35,10,paint);
             paint.setColor(0xff9f0a1c);canvas.drawRect(21,8,27,19,paint);
             truckMarker=googleMap.addMarker(new com.google.android.gms.maps.model.MarkerOptions().position(point).anchor(.5f,.5f).flat(true).zIndex(1000).icon(com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(bitmap)));
+            if(truckMarker!=null)Log.i("TRXNavigation","TRUCK_READY");
         }
         if(truckMarker!=null){truckMarker.setPosition(point);if(location.hasBearing())truckMarker.setRotation(location.getBearing());truckMarker.setVisible(true);}
         try{googleMap.setMyLocationEnabled(false);}catch(SecurityException denied){stopTruckTracking();}
