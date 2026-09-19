@@ -98,7 +98,7 @@ public class MainActivity extends Activity {
     @Override protected void onPause(){if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onPausePanel();super.onPause();}
     @Override protected void onStop(){if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onStopPanel();super.onStop();}
     @Override public void onLowMemory(){super.onLowMemory();if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onLowMemoryPanel();}
-    @Override public void onConfigurationChanged(Configuration config){super.onConfigurationChanged(config);if(mapView!=null)mapView.onConfigurationChanged(config);}
+    @Override public void onConfigurationChanged(Configuration config){super.onConfigurationChanged(config);if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onConfigurationChangedPanel(config);}
     @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onSaveInstanceStatePanel(out);}
 
     private void setupLiveMap(Bundle state){
@@ -232,7 +232,11 @@ public class MainActivity extends Activity {
             mapPanel.setLayoutParams(lp);
             if(mapPanel.getParent()==null)root.addView(mapPanel);
             mapPanel.setVisibility(View.VISIBLE);mapPanel.bringToFront();
-        }else mapPanel.setVisibility(View.GONE);
+            if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onShownPanel();
+        }else{
+            if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onHiddenPanel();
+            mapPanel.setVisibility(View.GONE);
+        }
     }
 
     private void showStartupError(Throwable error) {
