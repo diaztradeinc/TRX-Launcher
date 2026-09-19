@@ -24,6 +24,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -51,11 +52,16 @@ public class NavigationPanel extends FrameLayout {
     private final Button routeButton;
     private final Button stopButton;
     private final LinearLayout suggestions;
+    private final ScrollView suggestionScroller;
+    private final LinearLayout commandBar;
+    private final LinearLayout mapTools;
     private final TextView status;
     private final TextView modeBadge;
     private final Handler suggestionHandler = new Handler(Looper.getMainLooper());
     private final int accent;
     private Navigator navigator;
+    private GoogleMap googleMap;
+    private boolean trafficEnabled = true;
     private int suggestionRequest;
     private boolean selectingSuggestion;
     private boolean guiding;
@@ -104,11 +110,17 @@ public class NavigationPanel extends FrameLayout {
         suggestions.setPadding(dp(7), dp(5), dp(7), dp(7));
         suggestions.setBackground(panel(0xf5080a0d, accent, 1, 16));
         suggestions.setElevation(dp(20));
-        suggestions.setVisibility(GONE);
+        suggestionScroller = new ScrollView(context);
+        suggestionScroller.setFillViewport(true);
+        suggestionScroller.setClipToPadding(false);
+        suggestionScroller.setElevation(dp(26));
+        suggestionScroller.setVisibility(GONE);
+        suggestionScroller.addView(suggestions, new ScrollView.LayoutParams(
+            LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
         LayoutParams suggestionLp = new LayoutParams(
-            LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.TOP);
+            LayoutParams.MATCH_PARENT, dp(340), Gravity.TOP);
         suggestionLp.setMargins(dp(16), dp(88), dp(16), 0);
-        addView(suggestions, suggestionLp);
+        addView(suggestionScroller, suggestionLp);
 
         destination.setImeOptions(EditorInfo.IME_ACTION_GO);
         destination.setOnEditorActionListener((v, action, event) -> {
@@ -126,7 +138,7 @@ public class NavigationPanel extends FrameLayout {
             }
         });
         destination.setOnFocusChangeListener((v, focused) -> {
-            if (!focused) suggestionHandler.postDelayed(() -> suggestions.setVisibility(GONE), 180);
+            if (!focused) suggestionHandler.postDelayed(() -> suggestionScroller.setVisibility(GONE), 220);
         });
 
         routeButton = button("➤", true);
@@ -135,6 +147,33 @@ public class NavigationPanel extends FrameLayout {
         routeLp.setMargins(0, dp(21), dp(21), 0);
         addView(routeButton, routeLp);
         routeButton.setOnClickListener(v -> beginNavigation(destination.getText().toString()));
+
+        commandBar = new LinearLayout(context);
+        commandBar.setOrientation(LinearLayout.HORIZONTAL);
+        commandBar.setGravity(Gravity.CENTER);
+        commandBar.setPadding(dp(6), dp(6), dp(6), dp(6));
+        commandBar.setBackground(panel(0xe807090c, 0xff3f454e, 1, 16));
+        commandBar.setElevation(dp(8));
+        addCommand("⌂  HOME", () -> beginNavigation("Home"));
+        addCommand("▣  WORK", () -> beginNavigation("Work"));
+        addCommand("↻  RECENT", this::showRecentDestinations);
+        LayoutParams commandLp = new LayoutParams(dp(390), dp(54), Gravity.LEFT | Gravity.TOP);
+        commandLp.setMargins(dp(16), dp(92), 0, 0);
+        addView(commandBar, commandLp);
+
+        mapTools = new LinearLayout(context);
+        mapTools.setOrientation(LinearLayout.VERTICAL);
+        mapTools.setGravity(Gravity.CENTER);
+        mapTools.setPadding(dp(5), dp(5), dp(5), dp(5));
+        mapTools.setBackground(panel(0xe807090c, 0xff4e545e, 1, 16));
+        mapTools.setElevation(dp(9));
+        addMapTool("＋", () -> zoomBy(1f), "Zoom in");
+        addMapTool("−", () -> zoomBy(-1f), "Zoom out");
+        addMapTool("◎", this::recenterMap, "Recenter map");
+        addMapTool("T", this::toggleTraffic, "Toggle live traffic");
+        LayoutParams toolsLp = new LayoutParams(dp(58), dp(226), Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        toolsLp.setMargins(0, 0, dp(16), 0);
+        addView(mapTools, toolsLp);
 
         status = new TextView(context);
         status.setText("CONNECTING TO GOOGLE NAVIGATION…");
@@ -280,13 +319,14 @@ public class NavigationPanel extends FrameLayout {
         try {
             navigationView.getMapAsync(map -> {
                 try {
+                    googleMap = map;
                     map.getUiSettings().setZoomGesturesEnabled(true);
                     map.getUiSettings().setScrollGesturesEnabled(true);
                     map.getUiSettings().setRotateGesturesEnabled(true);
                     map.getUiSettings().setCompassEnabled(true);
                     map.getUiSettings().setMyLocationButtonEnabled(true);
                     map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-                    map.setTrafficEnabled(true);
+                    map.setTrafficEnabled(trafficEnabled);
 
                     LatLng start = new LatLng(40.3323, -74.5819);
                     try {
@@ -402,7 +442,7 @@ public class NavigationPanel extends FrameLayout {
         if ("Work".equalsIgnoreCase(query)) query = prefs.getString("work_destination", "Work");
         final String address = query;
         hideKeyboard();
-        suggestions.setVisibility(GONE);
+        suggestionScroller.setVisibility(GONE);
         status.setText("BUILDING ROUTE TO " + address.toUpperCase(Locale.US) + "…");
         status.setVisibility(VISIBLE);
         new Thread(() -> {
@@ -427,6 +467,7 @@ public class NavigationPanel extends FrameLayout {
                             rememberDestination(address);
                             destination.setVisibility(GONE);
                             routeButton.setVisibility(GONE);
+                            commandBar.setVisibility(GONE);
                             stopButton.setVisibility(VISIBLE);
                             modeBadge.setText("LIVE TRAFFIC  •  VOICE GUIDANCE ACTIVE");
                             status.setVisibility(GONE);
@@ -455,14 +496,15 @@ public class NavigationPanel extends FrameLayout {
         guiding = false;
         destination.setVisibility(VISIBLE);
         routeButton.setVisibility(VISIBLE);
+        commandBar.setVisibility(VISIBLE);
         stopButton.setVisibility(GONE);
         modeBadge.setText("GOOGLE LIVE TRAFFIC  •  PINCH TO ZOOM");
         Toast.makeText(activity, "TRX guidance ended", Toast.LENGTH_SHORT).show();
     }
 
     public boolean closeChooser() {
-        if (suggestions.getVisibility() == VISIBLE) {
-            suggestions.setVisibility(GONE);
+        if (suggestionScroller.getVisibility() == VISIBLE) {
+            suggestionScroller.setVisibility(GONE);
             return true;
         }
         if (guiding) {
@@ -477,7 +519,7 @@ public class NavigationPanel extends FrameLayout {
         final int request = ++suggestionRequest;
         if (query.length() < 3) {
             suggestions.removeAllViews();
-            suggestions.setVisibility(GONE);
+            suggestionScroller.setVisibility(GONE);
             return;
         }
         suggestionHandler.postDelayed(() -> {
@@ -491,7 +533,7 @@ public class NavigationPanel extends FrameLayout {
         try {
             if (Geocoder.isPresent()) {
                 List<Address> matches = new Geocoder(activity, Locale.US)
-                    .getFromLocationName(query, 4);
+                    .getFromLocationName(query, 8);
                 if (matches != null) found.addAll(matches);
             }
         } catch (Throwable ignored) { }
@@ -502,7 +544,7 @@ public class NavigationPanel extends FrameLayout {
         if (request != suggestionRequest || !destination.hasFocus()) return;
         suggestions.removeAllViews();
         if (found == null || found.isEmpty()) {
-            suggestions.setVisibility(GONE);
+            suggestionScroller.setVisibility(GONE);
             return;
         }
 
@@ -541,10 +583,11 @@ public class NavigationPanel extends FrameLayout {
         }
         if (suggestions.getChildCount() <= 1) {
             suggestions.removeAllViews();
-            suggestions.setVisibility(GONE);
+            suggestionScroller.setVisibility(GONE);
         } else {
-            suggestions.setVisibility(VISIBLE);
-            suggestions.bringToFront();
+            suggestionScroller.setVisibility(VISIBLE);
+            suggestionScroller.bringToFront();
+            suggestionScroller.scrollTo(0, 0);
         }
     }
 
@@ -560,7 +603,7 @@ public class NavigationPanel extends FrameLayout {
         marker.setTextColor(accent);
         marker.setTextSize(13);
         marker.setGravity(Gravity.CENTER);
-        row.addView(marker, new LinearLayout.LayoutParams(dp(34), dp(54)));
+        row.addView(marker, new LinearLayout.LayoutParams(dp(34), dp(68)));
 
         LinearLayout copy = new LinearLayout(activity);
         copy.setOrientation(LinearLayout.VERTICAL);
@@ -576,13 +619,14 @@ public class NavigationPanel extends FrameLayout {
         address.setText(full);
         address.setTextColor(0xffaeb3bc);
         address.setTextSize(11);
-        address.setSingleLine(true);
+        address.setSingleLine(false);
+        address.setMaxLines(2);
         address.setEllipsize(TextUtils.TruncateAt.END);
-        copy.addView(name, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(24)));
-        copy.addView(address, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(20)));
-        row.addView(copy, new LinearLayout.LayoutParams(0, dp(50), 1));
+        copy.addView(name, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(25)));
+        copy.addView(address, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(36)));
+        row.addView(copy, new LinearLayout.LayoutParams(0, dp(64), 1));
 
-        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(56));
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(70));
         rowLp.setMargins(0, dp(2), 0, dp(2));
         suggestions.addView(row, rowLp);
         row.setOnClickListener(v -> {
@@ -592,11 +636,101 @@ public class NavigationPanel extends FrameLayout {
             destination.setSelection(destination.length());
             selectingSuggestion = false;
             suggestions.removeAllViews();
-            suggestions.setVisibility(GONE);
+            suggestionScroller.setVisibility(GONE);
             hideKeyboard();
             destination.clearFocus();
             beginNavigation(full);
         });
+    }
+
+    private void addCommand(String label, Runnable action) {
+        Button control = button(label, false);
+        control.setTextSize(11);
+        control.setMinWidth(0);
+        control.setMinimumWidth(0);
+        control.setPadding(dp(8), 0, dp(8), 0);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1);
+        lp.setMargins(dp(2), 0, dp(2), 0);
+        commandBar.addView(control, lp);
+        control.setOnClickListener(v -> action.run());
+    }
+
+    private void addMapTool(String label, Runnable action, String description) {
+        Button control = button(label, false);
+        control.setTextSize(19);
+        control.setContentDescription(description);
+        control.setMinWidth(0);
+        control.setMinimumWidth(0);
+        control.setPadding(0, 0, 0, 0);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(46), 0, 1);
+        lp.setMargins(0, dp(2), 0, dp(2));
+        mapTools.addView(control, lp);
+        control.setOnClickListener(v -> action.run());
+    }
+
+    private void zoomBy(float amount) {
+        if (googleMap != null) googleMap.animateCamera(CameraUpdateFactory.zoomBy(amount));
+    }
+
+    private void recenterMap() {
+        if (googleMap == null) return;
+        try {
+            if (activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(activity, "Location permission is required", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            LocationManager manager = (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
+            Location last = manager == null ? null : manager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if (last == null && manager != null)
+                last = manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+            if (last != null) googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                new LatLng(last.getLatitude(), last.getLongitude()), 15.4f));
+        } catch (Throwable error) {
+            Toast.makeText(activity, "Current location is not available yet", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void toggleTraffic() {
+        trafficEnabled = !trafficEnabled;
+        if (googleMap != null) googleMap.setTrafficEnabled(trafficEnabled);
+        modeBadge.setText(trafficEnabled
+            ? "GOOGLE LIVE TRAFFIC  •  PINCH TO ZOOM"
+            : "TRAFFIC OFF  •  PINCH TO ZOOM");
+        Toast.makeText(activity, trafficEnabled ? "Live traffic on" : "Live traffic off", Toast.LENGTH_SHORT).show();
+    }
+
+    private void showRecentDestinations() {
+        suggestions.removeAllViews();
+        TextView heading = new TextView(activity);
+        heading.setText("RECENT DESTINATIONS");
+        heading.setTextColor(accent);
+        heading.setTextSize(10);
+        heading.setLetterSpacing(.14f);
+        heading.setTypeface(null, android.graphics.Typeface.BOLD);
+        heading.setGravity(Gravity.CENTER_VERTICAL);
+        heading.setPadding(dp(14), 0, dp(10), 0);
+        suggestions.addView(heading, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(30)));
+        String raw = prefs.getString("recent_destinations", "");
+        int count = 0;
+        if (!TextUtils.isEmpty(raw)) for (String value : raw.split("\\n")) {
+            if (!TextUtils.isEmpty(value.trim())) {
+                addAddressSuggestion(value.trim(), value.trim());
+                count++;
+            }
+        }
+        if (count == 0) {
+            TextView empty = new TextView(activity);
+            empty.setText("Your routed destinations will appear here");
+            empty.setTextColor(0xffb6bac2);
+            empty.setTextSize(13);
+            empty.setGravity(Gravity.CENTER_VERTICAL);
+            empty.setPadding(dp(16), 0, dp(16), 0);
+            suggestions.addView(empty, new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(64)));
+        }
+        suggestionScroller.setVisibility(VISIBLE);
+        suggestionScroller.bringToFront();
+        routeButton.bringToFront();
     }
 
     private void hideKeyboard() {
