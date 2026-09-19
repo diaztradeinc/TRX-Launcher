@@ -35,6 +35,15 @@ jobs:
         with:
           gradle-version: "8.13"
 
+      - name: Verify Google Navigation key
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: |
+          if [ -z "$MAPS_API_KEY" ]; then
+            echo "::error::Repository secret MAPS_API_KEY is missing. Add the restricted Google Navigation SDK key before building."
+            exit 1
+          fi
+
       - name: Build release APK
         env:
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
