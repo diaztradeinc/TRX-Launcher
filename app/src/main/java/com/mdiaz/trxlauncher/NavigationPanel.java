@@ -29,7 +29,7 @@ import android.widget.Toast;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MapStyleOptions;
+import com.google.android.gms.maps.model.MapColorScheme;
 import com.google.android.libraries.navigation.ListenableResultFuture;
 import com.google.android.libraries.navigation.NavigationApi;
 import com.google.android.libraries.navigation.NavigationView;
@@ -58,6 +58,9 @@ public class NavigationPanel extends FrameLayout {
     private int suggestionRequest;
     private boolean selectingSuggestion;
     private boolean guiding;
+    private boolean mapLoaded;
+    private boolean panelStarted;
+    private boolean panelResumed;
 
     public NavigationPanel(MainActivity context, Bundle state) {
         super(context);
@@ -169,7 +172,9 @@ public class NavigationPanel extends FrameLayout {
             map.getUiSettings().setRotateGesturesEnabled(true);
             map.getUiSettings().setCompassEnabled(true);
             map.getUiSettings().setMyLocationButtonEnabled(true);
-            try { map.setMapStyle(MapStyleOptions.loadRawResourceStyle(activity, R.raw.map_dark)); }
+            map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+            map.setTrafficEnabled(true);
+            try { map.setMapColorScheme(MapColorScheme.DARK); }
             catch (Throwable ignored) { }
             LatLng start = new LatLng(40.3323, -74.5819);
             try {
@@ -185,8 +190,15 @@ public class NavigationPanel extends FrameLayout {
             } catch (Throwable ignored) { }
             map.moveCamera(CameraUpdateFactory.newLatLngZoom(start, 14.2f));
             map.setOnMapLoadedCallback(() -> {
+                mapLoaded = true;
                 if (navigator != null && !guiding) status.setVisibility(GONE);
             });
+            status.postDelayed(() -> {
+                if (!mapLoaded && !guiding) {
+                    status.setVisibility(VISIBLE);
+                    status.setText("BASEMAP NOT LOADED • CHECK NETWORK + GOOGLE KEY");
+                }
+            }, 9000);
         });
     }
 
@@ -200,15 +212,19 @@ public class NavigationPanel extends FrameLayout {
                 navigationView.setRecenterButtonEnabled(true);
                 navigationView.setSpeedometerEnabled(true);
                 navigationView.setSpeedLimitIconEnabled(true);
-                status.setText("GOOGLE NAVIGATION READY");
-                status.postDelayed(() -> { if (!guiding) status.setVisibility(GONE); }, 900);
+                status.setText("GOOGLE NAVIGATION READY • LOADING BASEMAP…");
+                if (mapLoaded && !guiding) status.setVisibility(GONE);
             }
 
             @Override public void onError(int errorCode) {
                 status.setVisibility(VISIBLE);
-                status.setText(errorCode == NavigationApi.ErrorCode.NOT_AUTHORIZED
-                    ? "GOOGLE KEY NOT AUTHORIZED • CHECK BILLING + API RESTRICTIONS"
-                    : "GOOGLE NAVIGATION ERROR • " + errorCode);
+                if (errorCode == NavigationApi.ErrorCode.NOT_AUTHORIZED)
+                    status.setText("GOOGLE KEY NOT AUTHORIZED • ENABLE NAVIGATION SDK");
+                else if (errorCode == NavigationApi.ErrorCode.TERMS_NOT_ACCEPTED)
+                    status.setText("GOOGLE NAVIGATION TERMS MUST BE ACCEPTED");
+                else if (errorCode == NavigationApi.ErrorCode.LOCATION_PERMISSION_MISSING)
+                    status.setText("LOCATION PERMISSION REQUIRED FOR NAVIGATION");
+                else status.setText("GOOGLE NAVIGATION ERROR • " + errorCode);
             }
         });
     }
@@ -448,10 +464,29 @@ public class NavigationPanel extends FrameLayout {
         prefs.edit().putString("recent_destinations", saved.toString()).apply();
     }
 
-    public void onStartPanel() { navigationView.onStart(); }
-    public void onResumePanel() { navigationView.onResume(); }
-    public void onPausePanel() { navigationView.onPause(); }
-    public void onStopPanel() { navigationView.onStop(); }
+    public void onStartPanel() {
+        if (!panelStarted) { navigationView.onStart(); panelStarted = true; }
+    }
+    public void onResumePanel() {
+        onStartPanel();
+        if (!panelResumed) { navigationView.onResume(); panelResumed = true; }
+    }
+    public void onPausePanel() {
+        if (panelResumed) { navigationView.onPause(); panelResumed = false; }
+    }
+    public void onStopPanel() {
+        onPausePanel();
+        if (panelStarted) { navigationView.onStop(); panelStarted = false; }
+    }
+    public void onShownPanel() {
+        onResumePanel();
+        navigationView.requestLayout();
+        navigationView.invalidate();
+    }
+    public void onHiddenPanel() { onPausePanel(); }
+    public void onConfigurationChangedPanel(android.content.res.Configuration config) {
+        navigationView.onConfigurationChanged(config);
+    }
     public void onLowMemoryPanel() { navigationView.onTrimMemory(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW); }
     public void onSaveInstanceStatePanel(Bundle out) { navigationView.onSaveInstanceState(out); }
     public void onDestroyPanel() {
