@@ -60,6 +60,8 @@ public final class DashboardView extends View {
     private float W,H,u,usableH,downX,downY,touchX=-1,touchY=-1,appScroll,scrollAtDown,mediaScroll,mediaScrollAtDown;
     private long launchAt=SystemClock.uptimeMillis(), transitionAt, lastMediaRefresh, runStarted;
     private float speedMph, zeroToSixty;
+    private final java.util.ArrayList<Float> speedTrace=new java.util.ArrayList<>();
+    private long lastGpsAt;
     private boolean runArmed, runActive;
     private int transitionDirection;
     private final Runnable ticker=new Runnable(){public void run(){invalidate();clock.postDelayed(this,33);}};
@@ -136,7 +138,7 @@ public final class DashboardView extends View {
         RectF r=new RectF(0,y(0),W,y(72));p.setShader(new LinearGradient(0,y(0),W,y(0),0xff020304,0xff101317,Shader.TileMode.CLAMP));c.drawRect(r,p);p.setShader(null);
         String now=new SimpleDateFormat("h:mm a",Locale.US).format(new Date());
         text(c,"RAM",28,46,24,WHITE,true);line(c,118,20,118,50,RED,3);text(c,"TRX LAUNCHER",138,44,15,RED,true);
-        paint(MUTED,13,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText(activity.weatherTemp()+"  •  PLAINSBORO, NJ",x(825),y(43),p);
+        paint(MUTED,13,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText(activity.weatherTemp()+"  •  LOCAL WEATHER",x(825),y(43),p);
         paint(WHITE,22,true);c.drawText(now,x(1028),y(46),p);p.setTextAlign(Paint.Align.LEFT);
         line(c,0,71,1080,71,(RED&0x00ffffff)|0x99000000,2);
     }
@@ -220,13 +222,13 @@ public final class DashboardView extends View {
         }
         if(page==3){
             if(tab==1&&yy>850&&yy<950){if(xx<520){if(speedMph<1)armRun();else android.widget.Toast.makeText(activity,"Stop before arming the timer",android.widget.Toast.LENGTH_SHORT).show();}else resetRun();}
-            if(tab==2&&yy>1190)activity.openAudioRouteSettings();
+            if(tab==2&&yy>1190)activity.openObdSetup();
             if(tab==3&&yy>1160)new android.app.AlertDialog.Builder(activity).setTitle("Clear saved runs?").setNegativeButton("Cancel",null).setPositiveButton("Clear",(d,i)->{prefs.edit().remove("performance_runs").apply();invalidate();}).show();
             return true;
         }return false;
     }
 
-    public void onSpeedChanged(float mph){speedMph=mph;activity.applySpeedCompensation(mph);if(runArmed&&!runActive&&mph>=1f){runActive=true;runStarted=SystemClock.elapsedRealtime();}if(runActive&&mph>=60f){zeroToSixty=(SystemClock.elapsedRealtime()-runStarted)/1000f;runActive=false;runArmed=false;saveCompletedRun(zeroToSixty);}invalidate();}
+    public void onSpeedChanged(float mph){speedMph=mph;lastGpsAt=SystemClock.elapsedRealtime();speedTrace.add(mph);if(speedTrace.size()>120)speedTrace.remove(0);activity.applySpeedCompensation(mph);if(runArmed&&!runActive&&mph>=1f){runActive=true;runStarted=SystemClock.elapsedRealtime();}if(runActive&&mph>=60f){zeroToSixty=(SystemClock.elapsedRealtime()-runStarted)/1000f;runActive=false;runArmed=false;saveCompletedRun(zeroToSixty);}invalidate();}
     private void saveCompletedRun(float seconds){
         if(seconds<=0||seconds>60)return;
         String old=prefs.getString("performance_runs","");
@@ -264,7 +266,7 @@ public final class DashboardView extends View {
         p.setTextAlign(Paint.Align.RIGHT);text(c,"WARNING",r-14,t+31,10,RED,true);p.setTextAlign(Paint.Align.LEFT);
     }
 
-    private void armRun(){zeroToSixty=0;runActive=false;runArmed=true;}
+    private void armRun(){if(speedMph>=1||lastGpsAt==0||SystemClock.elapsedRealtime()-lastGpsAt>3000){android.widget.Toast.makeText(activity,"Stop with a current GPS fix before arming",android.widget.Toast.LENGTH_SHORT).show();return;}zeroToSixty=0;runActive=false;runArmed=true;speedTrace.clear();}
     private void resetRun(){zeroToSixty=0;runActive=false;runArmed=false;}
     private String runTime(){if(runActive)return String.format(Locale.US,"%.1f s",(SystemClock.elapsedRealtime()-runStarted)/1000f);if(zeroToSixty>0)return String.format(Locale.US,"%.1f s",zeroToSixty);return "--.- s";}
     private String trim(String value,int max){if(value==null)return "";return value.length()>max?value.substring(0,max-1)+"…":value;}
@@ -507,8 +509,19 @@ public final class DashboardView extends View {
         miniStat(c,786,146,908,216,"CONNECTION",ObdBridge.connected?"READY":"GPS");miniStat(c,922,146,1044,216,"PROFILE","STREET");sectionTabs(c,32,330,new String[]{"Live Data","0–60","Gauges","History"},0);
         metricCard(c,32,420,278,"BOOST",obdText(ObdBridge.boostPsi,1),"PSI",obdLevel(ObdBridge.boostPsi,0,15));metricCard(c,290,420,536,"COOLANT",obdText(ObdBridge.coolantF,0),"°F",obdLevel(ObdBridge.coolantF,100,240));metricCard(c,548,420,794,"TRANS",obdText(ObdBridge.transmissionF,0),"°F",obdLevel(ObdBridge.transmissionF,100,240));metricCard(c,806,420,1048,"BATTERY",obdText(ObdBridge.batteryV,1),"V",obdLevel(ObdBridge.batteryV,11,15));
         panel(c,32,640,430,1085,"");text(c,"0–60 GPS TIMER",54,682,11,MUTED,true);text(c,"●  "+(runActive?"RUNNING":runArmed?"ARMED":"READY"),316,682,9,0xff55d88a,true);text(c,runTime(),54,790,43,WHITE,true);text(c,runArmed?"ARMED":"AUTOMATIC ABOVE 1 MPH",316,790,12,0xff55d88a,true);button(c,54,850,210,930,"START",true);button(c,226,850,398,930,"RESET",false);
-        panel(c,446,640,1048,1085,"");text(c,"ACCELERATION",470,682,11,MUTED,true);text(c,"●  LIVE",950,682,9,0xff55d88a,true);for(int i=0;i<5;i++)line(c,470,730+i*65,1024,730+i*65,0xff292e35,1);for(int i=0;i<6;i++)line(c,500+i*100,710,500+i*100,1045,0xff292e35,1);path.reset();path.moveTo(x(485),y(1020));path.cubicTo(x(620),y(980),x(810),y(925),x(1010),y(850));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(5));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);
+        drawSpeedTrace(c);
         panel(c,32,1100,1048,1278,"");text(c,trim(ObdBridge.status,52),54,1145,12,ObdBridge.connected?0xff55d88a:MUTED,true);float[] history=runStats();text(c,"LAST",54,1190,9,MUTED,true);text(c,history[0]>0?String.format(Locale.US,"%.2f s",history[0]):"--",54,1235,22,WHITE,true);text(c,"BEST",250,1190,9,MUTED,true);text(c,history[1]>0?String.format(Locale.US,"%.2f s",history[1]):"--",250,1235,22,WHITE,true);text(c,"RUNS",446,1190,9,MUTED,true);text(c,String.valueOf((int)history[2]),446,1235,22,WHITE,true);
+    }
+    private void drawSpeedTrace(Canvas c){
+        panel(c,446,640,1048,1085,"");text(c,"GPS SPEED • LAST 120 FIXES",470,682,11,MUTED,true);
+        boolean fresh=lastGpsAt>0&&SystemClock.elapsedRealtime()-lastGpsAt<3000;
+        text(c,fresh?"LIVE":"NO FIX",950,682,9,fresh?0xff55d88a:MUTED,true);
+        for(int i=0;i<5;i++)line(c,470,730+i*65,1024,730+i*65,0xff292e35,1);
+        if(speedTrace.size()<2){text(c,"WAITING FOR GPS DATA",500,875,15,MUTED,true);return;}
+        float maximum=60;for(float speed:speedTrace)maximum=Math.max(maximum,speed);
+        path.reset();for(int i=0;i<speedTrace.size();i++){float px=x(485+i*525f/119),py=y(1020-280*speedTrace.get(i)/maximum);if(i==0)path.moveTo(px,py);else path.lineTo(px,py);}
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(3));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);
+        text(c,"0–"+Math.round(maximum)+" MPH",470,1060,10,MUTED,false);
     }
     private void metricCard(Canvas c,float l,float top,float r,String label,String value,String unit,float level){RectF q=new RectF(x(l),y(top),x(r),y(top+195));raisedBox(c,q,false,12);text(c,label,l+20,top+35,11,MUTED,true);text(c,value,l+20,top+105,31,WHITE,true);text(c,unit,l+98,top+105,11,MUTED,true);p.setColor(0xff343940);c.drawRoundRect(new RectF(x(l+20),y(top+158),x(r-20),y(top+166)),x(4),x(4),p);p.setColor(RED);c.drawRoundRect(new RectF(x(l+20),y(top+158),x(l+20+(r-l-40)*Math.max(.02f,level)),y(top+166)),x(4),x(4),p);}
     private void apps(Canvas c){

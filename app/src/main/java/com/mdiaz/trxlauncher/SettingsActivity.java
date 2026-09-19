@@ -89,6 +89,7 @@ public class SettingsActivity extends Activity {
         Button clearArt=action("CLEAR ARTWORK CACHE",false,false);mediaPanel.addView(clearArt,buttonParams());clearArt.setOnClickListener(v->{MediaBridge.clearArtworkCache();toast("Artwork cache cleared");});
 
         LinearLayout performance=section(root,"// PERFORMANCE SAFETY","Visual reminders only; factory vehicle warnings always take priority.");
+        Button obdSetup=action("SET UP OBDLINK MX+",false,false);performance.addView(obdSetup,buttonParams());obdSetup.setOnClickListener(v->ObdSetup.show(this));
         alerts=toggle("Enable visual gauge warnings",prefs.getBoolean("performance_alerts",true));addControl(performance,"WARNING DISPLAY",alerts);
         coolantWarning=numberEdit(prefs.getFloat("warn_coolant",235f));addControl(performance,"COOLANT WARNING (°F)",coolantWarning);
         intakeWarning=numberEdit(prefs.getFloat("warn_intake",170f));addControl(performance,"INTAKE TEMPERATURE WARNING (°F)",intakeWarning);
@@ -155,7 +156,12 @@ public class SettingsActivity extends Activity {
     private void openMissingPermission(){
         if(!MediaBridge.hasAccess(this)){MediaBridge.requestAccess(this);return;}
         if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},340);return;}
+        if(android.os.Build.VERSION.SDK_INT>=31&&checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED){ObdSetup.show(this);return;}
         toast("Launcher permissions are healthy");
+    }
+    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){
+        super.onRequestPermissionsResult(request,permissions,results);
+        if(request==ObdSetup.PERMISSION_REQUEST&&results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)ObdSetup.show(this);
     }
     private boolean isDefaultHome(){try{Intent i=new Intent(Intent.ACTION_MAIN);i.addCategory(Intent.CATEGORY_HOME);ResolveInfo r=getPackageManager().resolveActivity(i,PackageManager.MATCH_DEFAULT_ONLY);return r!=null&&r.activityInfo!=null&&getPackageName().equals(r.activityInfo.packageName);}catch(Throwable ignored){return false;}}
 

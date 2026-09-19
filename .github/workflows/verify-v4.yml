@@ -21,7 +21,9 @@ jobs:
       - name: Build and lint
         env:
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
-        run: gradle --no-daemon :app:assembleRelease :app:assembleDebug :app:lintRelease
+        run: |
+          if [ -z "$MAPS_API_KEY" ]; then echo '::error::MAPS_API_KEY is missing; Google services cannot be verified.'; exit 1; fi
+          gradle --no-daemon :app:assembleRelease :app:assembleDebug :app:lintRelease
       - name: Enable emulator acceleration
         run: sudo chmod a+rw /dev/kvm
       - name: Check screen interactions on Android 16

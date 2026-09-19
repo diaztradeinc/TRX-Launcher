@@ -49,6 +49,8 @@ public class MainActivity extends Activity {
     private volatile float speedMph;
     private volatile String weatherTemp = "--°";
     private volatile String weatherCondition = "WEATHER UNAVAILABLE";
+    private volatile Location weatherLocation;
+    private long weatherRequestedAt;
     private LocationManager locationManager;
     private FrameLayout root;
     private FrameLayout mapPanel;
@@ -261,10 +263,13 @@ public class MainActivity extends Activity {
     public String weatherCondition() { return weatherCondition; }
 
     private void fetchWeather() {
+        Location fix=weatherLocation;
+        if(fix==null){weatherCondition="WAITING FOR LOCATION";return;}
+        weatherRequestedAt=android.os.SystemClock.elapsedRealtime();
         new Thread(() -> {
             HttpURLConnection connection = null;
             try {
-                URL url = new URL("https://api.open-meteo.com/v1/forecast?latitude=40.33&longitude=-74.58&current=temperature_2m,weather_code&temperature_unit=fahrenheit");
+                URL url = new URL("https://api.open-meteo.com/v1/forecast?latitude="+fix.getLatitude()+"&longitude="+fix.getLongitude()+"&current=temperature_2m,weather_code&temperature_unit=fahrenheit");
                 connection = (HttpURLConnection)url.openConnection();
                 connection.setConnectTimeout(6000);
                 connection.setReadTimeout(6000);
@@ -313,6 +318,8 @@ public class MainActivity extends Activity {
 
     private final LocationListener gpsListener = new LocationListener() {
         @Override public void onLocationChanged(Location location) {
+            weatherLocation=new Location(location);
+            if(weatherRequestedAt==0||android.os.SystemClock.elapsedRealtime()-weatherRequestedAt>900000)fetchWeather();
             speedMph = location.hasSpeed() ?
                 Math.max(0,location.getSpeed()*2.2369363f) : 0;
             if (dashboard != null) dashboard.onSpeedChanged(speedMph);
@@ -347,8 +354,9 @@ public class MainActivity extends Activity {
     @Override public void onRequestPermissionsResult(
         int requestCode,String[] permissions,int[] results) {
         super.onRequestPermissionsResult(requestCode,permissions,results);
+        if(requestCode==ObdSetup.PERMISSION_REQUEST&&results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)ObdSetup.show(this);
         if (requestCode == 41 && results.length > 0 &&
-            results[0] == PackageManager.PERMISSION_GRANTED) startGps();
+            results[0] == PackageManager.PERMISSION_GRANTED) {startGps();if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onResumePanel();}
     }
 
     private void handleBack(){
@@ -527,6 +535,7 @@ public class MainActivity extends Activity {
         if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).showSection(tab);
     }
     public void refreshWeather(){fetchWeather();}
+    public void openObdSetup(){ObdSetup.show(this);}
 
     public float mediaVolumeLevel(){try{android.media.AudioManager m=(android.media.AudioManager)getSystemService(AUDIO_SERVICE);return m.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)/(float)Math.max(1,m.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC));}catch(Throwable ignored){return 0;}}
     public void setMediaVolumeLevel(float level){try{android.media.AudioManager m=(android.media.AudioManager)getSystemService(AUDIO_SERVICE);int max=Math.max(1,m.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)),value=Math.max(0,Math.min(max,Math.round(level*max)));m.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,value,0);if(autoVolumeEnabled())getSharedPreferences("launcher",MODE_PRIVATE).edit().putInt("auto_volume_base",value).apply();lastCompensatedVolume=value;}catch(Throwable ignored){}}

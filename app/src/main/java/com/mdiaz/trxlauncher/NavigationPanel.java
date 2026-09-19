@@ -71,6 +71,10 @@ public class NavigationPanel extends FrameLayout {
     private final java.util.Map<String,String> placeIds=new java.util.HashMap<>();
     private Navigator navigator;
     private GoogleMap googleMap;
+    private com.google.android.libraries.navigation.RoadSnappedLocationProvider roadLocations;
+    private com.google.android.gms.maps.model.Marker truckMarker;
+    private boolean roadListenerAdded;
+    private final com.google.android.libraries.navigation.RoadSnappedLocationProvider.LocationListener roadListener=location->post(()->updateTruck(location));
     private boolean trafficEnabled = true;
     private boolean satelliteEnabled;
     private int suggestionRequest;
@@ -277,6 +281,8 @@ public class NavigationPanel extends FrameLayout {
                 @Override public void onNavigatorReady(Navigator ready) {
                     navigatorRequested = false;
                     navigator = ready;
+                    startTruckTracking();
+                    applyTheme();
                     try {
                         navigationView.setNavigationUiEnabled(true);
                         navigationView.setHeaderEnabled(true);
@@ -354,6 +360,7 @@ public class NavigationPanel extends FrameLayout {
                     }
 
                     map.moveCamera(CameraUpdateFactory.newLatLngZoom(start, 14.2f));
+                    startTruckTracking();
                     status.setText("MAP CONNECTED • LOADING BASEMAP TILES…");
                     map.setOnMapLoadedCallback(() -> {
                         if (attempt != mapAttempt) return;
@@ -567,6 +574,39 @@ public class NavigationPanel extends FrameLayout {
         try{if(googleMap!=null)googleMap.followMyLocation(GoogleMap.CameraPerspective.TILTED,
             FollowMyLocationOptions.builder().setZoomLevel(18f).build());
         }catch(SecurityException denied){status.setText("LOCATION PERMISSION REQUIRED");status.setVisibility(VISIBLE);}
+    }
+
+    private void startTruckTracking(){
+        if(!activityResumed||navigator==null||googleMap==null||roadListenerAdded)return;
+        if(activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED)return;
+        try{
+            roadLocations=NavigationApi.getRoadSnappedLocationProvider(activity.getApplication());
+            roadLocations.addLocationListener(roadListener);roadListenerAdded=true;
+        }catch(SecurityException denied){Log.w("TRXNavigation","Location permission unavailable",denied);}
+    }
+
+    private void updateTruck(Location location){
+        if(!activityResumed||!roadListenerAdded||googleMap==null)return;
+        LatLng point=new LatLng(location.getLatitude(),location.getLongitude());
+        if(truckMarker==null){
+            android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(dp(48),dp(72),android.graphics.Bitmap.Config.ARGB_8888);
+            android.graphics.Canvas canvas=new android.graphics.Canvas(bitmap);canvas.scale(bitmap.getWidth()/48f,bitmap.getHeight()/72f);
+            android.graphics.Paint paint=new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            paint.setColor(0xcc000000);canvas.drawRoundRect(5,5,45,70,10,10,paint);
+            paint.setColor(0xff111115);canvas.drawRoundRect(4,13,12,29,3,3,paint);canvas.drawRoundRect(36,13,44,29,3,3,paint);canvas.drawRoundRect(4,47,12,63,3,3,paint);canvas.drawRoundRect(36,47,44,63,3,3,paint);
+            paint.setColor(0xffff2338);canvas.drawRoundRect(10,3,38,68,7,7,paint);
+            paint.setColor(0xff131a22);canvas.drawRoundRect(14,21,34,35,3,3,paint);canvas.drawRoundRect(14,44,34,63,2,2,paint);
+            paint.setColor(0xffffbbc2);canvas.drawRect(13,6,19,10,paint);canvas.drawRect(29,6,35,10,paint);
+            paint.setColor(0xff9f0a1c);canvas.drawRect(21,8,27,19,paint);
+            truckMarker=googleMap.addMarker(new com.google.android.gms.maps.model.MarkerOptions().position(point).anchor(.5f,.5f).flat(true).zIndex(1000).icon(com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(bitmap)));
+        }
+        if(truckMarker!=null){truckMarker.setPosition(point);if(location.hasBearing())truckMarker.setRotation(location.getBearing());truckMarker.setVisible(true);}
+    }
+
+    private void stopTruckTracking(){
+        if(roadLocations!=null&&roadListenerAdded)roadLocations.removeLocationListener(roadListener);
+        roadListenerAdded=false;
+        if(truckMarker!=null)truckMarker.setVisible(false);
     }
 
     public void applyTheme(){
@@ -858,10 +898,12 @@ public class NavigationPanel extends FrameLayout {
         onCreatePanel();
         startView();
         resumeView();
+        startTruckTracking();
         if (panelVisible) ensureInitialized();
     }
     public void onPausePanel() {
         activityResumed = false;
+        stopTruckTracking();
         pauseView();
     }
     public void onStopPanel() {
@@ -916,6 +958,7 @@ public class NavigationPanel extends FrameLayout {
     public void onLowMemoryPanel() { if (initialized) navigationView.onTrimMemory(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW); }
     public void onSaveInstanceStatePanel(Bundle out) { if (initialized) navigationView.onSaveInstanceState(out); }
     public void onDestroyPanel() {
+        stopTruckTracking();
         suggestionHandler.removeCallbacksAndMessages(null);
         if (initialized) navigationView.onDestroy();
     }

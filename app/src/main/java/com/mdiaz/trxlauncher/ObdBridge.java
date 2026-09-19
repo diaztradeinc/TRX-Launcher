@@ -44,6 +44,8 @@ public final class ObdBridge {
 
     private ObdBridge(){}
 
+    public static void reconnect(Context context){closeSocket();start(context);}
+
     public static synchronized void start(Context context){
         if(running)return;
         final Context app=context.getApplicationContext();
@@ -65,6 +67,7 @@ public final class ObdBridge {
     private static void runLoop(Context context){
         while(running){
             try{
+                if(!context.getSharedPreferences("launcher",Context.MODE_PRIVATE).getBoolean("obd_enabled",true)){status="OBD DISCONNECTED";sleep(1000);continue;}
                 if(Build.VERSION.SDK_INT>=31&&context.checkSelfPermission(
                     Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED){
                     connected=false;status="BLUETOOTH PERMISSION REQUIRED";sleep(4000);continue;
@@ -73,7 +76,10 @@ public final class ObdBridge {
                 if(adapter==null){status="BLUETOOTH UNAVAILABLE";sleep(5000);continue;}
                 if(!adapter.isEnabled()){status="TURN ON BLUETOOTH";sleep(3500);continue;}
 
-                BluetoothDevice target=findMx(adapter.getBondedDevices());
+                BluetoothDevice target=null;
+                String selected=context.getSharedPreferences("launcher",Context.MODE_PRIVATE).getString("obd_address","");
+                if(selected.isEmpty())target=findMx(adapter.getBondedDevices());
+                else for(BluetoothDevice device:adapter.getBondedDevices())if(selected.equals(device.getAddress())){target=device;break;}
                 if(target==null){status="PAIR OBDLINK MX+";sleep(4000);continue;}
                 deviceName=safeName(target);
                 status="CONNECTING "+deviceName.toUpperCase(Locale.US)+"…";
@@ -98,6 +104,7 @@ public final class ObdBridge {
                 status="OBD RECONNECTING…";
             }finally{
                 connected=false;
+                rpm=coolantF=intakeF=engineLoad=batteryV=obdSpeedMph=boostPsi=transmissionF=Float.NaN;
                 closeSocket();
             }
             if(running)sleep(3000);
@@ -111,9 +118,8 @@ public final class ObdBridge {
             String name=safeName(device).toUpperCase(Locale.US);
             if(name.contains("OBDLINK")&&(name.contains("MX")||name.contains("STN")))return device;
             if(name.contains("MX+"))return device;
-            if(fallback==null&&name.contains("OBD"))fallback=device;
         }
-        return fallback;
+        return null;
     }
 
     private static String safeName(BluetoothDevice device){
@@ -186,7 +192,7 @@ public final class ObdBridge {
         }catch(Throwable invalid){return null;}
     }
 
-    private static synchronized String command(String value,long timeout) throws Exception{
+    private static String command(String value,long timeout) throws Exception{
         InputStream in=input;OutputStream out=output;
         if(in==null||out==null)throw new IllegalStateException("OBD socket closed");
         while(in.available()>0)in.read();
