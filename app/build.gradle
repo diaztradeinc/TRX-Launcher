@@ -1,6 +1,7 @@
 plugins { id 'com.android.application' }
 
 def mapsApiKey = System.getenv('MAPS_API_KEY') ?: (project.findProperty('MAPS_API_KEY') ?: '')
+def escapedMapsApiKey = mapsApiKey.replace('\\', '\\\\').replace('"', '\\"')
 
 android {
     compileOptions {
@@ -15,9 +16,14 @@ android {
         applicationId 'com.mdiaz.trxlauncher'
         minSdk 26
         targetSdk 36
-        versionCode 44
-        versionName '1.8.0'
+        versionCode 45
+        versionName '1.8.1'
         manifestPlaceholders = [MAPS_API_KEY: mapsApiKey]
+        buildConfigField 'String', 'MAPS_API_KEY', "\"${escapedMapsApiKey}\""
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     buildTypes {
