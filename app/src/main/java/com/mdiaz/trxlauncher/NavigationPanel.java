@@ -45,6 +45,7 @@ public class NavigationPanel extends FrameLayout {
     private final MainActivity activity;
     private final SharedPreferences prefs;
     private final NavigationView navigationView;
+    private final Bundle initialState;
     private final EditText destination;
     private final Button routeButton;
     private final Button stopButton;
@@ -60,16 +61,20 @@ public class NavigationPanel extends FrameLayout {
     private boolean mapLoaded;
     private boolean panelStarted;
     private boolean panelResumed;
+    private boolean activityStarted;
+    private boolean activityResumed;
+    private boolean panelVisible;
+    private boolean initialized;
 
     public NavigationPanel(MainActivity context, Bundle state) {
         super(context);
         activity = context;
         prefs = context.getSharedPreferences("launcher", Context.MODE_PRIVATE);
+        initialState = state == null ? null : new Bundle(state);
         accent = currentAccent();
         setBackgroundColor(0xff05070a);
 
         navigationView = new NavigationView(context);
-        navigationView.onCreate(state);
         addView(navigationView, new LayoutParams(
             LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
@@ -163,8 +168,21 @@ public class NavigationPanel extends FrameLayout {
         addView(stopButton, stopLp);
         stopButton.setOnClickListener(v -> stopGuidance());
 
-        initializeMap();
-        initializeNavigator();
+    }
+
+    /**
+     * NavigationView owns a SurfaceView. Initializing it while this panel is GONE
+     * gives some automotive Android builds a zero-sized render surface that never
+     * recovers. Initialize only after MainActivity has attached and shown us.
+     */
+    private void ensureInitialized() {
+        if (initialized) return;
+        initialized = true;
+        navigationView.onCreate(initialState);
+        navigationView.post(() -> {
+            initializeMap();
+            initializeNavigator();
+        });
     }
 
     private void initializeMap() {
@@ -481,33 +499,74 @@ public class NavigationPanel extends FrameLayout {
     }
 
     public void onStartPanel() {
-        if (!panelStarted) { navigationView.onStart(); panelStarted = true; }
+        activityStarted = true;
+        if (panelVisible) startView();
     }
     public void onResumePanel() {
-        onStartPanel();
-        if (!panelResumed) { navigationView.onResume(); panelResumed = true; }
+        activityResumed = true;
+        if (panelVisible) {
+            ensureInitialized();
+            startView();
+            resumeView();
+        }
     }
     public void onPausePanel() {
-        if (panelResumed) { navigationView.onPause(); panelResumed = false; }
+        activityResumed = false;
+        pauseView();
     }
     public void onStopPanel() {
-        onPausePanel();
-        if (panelStarted) { navigationView.onStop(); panelStarted = false; }
+        activityStarted = false;
+        activityResumed = false;
+        pauseView();
+        stopView();
     }
     public void onShownPanel() {
-        onResumePanel();
-        navigationView.requestLayout();
-        navigationView.invalidate();
+        panelVisible = true;
+        ensureInitialized();
+        if (activityStarted) startView();
+        if (activityResumed) resumeView();
+        navigationView.post(() -> {
+            navigationView.requestLayout();
+            navigationView.invalidate();
+        });
     }
-    public void onHiddenPanel() { onPausePanel(); }
+    public void onHiddenPanel() {
+        panelVisible = false;
+        pauseView();
+        stopView();
+    }
+    private void startView() {
+        if (initialized && !panelStarted) {
+            navigationView.onStart();
+            panelStarted = true;
+        }
+    }
+    private void resumeView() {
+        if (initialized && !panelResumed) {
+            navigationView.onResume();
+            panelResumed = true;
+        }
+    }
+    private void pauseView() {
+        if (initialized && panelResumed) {
+            navigationView.onPause();
+            panelResumed = false;
+        }
+    }
+    private void stopView() {
+        if (initialized && panelStarted) {
+            navigationView.onStop();
+            panelStarted = false;
+        }
+    }
     public void onConfigurationChangedPanel(android.content.res.Configuration config) {
-        navigationView.onConfigurationChanged(config);
+        if (initialized) navigationView.onConfigurationChanged(config);
     }
-    public void onLowMemoryPanel() { navigationView.onTrimMemory(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW); }
-    public void onSaveInstanceStatePanel(Bundle out) { navigationView.onSaveInstanceState(out); }
+    public void onLowMemoryPanel() { if (initialized) navigationView.onTrimMemory(android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW); }
+    public void onSaveInstanceStatePanel(Bundle out) { if (initialized) navigationView.onSaveInstanceState(out); }
     public void onDestroyPanel() {
         suggestionHandler.removeCallbacksAndMessages(null);
-        navigationView.onDestroy();
+        if (initialized) navigationView.onDestroy();
     }
 
     private Button button(String text, boolean selected) {
