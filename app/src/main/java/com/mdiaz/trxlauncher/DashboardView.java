@@ -67,8 +67,8 @@ public final class DashboardView extends View {
         super(context);activity=context;setFocusable(true);
         appScroller=new android.widget.OverScroller(context);
         prefs=context.getSharedPreferences("launcher",Context.MODE_PRIVATE);
-        if(!prefs.getBoolean("precision_split_v2_migrated",false)){
-            prefs.edit().putInt("theme_choice",1).putBoolean("precision_split_v2_migrated",true).apply();
+        if(!prefs.getBoolean("trx_launcher_v4_migrated",false)){
+            prefs.edit().putInt("theme_choice",0).putBoolean("trx_launcher_v4_migrated",true).apply();
         }
         reloadTheme();
         int startup=prefs.getInt("startup_page",-1);
@@ -132,11 +132,12 @@ public final class DashboardView extends View {
     }
     private void carbon(Canvas c){p.setColor(0xff07090c);c.drawRect(0,safeTop,W,H-safeBottom,p);p.setStrokeWidth(x(1));p.setColor(0x221f252b);for(float i=-H;i<W+H;i+=x(34)){c.drawLine(i,safeTop,i+H,H-safeBottom,p);c.drawLine(i+x(8),safeTop,i+H+x(8),H-safeBottom,p);}}
     private void status(Canvas c){
-        RectF r=new RectF(0,y(0),W,y(62));p.setShader(new LinearGradient(0,y(0),W,y(0),0xff020304,0xff15181c,Shader.TileMode.CLAMP));c.drawRect(r,p);p.setShader(null);
-        String now=new SimpleDateFormat("h:mm",Locale.US).format(new Date());text(c,now,24,40,23,MUTED,false);
-        paint(WHITE,28,true);p.setTextAlign(Paint.Align.CENTER);c.drawText("R  A  M",x(540),y(40),p);
-        paint(MUTED,14,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText(activity.weatherTemp()+"   ◢",x(1045),y(39),p);p.setTextAlign(Paint.Align.LEFT);
-        line(c,0,61,420,61,0xff697078,1);line(c,660,61,1080,61,0xff697078,1);
+        RectF r=new RectF(0,y(0),W,y(72));p.setShader(new LinearGradient(0,y(0),W,y(0),0xff020304,0xff101317,Shader.TileMode.CLAMP));c.drawRect(r,p);p.setShader(null);
+        String now=new SimpleDateFormat("h:mm a",Locale.US).format(new Date());
+        text(c,"RAM",28,46,24,WHITE,true);line(c,118,20,118,50,RED,3);text(c,"TRX LAUNCHER",138,44,15,RED,true);
+        paint(MUTED,13,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText(activity.weatherTemp()+"  •  PLAINSBORO, NJ",x(825),y(43),p);
+        paint(WHITE,22,true);c.drawText(now,x(1028),y(46),p);p.setTextAlign(Paint.Align.LEFT);
+        line(c,0,71,1080,71,(RED&0x00ffffff)|0x99000000,2);
     }
     private void drawPage(Canvas c,float intro){switch(page){case 0:home(c,intro);break;case 1:navigation(c);break;case 2:media(c);break;case 3:performance(c);break;default:apps(c);}}
 
@@ -292,41 +293,62 @@ public final class DashboardView extends View {
     }
 
     private void home(Canvas c,float intro){
-        hero(c,63,500,intro);
-        paint(RED,14,true);p.setTextAlign(Paint.Align.CENTER);c.drawText("—   T R X   P R E C I S I O N   S P L I T   —",x(540),y(96),p);p.setTextAlign(Paint.Align.LEFT);
+        hero(c,72,360,intro);
+        text(c,"PRECISION COMMAND",38,132,12,RED,true);
+        text(c,"Focused on the road.",38,190,35,WHITE,true);
+        text(c,"Ready for everything.",38,232,35,WHITE,true);
+        text(c,"Navigation, media, and vehicle data working together.",38,268,13,MUTED,false);
+        miniStat(c,786,146,908,216,"DRIVE MODE","AUTO");
+        miniStat(c,922,146,1044,216,"GPS SPEED",Math.round(speedMph)+" MPH");
+        sectionTabs(c,32,330,new String[]{"Command","Drive","Quick Controls","Weather"},0);
 
-        panel(c,18,505,648,925,"N A V I G A T I O N");
-        p.setShader(new LinearGradient(x(34),y(558),x(620),y(900),0xff171c20,0xff030405,Shader.TileMode.CLAMP));c.drawRoundRect(new RectF(x(34),y(558),x(632),y(900)),x(12),x(12),p);p.setShader(null);
-        mountains(c,560,898);
-        path.reset();path.moveTo(x(300),y(900));path.cubicTo(x(265),y(815),x(395),y(760),x(355),y(690));path.cubicTo(x(315),y(620),x(470),y(610),x(535),y(566));
-        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(17));p.setColor(0x55300000|(RED&0x00ffffff));c.drawPath(path,p);p.setStrokeWidth(x(5));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);
-        paint(WHITE,46,true);p.setTextAlign(Paint.Align.CENTER);c.drawText("⌃",x(300),y(858),p);p.setTextAlign(Paint.Align.LEFT);
-        RectF next=new RectF(x(468),y(570),x(615),y(720));raisedBox(c,next,false,12);text(c,"↱",503,640,50,RED,true);text(c,"800 ft",493,688,24,WHITE,true);
-        text(c,"⌖  PLAINSBORO, NJ",48,888,11,MUTED,true);
+        panel(c,32,420,760,1278,"");
+        text(c,"ACTIVE ROUTE",58,462,11,MUTED,true);text(c,"●  LIVE TRAFFIC",610,462,10,0xff55d88a,true);
+        String recent=recentDestination(0);text(c,recent.isEmpty()?"Ready to navigate":destinationName(recent),58,515,24,WHITE,true);
+        text(c,recent.isEmpty()?"Tap this card to search a destination":"Recent destination • Google live traffic",58,548,12,MUTED,false);
+        p.setShader(new LinearGradient(x(48),y(580),x(744),y(1120),0xff161a20,0xff050608,Shader.TileMode.CLAMP));c.drawRoundRect(new RectF(x(48),y(572),x(744),y(1130)),x(14),x(14),p);p.setShader(null);
+        for(int i=0;i<7;i++)line(c,55,650+i*78,735,590+i*84,0xff242a31,3);
+        for(int i=0;i<6;i++)line(c,110+i*120,580,75+i*128,1125,0xff20262d,2);
+        path.reset();path.moveTo(x(455),y(1110));path.cubicTo(x(420),y(1010),x(555),y(910),x(515),y(805));path.cubicTo(x(475),y(700),x(600),y(650),x(660),y(585));
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(14));p.setColor((DEEP_RED&0x00ffffff)|0x88000000);c.drawPath(path,p);p.setStrokeWidth(x(5));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);
+        paint(WHITE,34,true);p.setTextAlign(Paint.Align.CENTER);c.drawText("▲",x(455),y(1080),p);p.setTextAlign(Paint.Align.LEFT);
+        RectF turn=new RectF(x(56),y(1128),x(736),y(1255));raisedBox(c,turn,false,14);text(c,"↱",78,1205,34,WHITE,true);text(c,"SEARCH OR RESUME ROUTE",142,1184,17,WHITE,true);text(c,"Google navigation ready",142,1217,11,MUTED,false);p.setTextAlign(Paint.Align.RIGHT);text(c,"GO",700,1205,16,RED,true);p.setTextAlign(Paint.Align.LEFT);
 
-        panel(c,662,505,1062,925,"M E D I A");
-        RectF art=new RectF(x(688),y(570),x(842),y(724));p.setColor(0xff120d06);c.drawRoundRect(art,x(10),x(10),p);
-        if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);
-        text(c,trim(MediaBridge.title,20),865,621,16,WHITE,true);text(c,trim(MediaBridge.artist,22),865,653,12,MUTED,false);
-        button(c,690,755,790,842,"|◀",false);button(c,802,742,918,855,MediaBridge.playing?"Ⅱ":"▶",true);button(c,930,755,1034,842,"▶|",false);
-        mediaProgress(c,690,874,1034);
+        panel(c,780,420,1048,815,"");text(c,"NOW PLAYING",804,462,11,MUTED,true);text(c,MediaBridge.hasAccess(activity)?"●  CONNECTED":"●  SETUP",938,462,9,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);
+        RectF art=new RectF(x(804),y(492),x(900),y(588));p.setColor(0xff18080a);c.drawRoundRect(art,x(12),x(12),p);if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);
+        text(c,trim(MediaBridge.title,15),916,530,14,WHITE,true);text(c,trim(MediaBridge.artist,16),916,558,11,MUTED,false);
+        button(c,804,640,870,708,"|◀",false);button(c,880,626,954,722,MediaBridge.playing?"Ⅱ":"▶",true);button(c,964,640,1030,708,"▶|",false);mediaProgress(c,804,760,1030);
 
-        precisionGauge(c,18,267,"ENGINE TEMP",obdText(ObdBridge.coolantF,0),"°F",obdLevel(ObdBridge.coolantF,100,240));
-        precisionGauge(c,280,529,"BOOST",obdText(ObdBridge.boostPsi,1),"PSI",obdLevel(ObdBridge.boostPsi,0,15));
-        precisionGauge(c,542,791,"BATTERY VOLTAGE",obdText(ObdBridge.batteryV,1),"V",obdLevel(ObdBridge.batteryV,11,15));
-        precisionGauge(c,804,1062,"GPS SPEED",String.valueOf(Math.round(speedMph)),"MPH",Math.min(1,speedMph/120f));
+        panel(c,780,835,1048,1278,"");text(c,"LIVE VEHICLE",804,877,11,MUTED,true);text(c,ObdBridge.connected?"●  OBD READY":"●  GPS MODE",936,877,9,ObdBridge.connected?0xff55d88a:MUTED,true);
+        vehicleValue(c,804,932,"COOLANT",obdText(ObdBridge.coolantF,0)+"°");vehicleValue(c,926,932,"BATTERY",obdText(ObdBridge.batteryV,1)+"V");
+        vehicleValue(c,804,1065,"TRANS",obdText(ObdBridge.transmissionF,0)+"°");vehicleValue(c,926,1065,"BOOST",obdText(ObdBridge.boostPsi,1));
+        text(c,"Tap for full performance",804,1238,11,RED,true);
     }
+
+    private void miniStat(Canvas c,float l,float top,float r,float bottom,String label,String value){RectF q=new RectF(x(l),y(top),x(r),y(bottom));raisedBox(c,q,false,10);text(c,label,l+14,top+26,9,MUTED,true);text(c,value,l+14,top+56,17,WHITE,true);}
+    private void vehicleValue(Canvas c,float l,float top,String label,String value){line(c,l,top,l,top+90,RED,3);text(c,value,l+14,top+40,24,WHITE,true);text(c,label,l+14,top+70,9,MUTED,true);}
+    private void sectionTabs(Canvas c,float l,float top,String[] labels,int selected){RectF q=new RectF(x(l),y(top),x(1048),y(top+70));raisedBox(c,q,false,18);float width=(1048-l)/labels.length;for(int i=0;i<labels.length;i++){float a=l+i*width,b=a+width;if(i==selected){p.setColor(RED);c.drawRoundRect(new RectF(x(a+8),y(top+8),x(b-8),y(top+62)),x(13),x(13),p);}paint(i==selected?WHITE:MUTED,12,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(labels[i],x((a+b)/2),y(top+43),p);}p.setTextAlign(Paint.Align.LEFT);}
 
     private void precisionGauge(Canvas c,float l,float r,String label,String value,String unit,float level){
         RectF q=new RectF(x(l),y(940),x(r),y(1285));raisedBox(c,q,false,10);text(c,label,l+24,984,11,MUTED,true);line(c,l+24,999,l+72,999,RED,3);
         RectF arc=new RectF(x(l+36),y(1025),x(r-36),y(1218));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(12));p.setColor(0xff242930);c.drawArc(arc,155,230,false,p);p.setColor(RED);c.drawArc(arc,155,Math.max(9,230*Math.max(0,Math.min(1,level))),false,p);p.setStyle(Paint.Style.FILL);
         paint(WHITE,34,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(value,x((l+r)/2),y(1178),p);paint(MUTED,12,true);c.drawText(unit,x((l+r)/2),y(1208),p);p.setTextAlign(Paint.Align.LEFT);
     }
-    private void navigation(Canvas c){hero(c,63,236,1);text(c,"NAVIGATION",38,125,36,WHITE,true);text(c,"Plainsboro, NJ  •  "+activity.weatherTemp()+"  •  "+activity.weatherCondition(),38,170,20,MUTED,false);panel(c,18,248,1062,1290,"");p.setColor(0xff111820);c.drawRect(x(34),y(266),x(1046),y(1270),p);for(int i=0;i<9;i++)line(c,40,330+i*104,1040,286+i*110,0xff303d47,4);for(int i=0;i<7;i++)line(c,95+i*148,270,65+i*151,1260,0xff27323a,3);path.reset();path.moveTo(x(470),y(1240));path.cubicTo(x(380),y(1050),x(690),y(800),x(590),y(610));path.cubicTo(x(540),y(510),x(700),y(430),x(760),y(300));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(12));p.setColor(DEEP_RED);c.drawPath(path,p);p.setStrokeWidth(x(5));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);panel(c,50,290,505,490,"NEXT TURN");text(c,"0.8 mi",80,380,43,WHITE,true);text(c,"Turn right onto Scudders Mill Rd",80,432,16,MUTED,false);button(c,744,1125,1007,1218,"OPEN MAPS",true);}
+    private void navigation(Canvas c){hero(c,72,330,1);text(c,"PRECISION NAVIGATION",38,130,12,RED,true);text(c,"Every turn,",38,190,36,WHITE,true);text(c,"clearly ahead.",38,232,36,WHITE,true);text(c,"Integrated Google directions with live traffic and fast destinations.",38,270,13,MUTED,false);miniStat(c,786,146,908,216,"ARRIVAL","--:--");miniStat(c,922,146,1044,216,"DISTANCE","-- MI");sectionTabs(c,32,330,new String[]{"Route","Recents","Favorites","Map Options"},0);panel(c,18,410,1062,1288,"");}
     private void media(Canvas c){
-        hero(c,63,226,1);text(c,"MEDIA COMMAND",38,120,34,WHITE,true);text(c,"MUSIC FUELS WHAT DRIVES YOU",38,165,13,MUTED,true);text(c,"BUILT FOR MORE  /",915,164,10,WHITE,true);
-        drawMediaSources(c);drawNowPlayingCockpit(c);drawMediaQueue(c);drawAudioRoute(c);drawDriveSound(c);
+        hero(c,72,330,1);text(c,"PRECISION MEDIA",38,130,12,RED,true);text(c,"Your music,",38,190,36,WHITE,true);text(c,"perfectly centered.",38,232,36,WHITE,true);text(c,"Large controls, sources, queue, and audio tuning.",38,270,13,MUTED,false);
+        miniStat(c,786,146,908,216,"OUTPUT",trim(activity.audioRouteName(),10));miniStat(c,922,146,1044,216,"VOLUME",Math.round(activity.mediaVolumeLevel()*100)+"%");
+        sectionTabs(c,32,330,new String[]{"Now Playing","Queue","Sources","Audio"},0);
+        panel(c,32,420,222,1278,"");text(c,"SOURCES",54,462,11,MUTED,true);
+        for(int i=0;i<3;i++){float t=500+i*120;RectF q=new RectF(x(52),y(t),x(202),y(t+98));raisedBox(c,q,i==0,12);String icon=i==0?"♫":i==1?"ᛒ":"+";String label=i==0?(mediaApps.isEmpty()?"MEDIA":trim(mediaApps.get(0).label,12)):i==1?"BLUETOOTH":"ADD SOURCE";text(c,icon,70,t+57,22,i==0?RED:MUTED,true);text(c,label,110,t+56,10,i==0?WHITE:MUTED,true);}
+        panel(c,238,420,782,1278,"");
+        drawPlaybackDial(c,430,745,145);text(c,trim(MediaBridge.artist.toUpperCase(Locale.US),28),585,650,11,MUTED,true);text(c,trim(MediaBridge.title,25),585,700,24,WHITE,true);text(c,trim(MediaBridge.artist,26),585,735,12,MUTED,false);
+        mediaProgress(c,585,790,750);button(c,572,850,626,915,"|◀",false);button(c,638,835,708,930,MediaBridge.playing?"Ⅱ":"▶",true);button(c,720,850,766,915,"▶|",false);
+        text(c,MediaBridge.hasAccess(activity)?"MEDIA SESSION CONNECTED":"ONE-TIME MEDIA SETUP REQUIRED",270,1198,10,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);
+        panel(c,798,420,1048,1278,"");text(c,"UP NEXT",820,462,11,MUTED,true);text(c,"●  LIVE",968,462,9,0xff55d88a,true);drawCompactQueue(c,820,510);
     }
+
+    private void drawCompactQueue(Canvas c,float l,float top){String[] titles=MediaBridge.queueTitles,artists=MediaBridge.queueArtists;for(int i=0;i<4;i++){float t=top+i*145;RectF thumb=new RectF(x(l),y(t),x(l+68),y(t+68));p.setShader(new LinearGradient(thumb.left,thumb.top,thumb.right,thumb.bottom,0xff411018,DEEP_RED,Shader.TileMode.CLAMP));c.drawRoundRect(thumb,x(10),x(10),p);p.setShader(null);text(c,"♫",l+22,t+43,19,WHITE,true);String title=i<titles.length?titles[i]:(i==0?trim(MediaBridge.title,18):"Queue available in player");String artist=i<artists.length?artists[i]:(i==0?trim(MediaBridge.artist,18):"");text(c,trim(title,18),l+84,t+30,12,WHITE,true);text(c,trim(artist,18),l+84,t+56,10,MUTED,false);line(c,l,t+95,1024,t+95,0xff30353c,1);}}
     private void drawMediaSources(Canvas c){
         panel(c,18,238,150,1138,"SOURCES");
         for(int i=0;i<4;i++){float top=305+i*195;RectF q=new RectF(x(34),y(top),x(134),y(top+170));raisedBox(c,q,i==0,12);
@@ -346,7 +368,6 @@ public final class DashboardView extends View {
         RectF arc=new RectF(x(cx-radius+22),y(cy)-x(radius-22),x(cx+radius-22),y(cy)+x(radius-22));p.setStrokeWidth(x(8));p.setColor(0xff2f343b);c.drawArc(arc,-90,360,false,p);p.setColor(RED);c.drawArc(arc,-90,360*level,false,p);p.setStyle(Paint.Style.FILL);
         float ar=Math.max(96,radius-54);RectF art=new RectF(x(cx-ar),y(cy)-x(ar),x(cx+ar),y(cy)+x(ar));path.reset();path.addCircle(x(cx),y(cy),x(ar),Path.Direction.CW);c.save();c.clipPath(path);p.setColor(0xff28080d);c.drawRect(art,p);if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);c.restore();
         p.setColor(0x99000000);c.drawCircle(x(cx),y(cy),x(58),p);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(3));p.setColor(RED);c.drawCircle(x(cx),y(cy),x(58),p);p.setStyle(Paint.Style.FILL);paint(WHITE,35,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(MediaBridge.playing?"Ⅱ":"▶",x(cx),y(cy)+x(12),p);p.setTextAlign(Paint.Align.LEFT);
-        button(c,176,550,272,670,"|◀",false);button(c,608,550,704,670,"▶|",false);
     }
     private void drawWaveform(Canvas c,float l,float top,float r,float height){
         long duration=MediaBridge.durationMs,position=MediaBridge.currentPositionMs();float level=duration>0?Math.max(0,Math.min(1,position/(float)duration)):0,mid=top+height/2;
@@ -375,11 +396,11 @@ public final class DashboardView extends View {
     }
     private boolean handleMediaTouch(float xx,float yy,float moveX,float moveY){
         if(moveX>x(24)||moveY>x(24))return true;
-        if(xx<155&&yy>300&&yy<1100){int slot=(int)((yy-305)/195);if(slot<2&&slot<mediaApps.size())activity.launch(mediaApps.get(slot));else if(slot==2)activity.openAudioRouteSettings();else activity.openMediaAppPicker();return true;}
-        if(yy>520&&yy<700&&xx>160&&xx<720){if(xx<300)MediaBridge.previous(activity);else if(xx>580)MediaBridge.next(activity);else MediaBridge.toggle(activity);return true;}
-        if(xx>180&&xx<705&&yy>850&&yy<965){long duration=MediaBridge.durationMs;if(duration>0)MediaBridge.seekTo(activity,Math.round(duration*Math.max(0,Math.min(1,(xx-190)/500f))));return true;}
-        if(xx>725&&yy>840&&yy<1140){activity.openAudioRouteSettings();return true;}
-        if(yy>1175&&yy<1292){if(xx<212)activity.setMediaProfile(0);else if(xx<360)activity.setMediaProfile(1);else if(xx<520)activity.setMediaProfile(2);else if(xx<620)activity.openSoundSettings();else if(xx<840)activity.setMediaVolumeLevel(Math.max(0,Math.min(1,(xx-634)/194f)));else activity.toggleAutoVolume();invalidate();return true;}return false;
+        if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}
+        if(xx<225&&yy>490&&yy<860){int slot=(int)((yy-500)/120);if(slot==0&&!mediaApps.isEmpty())activity.launch(mediaApps.get(0));else if(slot==1)activity.openAudioRouteSettings();else activity.openMediaAppPicker();return true;}
+        if(yy>820&&yy<950&&xx>560&&xx<780){if(xx<635)MediaBridge.previous(activity);else if(xx>710)MediaBridge.next(activity);else MediaBridge.toggle(activity);return true;}
+        if(xx>580&&xx<760&&yy>760&&yy<830){long duration=MediaBridge.durationMs;if(duration>0)MediaBridge.seekTo(activity,Math.round(duration*Math.max(0,Math.min(1,(xx-585)/165f))));return true;}
+        return false;
     }
     private String obdText(float value,int decimals){
         if(Float.isNaN(value))return "--";
@@ -391,59 +412,29 @@ public final class DashboardView extends View {
     }
 
     private void performance(Canvas c){
-        hero(c,63,270,1);text(c,"PERFORMANCE",38,130,36,WHITE,true);
-        gauge(c,18,285,258,"GPS SPEED",String.valueOf(Math.round(speedMph)),"MPH",Math.min(1,speedMph/120f));
-        gauge(c,274,285,514,"RPM",obdText(ObdBridge.rpm,0),"RPM",obdLevel(ObdBridge.rpm,0,7000));
-        gauge(c,530,285,770,"COOLANT",obdText(ObdBridge.coolantF,0),"°F",obdLevel(ObdBridge.coolantF,100,240));
-        gauge(c,786,285,1062,"TRANS TEMP",obdText(ObdBridge.transmissionF,0),"°F",obdLevel(ObdBridge.transmissionF,100,240));
-        warningBadge(c,530,285,770,"COOLANT");
-
-        panel(c,18,442,520,825,"0–60 GPS TIMER");
-        text(c,"0–60",60,538,18,MUTED,true);text(c,runTime(),60,610,49,WHITE,true);
-        text(c,"STATUS",280,538,18,MUTED,true);
-        text(c,runActive?"RUNNING":(runArmed?"ARMED":"READY"),280,610,31,runActive?RED:WHITE,true);
-        button(c,55,685,245,785,"START",true);button(c,270,685,475,785,"RESET",false);
-
-        panel(c,540,442,1062,825,"ACCELERATION");
-        for(int i=0;i<5;i++)line(c,570,520+i*58,1035,520+i*58,0xff30343a,1);
-        for(int i=0;i<6;i++)line(c,590+i*85,500,590+i*85,790,0xff30343a,1);
-        text(c,"Timer begins automatically above 1 MPH",615,655,18,MUTED,false);
-
-        panel(c,18,845,1062,1135,"LIVE OBD-II DATA");
-        gauge(c,38,900,280,"BOOST",obdText(ObdBridge.boostPsi,1),"PSI",obdLevel(ObdBridge.boostPsi,0,15));
-        gauge(c,294,900,536,"ENGINE LOAD",obdText(ObdBridge.engineLoad,0),"%",obdLevel(ObdBridge.engineLoad,0,100));
-        gauge(c,550,900,792,"INTAKE TEMP",obdText(ObdBridge.intakeF,0),"°F",obdLevel(ObdBridge.intakeF,40,180));
-        gauge(c,806,900,1042,"BATTERY",obdText(ObdBridge.batteryV,1),"V",obdLevel(ObdBridge.batteryV,11,15));
-        warningBadge(c,550,900,792,"INTAKE TEMP");warningBadge(c,806,900,1042,"BATTERY");
-
-        panel(c,18,1150,1062,1290,"OBD STATUS • SESSION HISTORY");
-        text(c,trim(ObdBridge.status,48),50,1210,15,ObdBridge.connected?0xff50dc83:RED,true);
-        float[] history=runStats();
-        text(c,"LAST",50,1243,10,MUTED,true);text(c,history[0]>0?String.format(Locale.US,"%.2f s",history[0]):"--",50,1271,17,WHITE,true);
-        text(c,"BEST",260,1243,10,MUTED,true);text(c,history[1]>0?String.format(Locale.US,"%.2f s",history[1]):"--",260,1271,17,WHITE,true);
-        text(c,"RUNS",470,1243,10,MUTED,true);text(c,String.valueOf((int)history[2]),470,1271,17,WHITE,true);
-        p.setTextAlign(Paint.Align.RIGHT);text(c,"TRANS TEMP AWAITS VERIFIED RAM PID",1030,1262,10,MUTED,true);p.setTextAlign(Paint.Align.LEFT);
+        hero(c,72,330,1);text(c,"PRECISION PERFORMANCE",38,130,12,RED,true);text(c,"Every heartbeat",38,190,36,WHITE,true);text(c,"of the truck.",38,232,36,WHITE,true);text(c,"Live OBD data and a focused GPS acceleration timer.",38,270,13,MUTED,false);
+        miniStat(c,786,146,908,216,"CONNECTION",ObdBridge.connected?"READY":"GPS");miniStat(c,922,146,1044,216,"PROFILE","STREET");sectionTabs(c,32,330,new String[]{"Live Data","0–60","Gauges","History"},0);
+        metricCard(c,32,420,278,"BOOST",obdText(ObdBridge.boostPsi,1),"PSI",obdLevel(ObdBridge.boostPsi,0,15));metricCard(c,290,420,536,"COOLANT",obdText(ObdBridge.coolantF,0),"°F",obdLevel(ObdBridge.coolantF,100,240));metricCard(c,548,420,794,"TRANS",obdText(ObdBridge.transmissionF,0),"°F",obdLevel(ObdBridge.transmissionF,100,240));metricCard(c,806,420,1048,"BATTERY",obdText(ObdBridge.batteryV,1),"V",obdLevel(ObdBridge.batteryV,11,15));
+        panel(c,32,640,430,1085,"");text(c,"0–60 GPS TIMER",54,682,11,MUTED,true);text(c,"●  "+(runActive?"RUNNING":runArmed?"ARMED":"READY"),316,682,9,0xff55d88a,true);text(c,runTime(),54,790,43,WHITE,true);text(c,runArmed?"ARMED":"AUTOMATIC ABOVE 1 MPH",316,790,12,0xff55d88a,true);button(c,54,850,210,930,"START",true);button(c,226,850,398,930,"RESET",false);
+        panel(c,446,640,1048,1085,"");text(c,"ACCELERATION",470,682,11,MUTED,true);text(c,"●  LIVE",950,682,9,0xff55d88a,true);for(int i=0;i<5;i++)line(c,470,730+i*65,1024,730+i*65,0xff292e35,1);for(int i=0;i<6;i++)line(c,500+i*100,710,500+i*100,1045,0xff292e35,1);path.reset();path.moveTo(x(485),y(1020));path.cubicTo(x(620),y(980),x(810),y(925),x(1010),y(850));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(5));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);
+        panel(c,32,1100,1048,1278,"");text(c,trim(ObdBridge.status,52),54,1145,12,ObdBridge.connected?0xff55d88a:MUTED,true);float[] history=runStats();text(c,"LAST",54,1190,9,MUTED,true);text(c,history[0]>0?String.format(Locale.US,"%.2f s",history[0]):"--",54,1235,22,WHITE,true);text(c,"BEST",250,1190,9,MUTED,true);text(c,history[1]>0?String.format(Locale.US,"%.2f s",history[1]):"--",250,1235,22,WHITE,true);text(c,"RUNS",446,1190,9,MUTED,true);text(c,String.valueOf((int)history[2]),446,1235,22,WHITE,true);
     }
+    private void metricCard(Canvas c,float l,float top,float r,String label,String value,String unit,float level){RectF q=new RectF(x(l),y(top),x(r),y(top+195));raisedBox(c,q,false,12);text(c,label,l+20,top+35,11,MUTED,true);text(c,value,l+20,top+105,31,WHITE,true);text(c,unit,l+98,top+105,11,MUTED,true);p.setColor(0xff343940);c.drawRoundRect(new RectF(x(l+20),y(top+158),x(r-20),y(top+166)),x(4),x(4),p);p.setColor(RED);c.drawRoundRect(new RectF(x(l+20),y(top+158),x(l+20+(r-l-40)*Math.max(.02f,level)),y(top+166)),x(4),x(4),p);}
     private void apps(Canvas c){
-        hero(c,63,228,1);text(c,"//  APP COMMAND",30,122,34,WHITE,true);
-        text(c,apps.size()+" INSTALLED",50,170,14,MUTED,true);text(c,"BUILT FOR MORE  /",907,157,10,WHITE,true);
-        panel(c,18,238,1062,1292,"");
-        button(c,34,260,438,326,appSearch.isEmpty()?"⌕   SEARCH ALL APPS":"⌕   "+trim(appSearch,22),false);
-        button(c,452,260,536,326,"ALL",appCategory==0&&!favoriteAppsOnly);
-        button(c,546,260,640,326,"DRIVING",appCategory==1);
-        button(c,650,260,734,326,"MEDIA",appCategory==2);
-        button(c,744,260,828,326,"TOOLS",appCategory==3);
-        text(c,favoriteAppsOnly?"FAVORITES  •  TAP ALL TO RETURN":"FLICK TO SCROLL  •  HOLD FOR TRX OPTIONS",38,360,11,favoriteAppsOnly?RED:MUTED,true);
-        text(c,currentAppSection(),38,392,16,WHITE,true);line(c,84,387,805,387,0xff3e444c,1);
-        c.save();c.clipRect(x(26),y(398),x(810),y(1270));
+        hero(c,72,310,1);text(c,"PRECISION APPS",38,128,12,RED,true);text(c,"Every app,",38,185,35,WHITE,true);text(c,"without the clutter.",38,228,35,WHITE,true);text(c,"Glossy tiles, quick categories, and a clean launch rail.",38,266,13,MUTED,false);miniStat(c,786,146,908,216,"INSTALLED",String.valueOf(apps.size()));miniStat(c,922,146,1044,216,"FAVORITES",String.valueOf(prefs.getStringSet("favorite_apps",java.util.Collections.emptySet()).size()));
+        sectionTabs(c,32,330,new String[]{"All","Driving","Media","Tools"},favoriteAppsOnly?0:appCategory);
+        button(c,32,420,914,492,appSearch.isEmpty()?"⌕   SEARCH ALL APPS":"⌕   "+trim(appSearch,28),false);miniStat(c,930,420,1048,492,"LIBRARY",apps.size()+" APPS");
+        panel(c,32,510,804,1278,"");
+        c.save();c.clipRect(x(42),y(525),x(790),y(1265));
         for(int i=0;i<displayApps.size();i++){
-            int col=i%4,row=i/4;float l=34+col*194,t=405+row*170-appScroll;
-            if(t>-20&&t<1270)appTile(c,displayApps.get(i),l,t,l+170,t+154);
+            int col=i%4,row=i/4;float l=48+col*184,t=530+row*170-appScroll;
+            if(t>360&&t<1270)appTile(c,displayApps.get(i),l,t,l+160,t+154);
         }
         c.restore();
-        drawAppActions(c);drawAppRail(c);drawQuickLaunch(c);
+        panel(c,822,510,1048,1278,"");text(c,"QUICK LAUNCH",846,552,11,MUTED,true);drawQuickLaunchV4(c);
         if(displayApps.isEmpty())text(c,favoriteAppsOnly?"NO FAVORITES YET":"NO APPS IN THIS CATEGORY",58,455,20,MUTED,true);
     }
+    private void drawQuickLaunchV4(Canvas c){List<AppEntry> quick=quickApps();for(int i=0;i<Math.min(5,quick.size());i++){float t=585+i*125;RectF q=new RectF(x(842),y(t),x(1028),y(t+96));raisedBox(c,q,false,12);AppEntry a=quick.get(i);int sz=(int)x(48),cx=(int)x(878),top=(int)y(t+22);try{a.icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);a.icon.draw(c);}catch(Throwable ignored){}text(c,trim(a.label,14),916,t+57,11,WHITE,true);}}
     private String currentAppSection(){
         if(favoriteAppsOnly)return "★  FAVORITES";
         if(appCategory==1)return "DRIVING";if(appCategory==2)return "MEDIA";if(appCategory==3)return "TOOLS";return "A–Z";
@@ -483,7 +474,7 @@ public final class DashboardView extends View {
     }
     private boolean containsPackage(List<AppEntry> list,String pkg){for(AppEntry app:list)if(app.packageName.equals(pkg))return true;return false;}
     private AppEntry selectedApp(){for(AppEntry app:apps)if(app.packageName.equals(selectedAppPackage))return app;return null;}
-    private float appActionTop(){int index=-1;for(int i=0;i<displayApps.size();i++)if(displayApps.get(i).packageName.equals(selectedAppPackage)){index=i;break;}if(index<0)return 0;float top=405+(index/4)*170-appScroll+106;return Math.max(430,Math.min(1168,top));}
+    private float appActionTop(){int index=-1;for(int i=0;i<displayApps.size();i++)if(displayApps.get(i).packageName.equals(selectedAppPackage)){index=i;break;}if(index<0)return 0;float top=530+(index/4)*170-appScroll+106;return Math.max(545,Math.min(1168,top));}
     private void drawAppActions(Canvas c){
         AppEntry selected=selectedApp();if(selected==null)return;float top=appActionTop();
         RectF q=new RectF(x(116),y(top),x(796),y(top+82));p.setColor(0xf20b0e12);c.drawRoundRect(q,x(13),x(13),p);
@@ -550,7 +541,7 @@ public final class DashboardView extends View {
     private void refreshDisplayedApps(){
         displayApps=new ArrayList<>();String needle=appSearch.toLowerCase(Locale.US);
         for(AppEntry app:apps)if((!favoriteAppsOnly||isFavorite(app))&&matchesCategory(app)&&(needle.isEmpty()||app.label.toLowerCase(Locale.US).contains(needle)))displayApps.add(app);
-        float rows=(displayApps.size()+3)/4f,max=Math.max(0,405+rows*170-1260);appScroll=Math.max(0,Math.min(max,appScroll));
+        float rows=(displayApps.size()+3)/4f,max=Math.max(0,530+rows*170-1260);appScroll=Math.max(0,Math.min(max,appScroll));
         if(selectedApp()!=null){boolean shown=false;for(AppEntry app:displayApps)if(app.packageName.equals(selectedAppPackage)){shown=true;break;}if(!shown){selectedAppPackage="";selectedAppIndex=-1;}}
     }
     private boolean matchesCategory(AppEntry app){
@@ -564,14 +555,14 @@ public final class DashboardView extends View {
     private List<Character> appLetters(){List<Character> result=new ArrayList<>();for(AppEntry app:displayApps){char letter=Character.toUpperCase(app.label.charAt(0));if(!result.contains(letter))result.add(letter);}return result;}
     private void jumpToLetter(int letterIndex){
         List<Character> letters=appLetters();if(letters.isEmpty())return;letterIndex=Math.max(0,Math.min(letters.size()-1,letterIndex));char target=letters.get(letterIndex);
-        for(int i=0;i<displayApps.size();i++)if(Character.toUpperCase(displayApps.get(i).label.charAt(0))==target){float rows=(displayApps.size()+3)/4f,max=Math.max(0,405+rows*170-1260);appScroll=Math.max(0,Math.min(max,(i/4)*170));break;}invalidate();
+        for(int i=0;i<displayApps.size();i++)if(Character.toUpperCase(displayApps.get(i).label.charAt(0))==target){float rows=(displayApps.size()+3)/4f,max=Math.max(0,530+rows*170-1260);appScroll=Math.max(0,Math.min(max,(i/4)*170));break;}invalidate();
     }
     private int appIndexAt(float xx,float yy){
-        float localX=xx-34,localY=yy-405+appScroll;if(localX<0||localY<0||xx>810)return -1;
-        int col=(int)(localX/194),row=(int)(localY/170);if(col<0||col>=4||localX-col*194>170||localY-row*170>154)return -1;
+        float localX=xx-48,localY=yy-530+appScroll;if(localX<0||localY<0||xx>804)return -1;
+        int col=(int)(localX/184),row=(int)(localY/170);if(col<0||col>=4||localX-col*184>160||localY-row*170>154)return -1;
         int index=row*4+col;return index<displayApps.size()?index:-1;
     }
-    private int maxAppScroll(){float rows=(displayApps.size()+3)/4f;return Math.max(0,Math.round(405+rows*170-1260));}
+    private int maxAppScroll(){float rows=(displayApps.size()+3)/4f;return Math.max(0,Math.round(530+rows*170-1260));}
     
     private void startAppTracking(MotionEvent e){
         if(appScroller!=null&&!appScroller.isFinished())appScroller.abortAnimation();
@@ -586,7 +577,7 @@ public final class DashboardView extends View {
         if(e.getAction()==MotionEvent.ACTION_MOVE){
             touchX=e.getX();touchY=e.getY();if(page==4&&appVelocity!=null)appVelocity.addMovement(e);float movedX=Math.abs(e.getX()-downX),movedY=Math.abs(e.getY()-downY);if(movedX>x(16)||movedY>x(16))cancelHeldApp();
             if(page==2&&e.getY()>y(960)&&e.getY()<y(1245)){float max=Math.max(0,(mediaApps.size()+1)*200-1000);mediaScroll=Math.max(0,Math.min(max,mediaScrollAtDown+(downX-e.getX())/Math.max(.01f,u)));}
-            if(page==4&&e.getY()>y(390)&&e.getX()<x(810)){appScroll=Math.max(0,Math.min(maxAppScroll(),scrollAtDown+(downY-e.getY())/Math.max(.01f,usableH)*1440f));}invalidate();return true;
+            if(page==4&&e.getY()>y(510)&&e.getX()<x(804)){appScroll=Math.max(0,Math.min(maxAppScroll(),scrollAtDown+(downY-e.getY())/Math.max(.01f,usableH)*1440f));}invalidate();return true;
         }
         if(e.getAction()!=MotionEvent.ACTION_UP&&e.getAction()!=MotionEvent.ACTION_CANCEL)return true;clock.removeCallbacks(openHeldAppOptions);
         float upX=e.getX(),upY=e.getY(),xx=upX/u,yy=(upY-safeTop)*1440f/usableH;float moveX=Math.abs(upX-downX),moveY=Math.abs(upY-downY);touchX=touchY=-1;
@@ -594,20 +585,17 @@ public final class DashboardView extends View {
         if(page==4&&appVelocity!=null){appVelocity.addMovement(e);appVelocity.computeCurrentVelocity(1000);float vy=appVelocity.getYVelocity();if(moveY>x(24)&&Math.abs(vy)>180){int logicalVelocity=Math.round(-vy*1440f/Math.max(1,usableH));appScroller.fling(0,Math.round(appScroll),0,logicalVelocity,0,0,0,maxAppScroll());postInvalidateOnAnimation();}}
         if(appVelocity!=null){appVelocity.recycle();appVelocity=null;}cancelHeldApp();
         if(yy>=1300){selectedAppPackage="";selectPage((int)(xx/216),xx/216>page?1:-1);return true;}
-        if(page==0&&yy>365&&yy<462){int quick=Math.max(0,Math.min(3,(int)((xx-18)/262)));activity.openQuickPanel(quick);return true;}
-        if(page==0&&xx<530&&yy>468&&yy<905){String recent=recentDestination(0);if(yy>=730&&yy<782){activity.openNavigation();return true;}if(yy>=782&&yy<829){activity.openNavigationTo(prefs.getString("work_destination","Work"));return true;}if(yy>=829){if(recent.isEmpty())selectPage(1,1);else activity.openNavigationTo(recent);return true;}selectPage(1,1);return true;}
-        if(page==0&&xx>=530&&yy>468&&yy<905){if(!MediaBridge.hasAccess(activity)){MediaBridge.requestAccess(activity);return true;}if(yy>705){if(xx<837)MediaBridge.previous(activity);else if(xx<944)MediaBridge.toggle(activity);else MediaBridge.next(activity);}else selectPage(2,1);return true;}
-        if(page==0&&yy>900&&yy<1068){selectPage(3,1);return true;}if(page==0&&xx>530&&yy>1070&&yy<1295){selectPage(3,1);return true;}if(page==1&&xx>700&&yy>1080){activity.openNavigation();return true;}
+        if(page==0&&xx<760&&yy>410&&yy<1280){selectPage(1,1);return true;}
+        if(page==0&&xx>=760&&yy>410&&yy<830){if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}if(yy>610){if(xx<875)MediaBridge.previous(activity);else if(xx<960)MediaBridge.toggle(activity);else MediaBridge.next(activity);}else selectPage(2,1);return true;}
+        if(page==0&&xx>760&&yy>830&&yy<1280){selectPage(3,1);return true;}if(page==1&&xx>700&&yy>1080){activity.openNavigation();return true;}
         if(page==2&&handleMediaTouch(xx,yy,moveX,moveY))return true;
-        if(page==3&&yy>665&&yy<810){if(xx<258)armRun();else if(xx<520)resetRun();return true;}
+        if(page==3&&yy>830&&yy<950){if(xx<220)armRun();else if(xx<430)resetRun();return true;}
         if(page==4){
             AppEntry selected=selectedApp();float actionTop=appActionTop();
             if(selected!=null&&yy>actionTop&&yy<actionTop+88&&xx>110&&xx<805&&moveX<x(18)&&moveY<x(18)){if(xx<342)activity.toggleAppFavoriteFromDashboard(selected);else if(xx<568)activity.openAppInformationFromDashboard(selected);else activity.requestAppUninstallFromDashboard(selected);selectedAppPackage="";selectedAppIndex=-1;invalidate();return true;}
-            if(yy>248&&yy<338&&moveX<x(18)&&moveY<x(18)){selectedAppPackage="";if(xx<445){activity.showAppSearch(appSearch);return true;}favoriteAppsOnly=false;appScroll=0;if(xx<542)appCategory=0;else if(xx<646)appCategory=1;else if(xx<740)appCategory=2;else if(xx<840)appCategory=3;refreshDisplayedApps();invalidate();return true;}
-            if(xx>812&&xx<858&&yy>390&&yy<1280&&moveX<x(18)&&moveY<x(18)){List<Character> letters=appLetters();if(!letters.isEmpty()){int li=Math.round((yy-418)/Math.max(1,(1238-418f)/Math.max(1,letters.size()-1)));jumpToLetter(li);}return true;}
-            if(xx>860&&yy>330&&yy<1112&&moveX<x(18)&&moveY<x(18)){int qi=(int)((yy-340)/158);List<AppEntry> quick=quickApps();if(qi>=0&&qi<quick.size())activity.launch(quick.get(qi));return true;}
-            if(xx>860&&yy>1112&&yy<1182&&moveX<x(18)&&moveY<x(18)){activity.openSettingsScreen();return true;}
-            if(xx>860&&yy>1182&&yy<1270&&moveX<x(18)&&moveY<x(18)){favoriteAppsOnly=true;appCategory=0;appScroll=0;refreshDisplayedApps();invalidate();return true;}
+            if(yy>330&&yy<405&&moveX<x(18)&&moveY<x(18)){selectedAppPackage="";favoriteAppsOnly=false;appScroll=0;appCategory=Math.max(0,Math.min(3,(int)((xx-32)/254)));refreshDisplayedApps();invalidate();return true;}
+            if(yy>415&&yy<500&&xx<920&&moveX<x(18)&&moveY<x(18)){activity.showAppSearch(appSearch);return true;}
+            if(xx>820&&yy>570&&yy<1225&&moveX<x(18)&&moveY<x(18)){int qi=(int)((yy-585)/125);List<AppEntry> quick=quickApps();if(qi>=0&&qi<quick.size())activity.launch(quick.get(qi));return true;}
             if(moveX>x(24)||moveY>x(24)){invalidate();return true;}int index=appIndexAt(xx,yy);if(index>=0){selectedAppPackage="";activity.launch(displayApps.get(index));}else{selectedAppPackage="";invalidate();}
         }
         invalidate();return true;
