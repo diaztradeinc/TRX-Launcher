@@ -16,8 +16,8 @@ android {
         applicationId 'com.mdiaz.trxlauncher'
         minSdk 26
         targetSdk 36
-        versionCode 55
-        versionName '2.1.0'
+        versionCode 56
+        versionName '2.2.0'
         manifestPlaceholders = [MAPS_API_KEY: mapsApiKey]
         buildConfigField 'String', 'MAPS_API_KEY', "\"${escapedMapsApiKey}\""
     }
@@ -36,9 +36,7 @@ android {
 
 
 dependencies {
-    // 7.9's bundled renderer produces a permanently blank surface on some
-    // Android automotive boxes. 6.3.3 is the latest stable 6.x renderer and
-    // retains the complete embedded turn-by-turn API used by the launcher.
-    api 'com.google.android.libraries.navigation:navigation:6.3.3'
+    // Google-native map and turn-by-turn Navigation SDK.
+    api 'com.google.android.libraries.navigation:navigation:7.9.0'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
 }
