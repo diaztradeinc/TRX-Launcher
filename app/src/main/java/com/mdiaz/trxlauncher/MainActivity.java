@@ -538,6 +538,7 @@ public class MainActivity extends Activity {
     }
     public void refreshWeather(){fetchWeather();}
     public void openObdSetup(){ObdSetup.show(this);}
+    public String routeMetric(boolean arrival){return mapPanel instanceof NavigationPanel?((NavigationPanel)mapPanel).routeMetric(arrival):arrival?"--:--":"-- MI";}
 
     public float mediaVolumeLevel(){try{android.media.AudioManager m=(android.media.AudioManager)getSystemService(AUDIO_SERVICE);return m.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)/(float)Math.max(1,m.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC));}catch(Throwable ignored){return 0;}}
     public void setMediaVolumeLevel(float level){try{android.media.AudioManager m=(android.media.AudioManager)getSystemService(AUDIO_SERVICE);int max=Math.max(1,m.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)),value=Math.max(0,Math.min(max,Math.round(level*max)));m.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,value,0);if(autoVolumeEnabled())getSharedPreferences("launcher",MODE_PRIVATE).edit().putInt("auto_volume_base",value).apply();lastCompensatedVolume=value;}catch(Throwable ignored){}}

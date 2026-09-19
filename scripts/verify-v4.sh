@@ -34,6 +34,21 @@ for page in 108 324 540 756 972; do
     if [ "$page" = 324 ] && { [ "$tab" = 574 ] || [ "$tab" = 791 ]; }; then adb shell input keyevent BACK; sleep 2; fi
   done
 done
+adb shell am start -W -n com.mdiaz.trxlauncher/.MainActivity
+sleep 2
+adb shell input tap 108 1360
+sleep 2
+adb shell input tap 974 375
+sleep 2
+adb exec-out screencap -p > verification/settings.png
+python3 scripts/tap-text.py 'OEM BLUE'
+for attempt in 1 2 3 4 5 6 7 8; do
+  if python3 scripts/tap-text.py 'SAVE & RETURN TO TRX'; then break; fi
+  adb shell input swipe 540 1180 540 350 350
+done
+sleep 2
+adb shell run-as com.mdiaz.trxlauncher cat shared_prefs/launcher.xml | grep -q 'name="theme_choice" value="3"'
+adb exec-out screencap -p > verification/theme-blue.png
 adb logcat -d -b crash > verification/crash-log.txt
 if grep -q 'Process: com.mdiaz.trxlauncher' verification/crash-log.txt; then
   cat verification/crash-log.txt

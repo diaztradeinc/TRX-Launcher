@@ -77,6 +77,19 @@ public class NavigationPanel extends FrameLayout {
     private final com.google.android.libraries.navigation.RoadSnappedLocationProvider.LocationListener roadListener=location->post(()->updateTruck(location));
     private boolean trafficEnabled = true;
     private boolean compact;
+    private String arrival="--:--",distance="-- MI";
+    private long metricsAt;
+    public String routeMetric(boolean arrivalRequested){
+        long now=android.os.SystemClock.elapsedRealtime();
+        if(!guiding||navigator==null){arrival="--:--";distance="-- MI";}
+        else if(now-metricsAt>1000){
+            metricsAt=now;
+            try{com.google.android.libraries.navigation.TimeAndDistance remaining=navigator.getCurrentTimeAndDistance();
+                if(remaining!=null){arrival=new java.text.SimpleDateFormat("h:mm a",Locale.US).format(new java.util.Date(System.currentTimeMillis()+remaining.getSeconds()*1000L));distance=String.format(Locale.US,"%.1f MI",remaining.getMeters()/1609.344);}
+            }catch(RuntimeException ignored){}
+        }
+        return arrivalRequested?arrival:distance;
+    }
     private boolean satelliteEnabled;
     private int suggestionRequest;
     private boolean selectingSuggestion;
@@ -288,8 +301,8 @@ public class NavigationPanel extends FrameLayout {
                     applyTheme();
                     try {
                         navigationView.setNavigationUiEnabled(true);
-                        navigationView.setHeaderEnabled(true);
-                        navigationView.setEtaCardEnabled(true);
+                        navigationView.setHeaderEnabled(!compact);
+                        navigationView.setEtaCardEnabled(!compact);
                         navigationView.setRecenterButtonEnabled(true);
                         navigationView.setSpeedometerEnabled(true);
                         navigationView.setSpeedLimitIconEnabled(true);
@@ -930,8 +943,8 @@ public class NavigationPanel extends FrameLayout {
     }
     public void setCompact(boolean value){
         compact=value;
-        destination.setVisibility(value?GONE:VISIBLE);routeButton.setVisibility(value?GONE:VISIBLE);
-        commandBar.setVisibility(value?GONE:VISIBLE);mapTools.setVisibility(value?GONE:VISIBLE);
+        destination.setVisibility(value||guiding?GONE:VISIBLE);routeButton.setVisibility(value||guiding?GONE:VISIBLE);
+        commandBar.setVisibility(value||guiding?GONE:VISIBLE);mapTools.setVisibility(value?GONE:VISIBLE);
         modeBadge.setVisibility(value?GONE:VISIBLE);stopButton.setVisibility(!value&&guiding?VISIBLE:GONE);
         suggestionScroller.setVisibility(GONE);
         if(initialized)try{navigationView.setHeaderEnabled(!value);navigationView.setEtaCardEnabled(!value);}catch(RuntimeException ignored){}
