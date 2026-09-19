@@ -337,7 +337,7 @@ public class NavigationPanel extends FrameLayout {
     }
 
     private void initializeMap() {
-        if (!initialized || mapRequested || mapLoaded) return;
+        if (!initialized || mapRequested || mapLoaded || googleMap!=null) return;
         mapRequested = true;
         final int attempt = ++mapAttempt;
         status.setVisibility(VISIBLE);
@@ -413,6 +413,9 @@ public class NavigationPanel extends FrameLayout {
 
     private void retryMap() {
         if (mapLoaded) return;
+        googleMap=null;
+        stopTruckTracking();
+        if(truckMarker!=null){truckMarker.remove();truckMarker=null;}
         mapRequested = false;
         mapAttempt++;
         status.setVisibility(VISIBLE);
@@ -622,7 +625,7 @@ public class NavigationPanel extends FrameLayout {
             if(truckMarker!=null)Log.i("TRXNavigation","TRUCK_READY");
         }
         if(truckMarker!=null){truckMarker.setPosition(point);if(location.hasBearing())truckMarker.setRotation(location.getBearing());truckMarker.setVisible(true);}
-        try{googleMap.setMyLocationEnabled(false);}catch(SecurityException denied){stopTruckTracking();}
+        try{if(googleMap.isMyLocationEnabled())googleMap.setMyLocationEnabled(false);}catch(SecurityException denied){stopTruckTracking();}
     }
 
     private void stopTruckTracking(){

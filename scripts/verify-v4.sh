@@ -47,7 +47,7 @@ python3 scripts/tap-text.py 'Where to?'
 adb shell input text 'Stanford%sUniversity'
 for attempt in 1 2 3 4 5 6; do
   sleep 3
-  if python3 scripts/tap-text.py 'STANFORD UNIVERSITY'; then break; fi
+  if python3 scripts/tap-text.py 'STANFORD UNIVERSITY' --case-sensitive; then break; fi
 done
 adb emu geo fix -122.084 37.422
 sleep 15
@@ -56,7 +56,7 @@ capture_diagnostics
 grep -q 'PLACES_READY' verification/navigation-diagnostics.txt
 grep -q 'ROUTE_READY' verification/navigation-diagnostics.txt
 grep -q 'TRUCK_READY' verification/navigation-diagnostics.txt
-python3 scripts/tap-text.py 'STOP' || true
+python3 scripts/tap-text.py '■  END'
 adb shell am start -W -n com.mdiaz.trxlauncher/.MainActivity
 sleep 2
 adb shell input tap 108 1360
