@@ -64,7 +64,17 @@ public class NavigationPanel extends FrameLayout {
     private final LinearLayout mapTools;
     private final TextView status;
     private final TextView modeBadge;
+    private final LinearLayout routeSummary;
+    private final TextView routeTime;
+    private final TextView routeDetail;
     private final Handler suggestionHandler = new Handler(Looper.getMainLooper());
+    private final Handler routeMetricsHandler = new Handler(Looper.getMainLooper());
+    private final Runnable routeMetricsUpdater = new Runnable() {
+        @Override public void run() {
+            updateRouteSummary();
+            if (guiding) routeMetricsHandler.postDelayed(this, 1000);
+        }
+    };
     private int accent;
     private PlacesClient places;
     private AutocompleteSessionToken placesSession;
@@ -234,16 +244,45 @@ public class NavigationPanel extends FrameLayout {
         modeBadge.setTextSize(11);
         modeBadge.setGravity(Gravity.CENTER);
         modeBadge.setBackground(panel(0xe80a0c10, 0xff656a74, 1, 18));
+        modeBadge.setVisibility(GONE);
         LayoutParams liveLp = new LayoutParams(dp(270), dp(42), Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
         liveLp.setMargins(0, 0, 0, dp(22));
         addView(modeBadge, liveLp);
+
+        routeSummary = new LinearLayout(context);
+        routeSummary.setOrientation(LinearLayout.VERTICAL);
+        routeSummary.setGravity(Gravity.CENTER_VERTICAL);
+        routeSummary.setPadding(dp(18), dp(7), dp(18), dp(7));
+        routeSummary.setBackground(panel(0xf207090c, accent, 2, 16));
+        routeSummary.setElevation(dp(12));
+        routeSummary.setVisibility(GONE);
+
+        routeTime = new TextView(context);
+        routeTime.setTextColor(accent);
+        routeTime.setTextSize(17);
+        routeTime.setTypeface(null, android.graphics.Typeface.BOLD);
+        routeTime.setSingleLine(true);
+        routeSummary.addView(routeTime, new LinearLayout.LayoutParams(
+            LayoutParams.MATCH_PARENT, 0, 1));
+
+        routeDetail = new TextView(context);
+        routeDetail.setTextColor(0xffd7d9de);
+        routeDetail.setTextSize(12);
+        routeDetail.setTypeface(null, android.graphics.Typeface.BOLD);
+        routeDetail.setSingleLine(true);
+        routeSummary.addView(routeDetail, new LinearLayout.LayoutParams(
+            LayoutParams.MATCH_PARENT, 0, 1));
+
+        LayoutParams summaryLp = new LayoutParams(dp(360), dp(66), Gravity.LEFT | Gravity.BOTTOM);
+        summaryLp.setMargins(dp(16), 0, 0, dp(16));
+        addView(routeSummary, summaryLp);
 
         stopButton = button("■  END", false);
         stopButton.setTextSize(13);
         stopButton.setTextColor(0xffff7883);
         stopButton.setVisibility(GONE);
-        LayoutParams stopLp = new LayoutParams(dp(120), dp(56), Gravity.RIGHT | Gravity.BOTTOM);
-        stopLp.setMargins(0, 0, dp(16), dp(16));
+        LayoutParams stopLp = new LayoutParams(dp(120), dp(52), Gravity.RIGHT | Gravity.TOP);
+        stopLp.setMargins(0, dp(16), dp(16), 0);
         addView(stopButton, stopLp);
         stopButton.setOnClickListener(v -> stopGuidance());
 
@@ -302,10 +341,13 @@ public class NavigationPanel extends FrameLayout {
                     try {
                         navigationView.setNavigationUiEnabled(true);
                         navigationView.setHeaderEnabled(!compact);
-                        navigationView.setEtaCardEnabled(!compact);
-                        navigationView.setRecenterButtonEnabled(true);
-                        navigationView.setSpeedometerEnabled(true);
-                        navigationView.setSpeedLimitIconEnabled(true);
+                        // Google owns these default controls and renders them as white cards.
+                        // Use the themed TRX controls instead so the route UI is consistent
+                        // and no SDK card can collide with the launcher dock.
+                        navigationView.setEtaCardEnabled(false);
+                        navigationView.setRecenterButtonEnabled(false);
+                        navigationView.setSpeedometerEnabled(false);
+                        navigationView.setSpeedLimitIconEnabled(false);
                         if (mapLoaded) {
                             status.setText("GOOGLE MAP READY");
                             if (!guiding) status.postDelayed(() -> status.setVisibility(GONE), 600);
@@ -350,8 +392,11 @@ public class NavigationPanel extends FrameLayout {
                     map.getUiSettings().setZoomGesturesEnabled(true);
                     map.getUiSettings().setScrollGesturesEnabled(true);
                     map.getUiSettings().setRotateGesturesEnabled(true);
-                    map.getUiSettings().setCompassEnabled(true);
-                    map.getUiSettings().setMyLocationButtonEnabled(true);
+                    // The launcher supplies its own themed recenter control. Keep
+                    // Google's white compass/location controls from resurfacing
+                    // beneath the upper-right End button.
+                    map.getUiSettings().setCompassEnabled(false);
+                    map.getUiSettings().setMyLocationButtonEnabled(false);
                     map.setMapType(satelliteEnabled?GoogleMap.MAP_TYPE_HYBRID:GoogleMap.MAP_TYPE_NORMAL);
                     try { map.setMapStyle(MapStyleOptions.loadRawResourceStyle(activity, R.raw.map_dark)); }
                     catch (Throwable ignored) { }
@@ -515,7 +560,8 @@ public class NavigationPanel extends FrameLayout {
                             routeButton.setVisibility(GONE);
                             commandBar.setVisibility(GONE);
                             stopButton.setVisibility(VISIBLE);
-                            modeBadge.setText("LIVE TRAFFIC  •  VOICE GUIDANCE ACTIVE");
+                            routeSummary.setVisibility(VISIBLE);
+                            startRouteMetrics();
                             status.setVisibility(GONE);
                         } else {
                             status.setVisibility(VISIBLE);
@@ -544,8 +590,37 @@ public class NavigationPanel extends FrameLayout {
         routeButton.setVisibility(VISIBLE);
         commandBar.setVisibility(VISIBLE);
         stopButton.setVisibility(GONE);
-        modeBadge.setText("GOOGLE LIVE TRAFFIC  •  PINCH TO ZOOM");
+        routeSummary.setVisibility(GONE);
+        routeMetricsHandler.removeCallbacks(routeMetricsUpdater);
         Toast.makeText(activity, "TRX guidance ended", Toast.LENGTH_SHORT).show();
+    }
+
+    private void startRouteMetrics() {
+        routeMetricsHandler.removeCallbacks(routeMetricsUpdater);
+        updateRouteSummary();
+        routeMetricsHandler.postDelayed(routeMetricsUpdater, 1000);
+    }
+
+    private void updateRouteSummary() {
+        if (!guiding || navigator == null) return;
+        try {
+            com.google.android.libraries.navigation.TimeAndDistance remaining =
+                navigator.getCurrentTimeAndDistance();
+            if (remaining == null) return;
+            long seconds = Math.max(0, remaining.getSeconds());
+            long hours = seconds / 3600;
+            long minutes = Math.max(1, (seconds % 3600 + 59) / 60);
+            String duration = hours > 0
+                ? String.format(Locale.US, "%d HR %02d MIN", hours, minutes)
+                : String.format(Locale.US, "%d MIN", minutes);
+            String eta = new java.text.SimpleDateFormat("h:mm a", Locale.US).format(
+                new java.util.Date(System.currentTimeMillis() + seconds * 1000L));
+            routeTime.setText(duration);
+            routeDetail.setText(String.format(Locale.US, "%.1f MI   •   ARRIVE %s",
+                remaining.getMeters() / 1609.344, eta));
+        } catch (RuntimeException error) {
+            Log.w("TRXNavigation", "Route metrics unavailable", error);
+        }
     }
 
     public boolean closeChooser() {
@@ -602,8 +677,12 @@ public class NavigationPanel extends FrameLayout {
 
     private void followRoad(){
         if(activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED)return;
-        try{if(googleMap!=null)googleMap.followMyLocation(GoogleMap.CameraPerspective.TILTED,
-            FollowMyLocationOptions.builder().setZoomLevel(18f).build());
+        try{if(googleMap!=null){
+            googleMap.getUiSettings().setCompassEnabled(false);
+            googleMap.getUiSettings().setMyLocationButtonEnabled(false);
+            googleMap.followMyLocation(GoogleMap.CameraPerspective.TILTED,
+                FollowMyLocationOptions.builder().setZoomLevel(18f).build());
+        }
         }catch(SecurityException denied){status.setText("LOCATION PERMISSION REQUIRED");status.setVisibility(VISIBLE);}
     }
 
@@ -620,15 +699,10 @@ public class NavigationPanel extends FrameLayout {
         if(!activityResumed||!roadListenerAdded||googleMap==null)return;
         LatLng point=new LatLng(location.getLatitude(),location.getLongitude());
         if(truckMarker==null){
-            android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(dp(48),dp(72),android.graphics.Bitmap.Config.ARGB_8888);
-            android.graphics.Canvas canvas=new android.graphics.Canvas(bitmap);canvas.scale(bitmap.getWidth()/48f,bitmap.getHeight()/72f);
-            android.graphics.Paint paint=new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-            paint.setColor(0xcc000000);canvas.drawRoundRect(5,5,45,70,10,10,paint);
-            paint.setColor(0xff111115);canvas.drawRoundRect(4,13,12,29,3,3,paint);canvas.drawRoundRect(36,13,44,29,3,3,paint);canvas.drawRoundRect(4,47,12,63,3,3,paint);canvas.drawRoundRect(36,47,44,63,3,3,paint);
-            paint.setColor(0xffff2338);canvas.drawRoundRect(10,3,38,68,7,7,paint);
-            paint.setColor(0xff131a22);canvas.drawRoundRect(14,21,34,35,3,3,paint);canvas.drawRoundRect(14,44,34,63,2,2,paint);
-            paint.setColor(0xffffbbc2);canvas.drawRect(13,6,19,10,paint);canvas.drawRect(29,6,35,10,paint);
-            paint.setColor(0xff9f0a1c);canvas.drawRect(21,8,27,19,paint);
+            android.graphics.Bitmap source=android.graphics.BitmapFactory.decodeResource(
+                getResources(),R.drawable.trx_navigation_marker);
+            android.graphics.Bitmap bitmap=android.graphics.Bitmap.createScaledBitmap(
+                source,dp(58),dp(87),true);
             truckMarker=googleMap.addMarker(new com.google.android.gms.maps.model.MarkerOptions().position(point).anchor(.5f,.5f).flat(true).zIndex(1000).icon(com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(bitmap)));
             if(truckMarker!=null)Log.i("TRXNavigation","TRUCK_READY");
         }
@@ -646,6 +720,10 @@ public class NavigationPanel extends FrameLayout {
         accent=currentAccent();
         destination.setBackground(panel(0xee05070a,accent,2,18));
         routeButton.setBackground(panel(0xff420a12,accent,2,14));
+        routeSummary.setBackground(panel(0xf207090c,accent,2,16));
+        routeTime.setTextColor(accent);
+        stopButton.setBackground(panel(0xf207090c,accent,2,14));
+        stopButton.setTextColor(accent);
         if(!initialized)return;
         try{
         navigationView.setForceNightMode(activity.getSharedPreferences("launcher",Context.MODE_PRIVATE).getInt("display_mode",0));
@@ -974,9 +1052,10 @@ public class NavigationPanel extends FrameLayout {
         compact=value;
         destination.setVisibility(value||guiding?GONE:VISIBLE);routeButton.setVisibility(value||guiding?GONE:VISIBLE);
         commandBar.setVisibility(value||guiding?GONE:VISIBLE);mapTools.setVisibility(value?GONE:VISIBLE);
-        modeBadge.setVisibility(value?GONE:VISIBLE);stopButton.setVisibility(!value&&guiding?VISIBLE:GONE);
+        modeBadge.setVisibility(GONE);stopButton.setVisibility(!value&&guiding?VISIBLE:GONE);
+        routeSummary.setVisibility(!value&&guiding?VISIBLE:GONE);
         suggestionScroller.setVisibility(GONE);
-        if(initialized)try{navigationView.setHeaderEnabled(!value);navigationView.setEtaCardEnabled(!value);}catch(RuntimeException ignored){}
+        if(initialized)try{navigationView.setHeaderEnabled(!value);navigationView.setEtaCardEnabled(false);}catch(RuntimeException ignored){}
     }
     public void onHiddenPanel() {
         // Keep NavigationView started and resumed while the Activity is alive.
@@ -1016,6 +1095,7 @@ public class NavigationPanel extends FrameLayout {
     public void onDestroyPanel() {
         stopTruckTracking();
         suggestionHandler.removeCallbacksAndMessages(null);
+        routeMetricsHandler.removeCallbacksAndMessages(null);
         if (initialized) navigationView.onDestroy();
     }
 
