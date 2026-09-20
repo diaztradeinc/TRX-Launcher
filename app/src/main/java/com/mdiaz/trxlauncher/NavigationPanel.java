@@ -392,8 +392,11 @@ public class NavigationPanel extends FrameLayout {
                     map.getUiSettings().setZoomGesturesEnabled(true);
                     map.getUiSettings().setScrollGesturesEnabled(true);
                     map.getUiSettings().setRotateGesturesEnabled(true);
-                    map.getUiSettings().setCompassEnabled(true);
-                    map.getUiSettings().setMyLocationButtonEnabled(true);
+                    // The launcher supplies its own themed recenter control. Keep
+                    // Google's white compass/location controls from resurfacing
+                    // beneath the upper-right End button.
+                    map.getUiSettings().setCompassEnabled(false);
+                    map.getUiSettings().setMyLocationButtonEnabled(false);
                     map.setMapType(satelliteEnabled?GoogleMap.MAP_TYPE_HYBRID:GoogleMap.MAP_TYPE_NORMAL);
                     try { map.setMapStyle(MapStyleOptions.loadRawResourceStyle(activity, R.raw.map_dark)); }
                     catch (Throwable ignored) { }
@@ -674,8 +677,12 @@ public class NavigationPanel extends FrameLayout {
 
     private void followRoad(){
         if(activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED)return;
-        try{if(googleMap!=null)googleMap.followMyLocation(GoogleMap.CameraPerspective.TILTED,
-            FollowMyLocationOptions.builder().setZoomLevel(18f).build());
+        try{if(googleMap!=null){
+            googleMap.getUiSettings().setCompassEnabled(false);
+            googleMap.getUiSettings().setMyLocationButtonEnabled(false);
+            googleMap.followMyLocation(GoogleMap.CameraPerspective.TILTED,
+                FollowMyLocationOptions.builder().setZoomLevel(18f).build());
+        }
         }catch(SecurityException denied){status.setText("LOCATION PERMISSION REQUIRED");status.setVisibility(VISIBLE);}
     }
 
