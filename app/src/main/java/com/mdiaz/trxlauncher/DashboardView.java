@@ -418,14 +418,62 @@ public final class DashboardView extends View {
     private void navigation(Canvas c){sectionTabs(c,32,82,new String[]{"Route","Recents","Favorites","Map Options"},0);panel(c,18,164,1062,1288,"");}
     private void media(Canvas c){
         sectionTabs(c,32,82,new String[]{"Now Playing","Queue","Sources","Audio"},0);
-        panel(c,32,164,246,1284,"");text(c,"SOURCES",56,208,14,MUTED,true);
-        for(int i=0;i<3;i++){float t=245+i*150;RectF q=new RectF(x(52),y(t),x(226),y(t+120));raisedBox(c,q,i==0,12);String icon=i==0?"♫":i==1?"ᛒ":"+";String label=i==0?(mediaApps.isEmpty()?"MEDIA":trim(mediaApps.get(0).label,14)):i==1?"BLUETOOTH":"ADD SOURCE";text(c,icon,72,t+70,28,i==0?RED:MUTED,true);fittedText(c,label,118,t+68,214,13,i==0?WHITE:MUTED,true);}
-        panel(c,262,164,770,1284,"");
-        drawPlaybackDial(c,516,550,170);
-        fittedText(c,MediaBridge.title,300,790,734,28,WHITE,true);fittedText(c,MediaBridge.artist,300,835,734,18,MUTED,false);
-        mediaProgress(c,300,875,734);button(c,310,955,405,1050,"|◀",false);button(c,435,935,597,1070,MediaBridge.playing?"Ⅱ":"▶",true);button(c,627,955,722,1050,"▶|",false);
-        text(c,MediaBridge.hasAccess(activity)?"MEDIA SESSION CONNECTED":"ONE-TIME MEDIA SETUP REQUIRED",300,1198,13,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);
-        panel(c,786,164,1048,1284,"");text(c,"UP NEXT",810,208,14,MUTED,true);text(c,"● LIVE",958,208,11,0xff55d88a,true);drawCompactQueue(c,810,255);
+        panel(c,32,164,1048,1284,"");
+        text(c,"NOW PLAYING",56,205,13,MUTED,true);
+        p.setTextAlign(Paint.Align.RIGHT);text(c,MediaBridge.hasAccess(activity)?"● CONNECTED":"● MEDIA SETUP REQUIRED",1024,205,11,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);p.setTextAlign(Paint.Align.LEFT);
+
+        drawSquareMediaArtwork(c,290,218,500);
+        centeredFittedText(c,MediaBridge.title,100,748,980,27,WHITE,true);
+        centeredFittedText(c,MediaBridge.artist,150,783,930,16,MUTED,false);
+        mediaProgress(c,230,812,850);
+        button(c,350,855,455,935,"|◀",false);
+        button(c,478,845,602,945,MediaBridge.playing?"Ⅱ":"▶",true);
+        button(c,625,855,730,935,"▶|",false);
+
+        text(c,"UP NEXT",56,982,13,MUTED,true);
+        p.setTextAlign(Paint.Align.RIGHT);text(c,"LIVE QUEUE",1024,982,10,0xff55d88a,true);p.setTextAlign(Paint.Align.LEFT);
+        drawBottomMediaQueue(c,56,998);
+
+        text(c,"SOURCES",56,1155,13,MUTED,true);
+        drawBottomMediaSources(c,56,1172);
+    }
+
+    private void centeredFittedText(Canvas c,String value,float left,float baseline,float right,float size,int color,boolean bold){
+        paint(color,size,bold);android.text.TextPaint tp=new android.text.TextPaint(p);
+        String fitted=android.text.TextUtils.ellipsize(value==null?"":value,tp,x(right-left),android.text.TextUtils.TruncateAt.END).toString();
+        p.setTextAlign(Paint.Align.CENTER);c.drawText(fitted,x((left+right)/2),y(baseline),p);p.setTextAlign(Paint.Align.LEFT);
+    }
+
+    private void drawSquareMediaArtwork(Canvas c,float left,float top,float size){
+        RectF frame=new RectF(x(left),y(top),x(left+size),y(top+size));raisedBox(c,frame,true,18);
+        RectF art=new RectF(x(left+12),y(top+12),x(left+size-12),y(top+size-12));
+        Bitmap source=MediaBridge.artwork!=null?MediaBridge.artwork:defaultMediaArt;
+        path.reset();path.addRoundRect(art,x(12),x(12),Path.Direction.CW);c.save();c.clipPath(path);
+        p.setColor(0xff130609);c.drawRect(art,p);
+        if(source!=null){int side=Math.min(source.getWidth(),source.getHeight());int sx=(source.getWidth()-side)/2,sy=(source.getHeight()-side)/2;c.drawBitmap(source,new Rect(sx,sy,sx+side,sy+side),art,p);}
+        c.restore();p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(2));p.setColor((RED&0x00ffffff)|0xcc000000);c.drawRoundRect(art,x(12),x(12),p);p.setStyle(Paint.Style.FILL);
+    }
+
+    private void drawBottomMediaQueue(Canvas c,float left,float top){
+        String[] titles=MediaBridge.queueTitles,artists=MediaBridge.queueArtists;Bitmap[] images=MediaBridge.queueArtwork;
+        for(int i=0;i<3;i++){
+            float l=left+i*322,r=l+306;RectF card=new RectF(x(l),y(top),x(r),y(top+125));raisedBox(c,card,i==0,10);
+            RectF art=new RectF(x(l+12),y(top+12),x(l+105),y(top+105));
+            p.setColor(0xff26080d);c.drawRoundRect(art,x(9),x(9),p);
+            if(i<images.length&&images[i]!=null){Bitmap image=images[i];int side=Math.min(image.getWidth(),image.getHeight());int sx=(image.getWidth()-side)/2,sy=(image.getHeight()-side)/2;path.reset();path.addRoundRect(art,x(9),x(9),Path.Direction.CW);c.save();c.clipPath(path);c.drawBitmap(image,new Rect(sx,sy,sx+side,sy+side),art,p);c.restore();}
+            else{text(c,"♫",l+43,top+70,25,RED,true);}
+            String title=i<titles.length?titles[i]:(i==0?MediaBridge.title:"Available in player");String artist=i<artists.length?artists[i]:(i==0?MediaBridge.artist:"");
+            fittedText(c,title,l+120,top+49,r-12,13,WHITE,true);fittedText(c,artist,l+120,top+78,r-12,11,MUTED,false);
+        }
+    }
+
+    private void drawBottomMediaSources(Canvas c,float left,float top){
+        int saved=Math.min(4,mediaApps.size()),count=Math.max(2,saved+1);float width=968f/count;
+        for(int i=0;i<count;i++){
+            float l=left+i*width,r=l+width-10;RectF chip=new RectF(x(l),y(top),x(r),y(top+82));raisedBox(c,chip,i==0&&saved>0,10);
+            if(i<saved){AppEntry app=mediaApps.get(i);int sz=(int)x(42),cx=(int)x(l+33),iy=(int)y(top+18);try{app.icon.setBounds(cx-sz/2,iy,cx+sz/2,iy+sz);app.icon.draw(c);}catch(Throwable ignored){}fittedText(c,app.label,l+64,top+50,r-12,12,WHITE,true);}
+            else{text(c,"+",l+20,top+54,25,RED,true);fittedText(c,"ADD SOURCE",l+58,top+50,r-12,12,RED,true);}
+        }
     }
 
     private void drawCompactQueue(Canvas c,float l,float top){String[] titles=MediaBridge.queueTitles,artists=MediaBridge.queueArtists;for(int i=0;i<6;i++){float t=top+i*155;RectF thumb=new RectF(x(l),y(t),x(l+72),y(t+72));p.setShader(new LinearGradient(thumb.left,thumb.top,thumb.right,thumb.bottom,0xff411018,DEEP_RED,Shader.TileMode.CLAMP));c.drawRoundRect(thumb,x(10),x(10),p);p.setShader(null);text(c,"♫",l+24,t+46,20,WHITE,true);String title=i<titles.length?titles[i]:(i==0?trim(MediaBridge.title,14):"Available in player");String artist=i<artists.length?artists[i]:(i==0?trim(MediaBridge.artist,14):"");fittedText(c,title,l+84,t+31,1024,14,WHITE,true);fittedText(c,artist,l+84,t+61,1024,12,MUTED,false);line(c,l,t+112,1024,t+112,0xff30353c,1);}}
@@ -476,12 +524,11 @@ public final class DashboardView extends View {
     }
     private boolean handleMediaTouch(float xx,float yy,float moveX,float moveY){
         if(moveX>x(24)||moveY>x(24))return true;
-        if(xx<250&&yy>235&&yy<700){int slot=(int)((yy-245)/150);if(slot==0&&!mediaApps.isEmpty())activity.launch(mediaApps.get(0));else if(slot==1)activity.openAudioRouteSettings();else activity.openMediaAppPicker();return true;}
         if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}
-        if(xx>330&&xx<705&&yy>350&&yy<730){MediaBridge.toggle(activity);return true;}
-        if(xx>786&&yy>245&&yy<1190){MediaBridge.playQueueItem(activity,(int)((yy-255)/155));return true;}
-        if(yy>925&&yy<1080&&xx>290&&xx<745){if(xx<420)MediaBridge.previous(activity);else if(xx>615)MediaBridge.next(activity);else MediaBridge.toggle(activity);return true;}
-        if(xx>295&&xx<740&&yy>850&&yy<925){long duration=MediaBridge.durationMs;if(duration>0)MediaBridge.seekTo(activity,Math.round(duration*Math.max(0,Math.min(1,(xx-300)/434f))));return true;}
+        if(yy>845&&yy<950&&xx>335&&xx<745){if(xx<465)MediaBridge.previous(activity);else if(xx>615)MediaBridge.next(activity);else MediaBridge.toggle(activity);return true;}
+        if(yy>800&&yy<845&&xx>220&&xx<860){long duration=MediaBridge.durationMs;if(duration>0)MediaBridge.seekTo(activity,Math.round(duration*Math.max(0,Math.min(1,(xx-230)/620f))));return true;}
+        if(yy>990&&yy<1135){int item=(int)((xx-56)/322);if(item>=0&&item<3)MediaBridge.playQueueItem(activity,item);return true;}
+        if(yy>1160&&yy<1285){int saved=Math.min(4,mediaApps.size()),count=Math.max(2,saved+1);int item=(int)((xx-56)/(968f/count));if(item>=0&&item<saved)activity.launch(mediaApps.get(item));else activity.openMediaAppPicker();return true;}
         return false;
     }
     private String obdText(float value,int decimals){
