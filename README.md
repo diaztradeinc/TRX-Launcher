@@ -1,6 +1,6 @@
 # TRX Launcher
 
-Current build: **v4.0.0 cockpit design**, release version **4.1.0 / 122**. See [verification results and MX+ setup](BUILD-STATUS.md). The signed APK passed build, lint and Android 16 emulator navigation/theme checks.
+Current build: **v4 full-screen Uconnect cockpit**, release version **4.2.0 / 123**. See [verification results and MX+ setup](BUILD-STATUS.md). The signed APK passed build, lint and Android 16 emulator navigation/theme checks.
 
 Google Navigation SDK 7.9 now powers the Navigation page directly inside the launcher,
 including live traffic, rerouting, voice guidance, ETA, speed-limit display, themed map
@@ -16,7 +16,7 @@ Native standalone Android launcher for Michael Diaz's 2023 RAM TRX / Ottocast po
 1. Open the repository's **Actions** tab.
 2. Choose **Build TRX Launcher APK** and tap **Run workflow**.
 3. When the run finishes, open it and download the **TRX-Launcher-APK** artifact.
-4. Unzip the artifact on the Ottocast and install `TRX-Launcher-v4.1.0.apk`. An older installation signed with a different certificate must be uninstalled first, removing its saved settings.
+4. Unzip the artifact on the Ottocast and install `TRX-Launcher-v4.2.0.apk`. An older installation signed with a different certificate must be uninstalled first, removing its saved settings.
 5. Press Home and select **TRX Launcher** as the default launcher.
 
 The workflow also builds automatically whenever source is pushed to `main` or `master`. The downloadable Actions artifact is kept for 30 days.

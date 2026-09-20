@@ -148,81 +148,82 @@ public final class DashboardView extends View {
     private void drawSection(Canvas c){
         int tab=sections[page];
         if(tab==0||page==1||page==4)return;
-        p.setColor(BACKGROUND);c.drawRect(x(18),y(410),x(1062),y(1295),p);
+        p.setColor(BACKGROUND);c.drawRect(x(18),y(164),x(1062),y(1295),p);
         if(page==0){
             if(tab==1){
-                panel(c,32,420,1048,1278,"DRIVE");
-                text(c,Math.round(speedMph)+" MPH",70,620,64,WHITE,true);
-                text(c,"GPS speed • Vehicle systems remain factory controlled",70,700,18,MUTED,false);
-                button(c,70,790,500,890,"OPEN NAVIGATION",true);button(c,550,790,1000,890,"PERFORMANCE",false);
+                panel(c,32,174,1048,1278,"DRIVE");
+                text(c,Math.round(speedMph)+" MPH",70,470,82,WHITE,true);
+                text(c,"LIVE GPS SPEED",74,520,17,RED,true);
+                text(c,"Vehicle systems remain factory controlled",70,570,20,MUTED,false);
+                button(c,70,690,500,810,"OPEN NAVIGATION",true);button(c,550,690,1000,810,"PERFORMANCE",false);
             }else if(tab==2){
-                panel(c,32,420,1048,1278,"QUICK CONTROLS");
+                panel(c,32,174,1048,1278,"QUICK CONTROLS");
                 String[] labels={"BLUETOOTH / AUDIO","SOUND SETTINGS","MEDIA SOURCES","SYSTEM SETTINGS"};
-                for(int i=0;i<4;i++)button(c,70,510+i*160,1010,630+i*160,labels[i],false);
+                for(int i=0;i<4;i++)button(c,70,285+i*190,1010,430+i*190,labels[i],false);
             }else{
-                panel(c,32,420,1048,1278,"WEATHER • CURRENT LOCATION");
-                text(c,activity.weatherTemp(),70,680,72,WHITE,true);text(c,activity.weatherCondition(),70,790,22,MUTED,false);
-                button(c,70,920,1010,1020,"REFRESH WEATHER",true);
+                panel(c,32,174,1048,1278,"WEATHER • CURRENT LOCATION");
+                text(c,activity.weatherTemp(),70,535,90,WHITE,true);text(c,activity.weatherCondition(),70,625,28,MUTED,false);
+                button(c,70,770,1010,900,"REFRESH WEATHER",true);
             }return;
         }
         if(page==2){
             if(tab==1){
-                panel(c,32,420,1048,1278,"UP NEXT");
+                panel(c,32,174,1048,1278,"UP NEXT");
                 String[] titles=MediaBridge.queueTitles;
-                if(titles.length==0){text(c,"This player has not shared a queue.",70,570,22,WHITE,true);text(c,"Open the player to view or edit its queue.",70,630,18,MUTED,false);}
-                for(int i=0;i<titles.length;i++)button(c,60,500+i*130,1020,605+i*130,trim(titles[i],65),false);
-                button(c,60,1130,1020,1240,"OPEN PLAYER",true);
+                if(titles.length==0){text(c,"This player has not shared a queue.",70,345,26,WHITE,true);text(c,"Open the player to view or edit its queue.",70,405,20,MUTED,false);}
+                for(int i=0;i<Math.min(6,titles.length);i++)button(c,60,250+i*140,1020,365+i*140,trim(titles[i],70),false);
+                button(c,60,1140,1020,1250,"OPEN PLAYER",true);
             }else if(tab==2){
-                panel(c,32,420,1048,1278,"MEDIA SOURCES");
-                text(c,"Swipe the source shelf • Tap an app to open",65,530,18,MUTED,false);
-                mediaShelf(c);button(c,65,610,1015,715,"ADD / REMOVE SOURCES",true);
+                panel(c,32,174,1048,1278,"MEDIA SOURCES");
+                text(c,"Swipe the source shelf • Tap an app to open",65,285,20,MUTED,false);
+                mediaShelf(c);button(c,65,365,1015,485,"ADD / REMOVE SOURCES",true);
             }else{
-                panel(c,32,420,1048,1128,"AUDIO");
-                text(c,activity.audioRouteName(),65,550,22,WHITE,true);
-                button(c,65,610,1015,710,"CHANGE AUDIO OUTPUT",false);
-                button(c,65,750,1015,850,"SYSTEM SOUND / EQUALIZER",false);
-                text(c,"Profiles set volume caps; EQ support depends on your player.",65,970,17,MUTED,false);
+                panel(c,32,174,1048,1090,"AUDIO");
+                text(c,activity.audioRouteName(),65,315,28,WHITE,true);
+                button(c,65,385,1015,505,"CHANGE AUDIO OUTPUT",false);
+                button(c,65,550,1015,670,"SYSTEM SOUND / EQUALIZER",false);
+                text(c,"Profiles set volume caps; EQ support depends on your player.",65,790,20,MUTED,false);
                 drawDriveSound(c);
             }return;
         }
         if(page==3){
             if(tab==1){
-                panel(c,32,420,1048,1278,"0–60 GPS TIMER • CLOSED COURSE ONLY");
-                text(c,runTime(),70,650,64,WHITE,true);text(c,runActive?"RUNNING":runArmed?"ARMED — STARTS ABOVE 1 MPH":"STOP BEFORE ARMING",70,740,22,RED,true);
-                button(c,70,850,490,950,"ARM",true);button(c,550,850,1010,950,"RESET",false);
-                text(c,"GPS estimate; not a calibrated performance instrument.",70,1090,18,MUTED,false);
+                panel(c,32,174,1048,1278,"0–60 GPS TIMER • CLOSED COURSE ONLY");
+                text(c,runTime(),70,510,82,WHITE,true);text(c,runActive?"RUNNING":runArmed?"ARMED — STARTS ABOVE 1 MPH":"STOP BEFORE ARMING",70,585,24,RED,true);
+                button(c,70,700,490,830,"ARM",true);button(c,550,700,1010,830,"RESET",false);
+                text(c,"GPS estimate; not a calibrated performance instrument.",70,1020,20,MUTED,false);
             }else if(tab==2){
                 String[] labels={"RPM","BOOST","COOLANT","INTAKE TEMP","BATTERY","ENGINE LOAD"};
                 float[] values={ObdBridge.rpm,ObdBridge.boostPsi,ObdBridge.coolantF,ObdBridge.intakeF,ObdBridge.batteryV,ObdBridge.engineLoad};
                 String[] units={"RPM","PSI","°F","°F","V","%"};
                 float[] limits={7000,15,260,200,16,100};
-                for(int i=0;i<6;i++){float left=32+(i%2)*516,top=430+(i/2)*250;metricCard(c,left,top,left+500,labels[i],obdText(values[i],i==1||i==4?1:0),units[i],obdLevel(values[i],0,limits[i]));warningBadge(c,left,top,left+500,labels[i]);}
+                for(int i=0;i<6;i++){float left=32+(i%2)*516,top=184+(i/2)*305;metricCard(c,left,top,left+500,labels[i],obdText(values[i],i==1||i==4?1:0),units[i],obdLevel(values[i],0,limits[i]));warningBadge(c,left,top,left+500,labels[i]);}
                 button(c,60,1190,1020,1270,"CONNECT / PAIR OBDLINK",false);
             }else{
-                panel(c,32,420,1048,1278,"SAVED 0–60 RUNS");
+                panel(c,32,174,1048,1278,"SAVED 0–60 RUNS");
                 String raw=prefs.getString("performance_runs","");String[] runs=raw.isEmpty()?new String[0]:raw.split("\\|");
-                if(runs.length==0)text(c,"No completed runs yet",65,550,22,MUTED,false);
-                for(int i=0;i<runs.length;i++)text(c,(i+1)+".  "+runs[i]+" seconds",65,520+i*60,21,WHITE,false);
+                if(runs.length==0)text(c,"No completed runs yet",65,330,24,MUTED,false);
+                for(int i=0;i<runs.length;i++)text(c,(i+1)+".  "+runs[i]+" seconds",65,300+i*72,23,WHITE,false);
                 button(c,60,1160,1020,1250,"CLEAR HISTORY",false);
             }
         }
     }
 
     private boolean touchSection(float xx,float yy){
-        int tab=sections[page];if(tab==0||yy<410)return false;
+        int tab=sections[page];if(tab==0||yy<164)return false;
         if(page==0){
-            if(tab==1&&yy>790&&yy<890)selectPage(xx<520?1:3,1);
-            if(tab==2&&yy>510&&yy<1110){int i=(int)((yy-510)/160);if(i==0)activity.openAudioRouteSettings();else if(i==1)activity.openSoundSettings();else if(i==2)activity.openMediaAppPicker();else activity.openSystemSettings();}
-            if(tab==3&&yy>920&&yy<1020)activity.refreshWeather();return true;
+            if(tab==1&&yy>690&&yy<830)selectPage(xx<520?1:3,1);
+            if(tab==2&&yy>285&&yy<1000){int i=(int)((yy-285)/190);if(i==0)activity.openAudioRouteSettings();else if(i==1)activity.openSoundSettings();else if(i==2)activity.openMediaAppPicker();else activity.openSystemSettings();}
+            if(tab==3&&yy>770&&yy<900)activity.refreshWeather();return true;
         }
         if(page==2){
-            if(tab==1){if(yy>1130)activity.openMedia();else if(yy>=500)MediaBridge.playQueueItem(activity,(int)((yy-500)/130));}
-            else if(tab==2){if(yy>610&&yy<715)activity.openMediaAppPicker();else if(yy>960){int i=(int)((xx-42+mediaScroll)/200);if(i>=0&&i<mediaApps.size())activity.launch(mediaApps.get(i));else activity.openMediaAppPicker();}}
-            else if(tab==3){if(yy>610&&yy<710)activity.openAudioRouteSettings();else if(yy>750&&yy<850)activity.openSoundSettings();else if(yy>1198){if(xx<512)activity.setMediaProfile(xx<210?0:xx<360?1:2);else if(xx<620)activity.openSoundSettings();else if(xx<840)activity.setMediaVolumeLevel(Math.max(0,Math.min(1,(xx-634)/194)));else activity.toggleAutoVolume();}}
+            if(tab==1){if(yy>1140)activity.openMedia();else if(yy>=250)MediaBridge.playQueueItem(activity,(int)((yy-250)/140));}
+            else if(tab==2){if(yy>365&&yy<485)activity.openMediaAppPicker();else if(yy>960){int i=(int)((xx-42+mediaScroll)/200);if(i>=0&&i<mediaApps.size())activity.launch(mediaApps.get(i));else activity.openMediaAppPicker();}}
+            else if(tab==3){if(yy>385&&yy<505)activity.openAudioRouteSettings();else if(yy>550&&yy<670)activity.openSoundSettings();else if(yy>1198){if(xx<512)activity.setMediaProfile(xx<210?0:xx<360?1:2);else if(xx<620)activity.openSoundSettings();else if(xx<840)activity.setMediaVolumeLevel(Math.max(0,Math.min(1,(xx-634)/194)));else activity.toggleAutoVolume();}}
             return true;
         }
         if(page==3){
-            if(tab==1&&yy>850&&yy<950){if(xx<520){if(speedMph<1)armRun();else android.widget.Toast.makeText(activity,"Stop before arming the timer",android.widget.Toast.LENGTH_SHORT).show();}else resetRun();}
+            if(tab==1&&yy>700&&yy<830){if(xx<520){if(speedMph<1)armRun();else android.widget.Toast.makeText(activity,"Stop before arming the timer",android.widget.Toast.LENGTH_SHORT).show();}else resetRun();}
             if(tab==2&&yy>1190)activity.openObdSetup();
             if(tab==3&&yy>1160)new android.app.AlertDialog.Builder(activity).setTitle("Clear saved runs?").setNegativeButton("Cancel",null).setPositiveButton("Clear",(d,i)->{prefs.edit().remove("performance_runs").apply();invalidate();}).show();
             return true;
@@ -382,36 +383,21 @@ public final class DashboardView extends View {
     }
 
     private void home(Canvas c,float intro){
-        hero(c,72,360,intro);
-        text(c,"PRECISION COMMAND",38,132,12,RED,true);
-        text(c,"Focused on the road.",38,190,35,WHITE,true);
-        text(c,"Ready for everything.",38,232,35,WHITE,true);
-        text(c,"Navigation, media, and vehicle data working together.",38,268,13,MUTED,false);
-        miniStat(c,786,146,908,216,"DRIVE MODE","AUTO");
-        miniStat(c,922,146,1044,216,"GPS SPEED",Math.round(speedMph)+" MPH");
-        sectionTabs(c,32,330,new String[]{"Command","Drive","Quick Controls","Weather"},0);
+        sectionTabs(c,32,82,new String[]{"Dashboard","Drive","Controls","Weather"},0);
+        panel(c,32,164,742,1284,"");
+        text(c,"GOOGLE NAVIGATION",56,206,15,WHITE,true);
+        text(c,"LIVE MAP • TAP NAVIGATION FOR SEARCH AND GUIDANCE",56,235,11,MUTED,true);
 
-        panel(c,32,420,760,1278,"");
-        text(c,"GOOGLE MAP",58,462,11,MUTED,true);text(c,"NAVIGATION",610,462,10,MUTED,true);
-        String recent=recentDestination(0);text(c,recent.isEmpty()?"Ready to navigate":destinationName(recent),58,515,24,WHITE,true);
-        text(c,recent.isEmpty()?"Tap below to search a destination":"Recent destination • tap below to navigate",58,548,12,MUTED,false);
-        p.setShader(new LinearGradient(x(48),y(580),x(744),y(1120),0xff161a20,0xff050608,Shader.TileMode.CLAMP));c.drawRoundRect(new RectF(x(48),y(572),x(744),y(1130)),x(14),x(14),p);p.setShader(null);
-        for(int i=0;i<7;i++)line(c,55,650+i*78,735,590+i*84,0xff242a31,3);
-        for(int i=0;i<6;i++)line(c,110+i*120,580,75+i*128,1125,0xff20262d,2);
-        path.reset();path.moveTo(x(455),y(1110));path.cubicTo(x(420),y(1010),x(555),y(910),x(515),y(805));path.cubicTo(x(475),y(700),x(600),y(650),x(660),y(585));
-        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(14));p.setColor((DEEP_RED&0x00ffffff)|0x88000000);c.drawPath(path,p);p.setStrokeWidth(x(5));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);
-        paint(WHITE,34,true);p.setTextAlign(Paint.Align.CENTER);c.drawText("▲",x(455),y(1080),p);p.setTextAlign(Paint.Align.LEFT);
-        RectF turn=new RectF(x(56),y(1128),x(736),y(1255));raisedBox(c,turn,false,14);text(c,"↱",78,1205,34,WHITE,true);text(c,"SEARCH OR RESUME ROUTE",142,1184,17,WHITE,true);text(c,"Google navigation ready",142,1217,11,MUTED,false);p.setTextAlign(Paint.Align.RIGHT);text(c,"GO",700,1205,16,RED,true);p.setTextAlign(Paint.Align.LEFT);
+        panel(c,762,164,1048,672,"");text(c,"NOW PLAYING",786,208,14,MUTED,true);
+        text(c,MediaBridge.hasAccess(activity)?"● CONNECTED":"● SETUP REQUIRED",786,238,11,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);
+        RectF art=new RectF(x(786),y(265),x(1024),y(503));p.setColor(0xff18080a);c.drawRoundRect(art,x(16),x(16),p);if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);
+        fittedText(c,MediaBridge.title,786,545,1024,18,WHITE,true);fittedText(c,MediaBridge.artist,786,577,1024,14,MUTED,false);
+        button(c,786,596,852,654,"|◀",false);button(c,861,586,949,662,MediaBridge.playing?"Ⅱ":"▶",true);button(c,958,596,1024,654,"▶|",false);
 
-        panel(c,780,420,1048,815,"");text(c,"NOW PLAYING",804,462,11,MUTED,true);text(c,MediaBridge.hasAccess(activity)?"●  CONNECTED":"●  SETUP",938,462,9,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);
-        RectF art=new RectF(x(804),y(492),x(900),y(588));p.setColor(0xff18080a);c.drawRoundRect(art,x(12),x(12),p);if(MediaBridge.artwork!=null)c.drawBitmap(MediaBridge.artwork,null,art,p);else if(defaultMediaArt!=null)c.drawBitmap(defaultMediaArt,null,art,p);
-        text(c,trim(MediaBridge.title,15),916,530,14,WHITE,true);text(c,trim(MediaBridge.artist,16),916,558,11,MUTED,false);
-        button(c,804,640,870,708,"|◀",false);button(c,880,626,954,722,MediaBridge.playing?"Ⅱ":"▶",true);button(c,964,640,1030,708,"▶|",false);mediaProgress(c,804,760,1030);
-
-        panel(c,780,835,1048,1278,"");text(c,"LIVE VEHICLE",804,877,11,MUTED,true);text(c,ObdBridge.connected?"●  OBD READY":"●  GPS MODE",936,877,9,ObdBridge.connected?0xff55d88a:MUTED,true);
-        vehicleValue(c,804,932,"COOLANT",obdText(ObdBridge.coolantF,0)+"°");vehicleValue(c,926,932,"BATTERY",obdText(ObdBridge.batteryV,1)+"V");
-        vehicleValue(c,804,1065,"TRANS",obdText(ObdBridge.transmissionF,0)+"°");vehicleValue(c,926,1065,"BOOST",obdText(ObdBridge.boostPsi,1));
-        text(c,"Tap for full performance",804,1238,11,RED,true);
+        panel(c,762,690,1048,1284,"");text(c,"LIVE VEHICLE",786,734,14,MUTED,true);
+        text(c,ObdBridge.connected?"● OBDLINK MX+":"● GPS MODE",786,765,11,ObdBridge.connected?0xff55d88a:MUTED,true);
+        vehicleValue(c,786,810,"GPS SPEED",Math.round(speedMph)+" MPH");vehicleValue(c,786,925,"COOLANT",obdText(ObdBridge.coolantF,0)+"°F");
+        vehicleValue(c,786,1040,"BATTERY",obdText(ObdBridge.batteryV,1)+" V");vehicleValue(c,786,1155,"BOOST",obdText(ObdBridge.boostPsi,1)+" PSI");
     }
 
     private void miniStat(Canvas c,float l,float top,float r,float bottom,String label,String value){RectF q=new RectF(x(l),y(top),x(r),y(bottom));raisedBox(c,q,false,10);text(c,label,l+14,top+26,9,MUTED,true);text(c,value,l+14,top+56,17,WHITE,true);}
@@ -420,8 +406,8 @@ public final class DashboardView extends View {
         selected=page==4?selected:sections[page];
         raisedBox(c,new RectF(x(l),y(top),x(1048),y(top+70)),false,18);
         float width=(900-l)/labels.length;
-        for(int i=0;i<labels.length;i++){float a=l+i*width,b=a+width;if(i==selected){p.setColor(RED);c.drawRoundRect(new RectF(x(a+8),y(top+8),x(b-8),y(top+62)),x(13),x(13),p);}paint(i==selected?WHITE:MUTED,12,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(labels[i],x((a+b)/2),y(top+43),p);}
-        paint(RED,12,true);c.drawText("SETTINGS",x(974),y(top+43),p);p.setTextAlign(Paint.Align.LEFT);
+        for(int i=0;i<labels.length;i++){float a=l+i*width,b=a+width;if(i==selected){p.setColor(RED);c.drawRoundRect(new RectF(x(a+8),y(top+8),x(b-8),y(top+62)),x(13),x(13),p);}paint(i==selected?WHITE:MUTED,15,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(labels[i],x((a+b)/2),y(top+44),p);}
+        paint(RED,14,true);c.drawText("SETTINGS",x(974),y(top+44),p);p.setTextAlign(Paint.Align.LEFT);
     }
 
     private void precisionGauge(Canvas c,float l,float r,String label,String value,String unit,float level){
@@ -429,21 +415,20 @@ public final class DashboardView extends View {
         RectF arc=new RectF(x(l+36),y(1025),x(r-36),y(1218));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(12));p.setColor(0xff242930);c.drawArc(arc,155,230,false,p);p.setColor(RED);c.drawArc(arc,155,Math.max(9,230*Math.max(0,Math.min(1,level))),false,p);p.setStyle(Paint.Style.FILL);
         paint(WHITE,34,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(value,x((l+r)/2),y(1178),p);paint(MUTED,12,true);c.drawText(unit,x((l+r)/2),y(1208),p);p.setTextAlign(Paint.Align.LEFT);
     }
-    private void navigation(Canvas c){hero(c,72,330,1);text(c,"PRECISION NAVIGATION",38,130,12,RED,true);text(c,"Every turn,",38,190,36,WHITE,true);text(c,"clearly ahead.",38,232,36,WHITE,true);text(c,"Integrated Google directions with live traffic and fast destinations.",38,270,13,MUTED,false);miniStat(c,786,146,908,216,"ARRIVAL",activity.routeMetric(true));miniStat(c,922,146,1044,216,"DISTANCE",activity.routeMetric(false));sectionTabs(c,32,330,new String[]{"Route","Recents","Favorites","Map Options"},0);panel(c,18,410,1062,1288,"");}
+    private void navigation(Canvas c){sectionTabs(c,32,82,new String[]{"Route","Recents","Favorites","Map Options"},0);panel(c,18,164,1062,1288,"");}
     private void media(Canvas c){
-        hero(c,72,330,1);text(c,"PRECISION MEDIA",38,130,12,RED,true);text(c,"Your music,",38,190,36,WHITE,true);text(c,"perfectly centered.",38,232,36,WHITE,true);text(c,"Large controls, sources, queue, and audio tuning.",38,270,13,MUTED,false);
-        miniStat(c,786,146,908,216,"OUTPUT",trim(activity.audioRouteName(),10));miniStat(c,922,146,1044,216,"VOLUME",Math.round(activity.mediaVolumeLevel()*100)+"%");
-        sectionTabs(c,32,330,new String[]{"Now Playing","Queue","Sources","Audio"},0);
-        panel(c,32,420,222,1278,"");text(c,"SOURCES",54,462,11,MUTED,true);
-        for(int i=0;i<3;i++){float t=500+i*120;RectF q=new RectF(x(52),y(t),x(202),y(t+98));raisedBox(c,q,i==0,12);String icon=i==0?"♫":i==1?"ᛒ":"+";String label=i==0?(mediaApps.isEmpty()?"MEDIA":trim(mediaApps.get(0).label,12)):i==1?"BLUETOOTH":"ADD SOURCE";text(c,icon,70,t+57,22,i==0?RED:MUTED,true);text(c,label,110,t+56,10,i==0?WHITE:MUTED,true);}
-        panel(c,238,420,782,1278,"");
-        drawPlaybackDial(c,430,745,145);fittedText(c,MediaBridge.artist.toUpperCase(Locale.US),585,650,760,11,MUTED,true);fittedText(c,MediaBridge.title,585,700,760,20,WHITE,true);fittedText(c,MediaBridge.artist,585,735,760,12,MUTED,false);
-        mediaProgress(c,585,790,750);button(c,572,850,626,915,"|◀",false);button(c,638,835,708,930,MediaBridge.playing?"Ⅱ":"▶",true);button(c,720,850,766,915,"▶|",false);
-        text(c,MediaBridge.hasAccess(activity)?"MEDIA SESSION CONNECTED":"ONE-TIME MEDIA SETUP REQUIRED",270,1198,10,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);
-        panel(c,798,420,1048,1278,"");text(c,"UP NEXT",820,462,11,MUTED,true);text(c,"●  LIVE",968,462,9,0xff55d88a,true);drawCompactQueue(c,820,510);
+        sectionTabs(c,32,82,new String[]{"Now Playing","Queue","Sources","Audio"},0);
+        panel(c,32,164,246,1284,"");text(c,"SOURCES",56,208,14,MUTED,true);
+        for(int i=0;i<3;i++){float t=245+i*150;RectF q=new RectF(x(52),y(t),x(226),y(t+120));raisedBox(c,q,i==0,12);String icon=i==0?"♫":i==1?"ᛒ":"+";String label=i==0?(mediaApps.isEmpty()?"MEDIA":trim(mediaApps.get(0).label,14)):i==1?"BLUETOOTH":"ADD SOURCE";text(c,icon,72,t+70,28,i==0?RED:MUTED,true);fittedText(c,label,118,t+68,214,13,i==0?WHITE:MUTED,true);}
+        panel(c,262,164,770,1284,"");
+        drawPlaybackDial(c,516,550,170);
+        fittedText(c,MediaBridge.title,300,790,734,28,WHITE,true);fittedText(c,MediaBridge.artist,300,835,734,18,MUTED,false);
+        mediaProgress(c,300,875,734);button(c,310,955,405,1050,"|◀",false);button(c,435,935,597,1070,MediaBridge.playing?"Ⅱ":"▶",true);button(c,627,955,722,1050,"▶|",false);
+        text(c,MediaBridge.hasAccess(activity)?"MEDIA SESSION CONNECTED":"ONE-TIME MEDIA SETUP REQUIRED",300,1198,13,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);
+        panel(c,786,164,1048,1284,"");text(c,"UP NEXT",810,208,14,MUTED,true);text(c,"● LIVE",958,208,11,0xff55d88a,true);drawCompactQueue(c,810,255);
     }
 
-    private void drawCompactQueue(Canvas c,float l,float top){String[] titles=MediaBridge.queueTitles,artists=MediaBridge.queueArtists;for(int i=0;i<4;i++){float t=top+i*145;RectF thumb=new RectF(x(l),y(t),x(l+68),y(t+68));p.setShader(new LinearGradient(thumb.left,thumb.top,thumb.right,thumb.bottom,0xff411018,DEEP_RED,Shader.TileMode.CLAMP));c.drawRoundRect(thumb,x(10),x(10),p);p.setShader(null);text(c,"♫",l+22,t+43,19,WHITE,true);String title=i<titles.length?titles[i]:(i==0?trim(MediaBridge.title,18):"Queue available in player");String artist=i<artists.length?artists[i]:(i==0?trim(MediaBridge.artist,18):"");text(c,trim(title,18),l+84,t+30,12,WHITE,true);text(c,trim(artist,18),l+84,t+56,10,MUTED,false);line(c,l,t+95,1024,t+95,0xff30353c,1);}}
+    private void drawCompactQueue(Canvas c,float l,float top){String[] titles=MediaBridge.queueTitles,artists=MediaBridge.queueArtists;for(int i=0;i<6;i++){float t=top+i*155;RectF thumb=new RectF(x(l),y(t),x(l+72),y(t+72));p.setShader(new LinearGradient(thumb.left,thumb.top,thumb.right,thumb.bottom,0xff411018,DEEP_RED,Shader.TileMode.CLAMP));c.drawRoundRect(thumb,x(10),x(10),p);p.setShader(null);text(c,"♫",l+24,t+46,20,WHITE,true);String title=i<titles.length?titles[i]:(i==0?trim(MediaBridge.title,14):"Available in player");String artist=i<artists.length?artists[i]:(i==0?trim(MediaBridge.artist,14):"");fittedText(c,title,l+84,t+31,1024,14,WHITE,true);fittedText(c,artist,l+84,t+61,1024,12,MUTED,false);line(c,l,t+112,1024,t+112,0xff30353c,1);}}
     private void drawMediaSources(Canvas c){
         panel(c,18,238,150,1138,"SOURCES");
         for(int i=0;i<4;i++){float top=305+i*195;RectF q=new RectF(x(34),y(top),x(134),y(top+170));raisedBox(c,q,i==0,12);
@@ -491,12 +476,12 @@ public final class DashboardView extends View {
     }
     private boolean handleMediaTouch(float xx,float yy,float moveX,float moveY){
         if(moveX>x(24)||moveY>x(24))return true;
-        if(xx<225&&yy>490&&yy<860){int slot=(int)((yy-500)/120);if(slot==0&&!mediaApps.isEmpty())activity.launch(mediaApps.get(0));else if(slot==1)activity.openAudioRouteSettings();else activity.openMediaAppPicker();return true;}
+        if(xx<250&&yy>235&&yy<700){int slot=(int)((yy-245)/150);if(slot==0&&!mediaApps.isEmpty())activity.launch(mediaApps.get(0));else if(slot==1)activity.openAudioRouteSettings();else activity.openMediaAppPicker();return true;}
         if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}
-        if(xx>285&&xx<570&&yy>600&&yy<890){MediaBridge.toggle(activity);return true;}
-        if(xx>798&&yy>510&&yy<1090){MediaBridge.playQueueItem(activity,(int)((yy-510)/145));return true;}
-        if(yy>820&&yy<950&&xx>560&&xx<780){if(xx<635)MediaBridge.previous(activity);else if(xx>710)MediaBridge.next(activity);else MediaBridge.toggle(activity);return true;}
-        if(xx>580&&xx<760&&yy>760&&yy<830){long duration=MediaBridge.durationMs;if(duration>0)MediaBridge.seekTo(activity,Math.round(duration*Math.max(0,Math.min(1,(xx-585)/165f))));return true;}
+        if(xx>330&&xx<705&&yy>350&&yy<730){MediaBridge.toggle(activity);return true;}
+        if(xx>786&&yy>245&&yy<1190){MediaBridge.playQueueItem(activity,(int)((yy-255)/155));return true;}
+        if(yy>925&&yy<1080&&xx>290&&xx<745){if(xx<420)MediaBridge.previous(activity);else if(xx>615)MediaBridge.next(activity);else MediaBridge.toggle(activity);return true;}
+        if(xx>295&&xx<740&&yy>850&&yy<925){long duration=MediaBridge.durationMs;if(duration>0)MediaBridge.seekTo(activity,Math.round(duration*Math.max(0,Math.min(1,(xx-300)/434f))));return true;}
         return false;
     }
     private String obdText(float value,int decimals){
@@ -509,40 +494,38 @@ public final class DashboardView extends View {
     }
 
     private void performance(Canvas c){
-        hero(c,72,330,1);text(c,"PRECISION PERFORMANCE",38,130,12,RED,true);text(c,"Every heartbeat",38,190,36,WHITE,true);text(c,"of the truck.",38,232,36,WHITE,true);text(c,"Live OBD data and a focused GPS acceleration timer.",38,270,13,MUTED,false);
-        miniStat(c,786,146,908,216,"CONNECTION",ObdBridge.connected?"READY":"GPS");miniStat(c,922,146,1044,216,"PROFILE","STREET");sectionTabs(c,32,330,new String[]{"Live Data","0–60","Gauges","History"},0);
-        metricCard(c,32,420,278,"BOOST",obdText(ObdBridge.boostPsi,1),"PSI",obdLevel(ObdBridge.boostPsi,0,15));metricCard(c,290,420,536,"COOLANT",obdText(ObdBridge.coolantF,0),"°F",obdLevel(ObdBridge.coolantF,100,240));metricCard(c,548,420,794,"TRANS",obdText(ObdBridge.transmissionF,0),"°F",obdLevel(ObdBridge.transmissionF,100,240));metricCard(c,806,420,1048,"BATTERY",obdText(ObdBridge.batteryV,1),"V",obdLevel(ObdBridge.batteryV,11,15));
-        panel(c,32,640,430,1085,"");text(c,"0–60 GPS TIMER",54,682,11,MUTED,true);text(c,"●  "+(runActive?"RUNNING":runArmed?"ARMED":"READY"),316,682,9,0xff55d88a,true);text(c,runTime(),54,790,43,WHITE,true);text(c,runArmed?"ARMED":"AUTOMATIC ABOVE 1 MPH",316,790,12,0xff55d88a,true);button(c,54,850,210,930,"START",true);button(c,226,850,398,930,"RESET",false);
+        sectionTabs(c,32,82,new String[]{"Live Data","0–60","Gauges","History"},0);
+        metricCard(c,32,174,278,"RPM",obdText(ObdBridge.rpm,0),"RPM",obdLevel(ObdBridge.rpm,0,7000));metricCard(c,290,174,536,"BOOST",obdText(ObdBridge.boostPsi,1),"PSI",obdLevel(ObdBridge.boostPsi,0,15));metricCard(c,548,174,794,"COOLANT",obdText(ObdBridge.coolantF,0),"°F",obdLevel(ObdBridge.coolantF,100,240));metricCard(c,806,174,1048,"BATTERY",obdText(ObdBridge.batteryV,1),"V",obdLevel(ObdBridge.batteryV,11,15));
+        panel(c,32,390,430,1070,"");text(c,"0–60 GPS TIMER",54,438,15,MUTED,true);text(c,"● "+(runActive?"RUNNING":runArmed?"ARMED":"READY"),285,438,12,0xff55d88a,true);text(c,runTime(),54,585,58,WHITE,true);text(c,runArmed?"ARMED":"AUTOMATIC ABOVE 1 MPH",54,640,15,0xff55d88a,true);button(c,54,710,210,815,"START",true);button(c,226,710,398,815,"RESET",false);
         drawSpeedTrace(c);
-        panel(c,32,1100,1048,1278,"");text(c,trim(ObdBridge.status,52),54,1145,12,ObdBridge.connected?0xff55d88a:MUTED,true);float[] history=runStats();text(c,"LAST",54,1190,9,MUTED,true);text(c,history[0]>0?String.format(Locale.US,"%.2f s",history[0]):"--",54,1235,22,WHITE,true);text(c,"BEST",250,1190,9,MUTED,true);text(c,history[1]>0?String.format(Locale.US,"%.2f s",history[1]):"--",250,1235,22,WHITE,true);text(c,"RUNS",446,1190,9,MUTED,true);text(c,String.valueOf((int)history[2]),446,1235,22,WHITE,true);
+        panel(c,32,1088,1048,1284,"");text(c,trim(ObdBridge.status,70),54,1135,15,ObdBridge.connected?0xff55d88a:MUTED,true);float[] history=runStats();text(c,"LAST",54,1190,12,MUTED,true);text(c,history[0]>0?String.format(Locale.US,"%.2f s",history[0]):"--",54,1242,28,WHITE,true);text(c,"BEST",290,1190,12,MUTED,true);text(c,history[1]>0?String.format(Locale.US,"%.2f s",history[1]):"--",290,1242,28,WHITE,true);text(c,"RUNS",526,1190,12,MUTED,true);text(c,String.valueOf((int)history[2]),526,1242,28,WHITE,true);text(c,ObdBridge.connected?"MX+ CONNECTED":"TAP GAUGES TO CONNECT MX+",760,1230,13,RED,true);
     }
     private void drawSpeedTrace(Canvas c){
-        panel(c,446,640,1048,1085,"");text(c,"GPS SPEED • LAST 120 FIXES",470,682,11,MUTED,true);
+        panel(c,446,390,1048,1070,"");text(c,"GPS SPEED • LAST 120 FIXES",470,438,15,MUTED,true);
         boolean fresh=lastGpsAt>0&&SystemClock.elapsedRealtime()-lastGpsAt<3000;
-        text(c,fresh?"LIVE":"NO FIX",950,682,9,fresh?0xff55d88a:MUTED,true);
-        for(int i=0;i<5;i++)line(c,470,730+i*65,1024,730+i*65,0xff292e35,1);
-        if(speedTrace.size()<2){text(c,"WAITING FOR GPS DATA",500,875,15,MUTED,true);return;}
+        text(c,fresh?"LIVE":"NO FIX",950,438,12,fresh?0xff55d88a:MUTED,true);
+        for(int i=0;i<6;i++)line(c,470,505+i*90,1024,505+i*90,0xff292e35,1);
+        if(speedTrace.size()<2){text(c,"WAITING FOR GPS DATA",500,750,20,MUTED,true);return;}
         float maximum=60;for(float speed:speedTrace)maximum=Math.max(maximum,speed);
-        path.reset();for(int i=0;i<speedTrace.size();i++){float px=x(485+i*525f/119),py=y(1020-280*speedTrace.get(i)/maximum);if(i==0)path.moveTo(px,py);else path.lineTo(px,py);}
+        path.reset();for(int i=0;i<speedTrace.size();i++){float px=x(485+i*525f/119),py=y(990-440*speedTrace.get(i)/maximum);if(i==0)path.moveTo(px,py);else path.lineTo(px,py);}
         p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(3));p.setColor(RED);c.drawPath(path,p);p.setStyle(Paint.Style.FILL);
-        text(c,"0–"+Math.round(maximum)+" MPH",470,1060,10,MUTED,false);
+        text(c,"0–"+Math.round(maximum)+" MPH",470,1040,13,MUTED,false);
     }
-    private void metricCard(Canvas c,float l,float top,float r,String label,String value,String unit,float level){RectF q=new RectF(x(l),y(top),x(r),y(top+195));raisedBox(c,q,false,12);text(c,label,l+20,top+35,11,MUTED,true);text(c,value,l+20,top+105,31,WHITE,true);text(c,unit,l+98,top+105,11,MUTED,true);p.setColor(0xff343940);c.drawRoundRect(new RectF(x(l+20),y(top+158),x(r-20),y(top+166)),x(4),x(4),p);p.setColor(RED);c.drawRoundRect(new RectF(x(l+20),y(top+158),x(l+20+(r-l-40)*Math.max(.02f,level)),y(top+166)),x(4),x(4),p);}
+    private void metricCard(Canvas c,float l,float top,float r,String label,String value,String unit,float level){RectF q=new RectF(x(l),y(top),x(r),y(top+195));raisedBox(c,q,false,12);text(c,label,l+20,top+38,14,MUTED,true);text(c,value,l+20,top+112,38,WHITE,true);p.setTextAlign(Paint.Align.RIGHT);text(c,unit,r-20,top+112,14,MUTED,true);p.setTextAlign(Paint.Align.LEFT);p.setColor(0xff343940);c.drawRoundRect(new RectF(x(l+20),y(top+158),x(r-20),y(top+168)),x(5),x(5),p);p.setColor(RED);c.drawRoundRect(new RectF(x(l+20),y(top+158),x(l+20+(r-l-40)*Math.max(.02f,level)),y(top+168)),x(5),x(5),p);}
     private void apps(Canvas c){
-        hero(c,72,310,1);text(c,"PRECISION APPS",38,128,12,RED,true);text(c,"Every app,",38,185,35,WHITE,true);text(c,"without the clutter.",38,228,35,WHITE,true);text(c,"Glossy tiles, quick categories, and a clean launch rail.",38,266,13,MUTED,false);miniStat(c,786,146,908,216,"INSTALLED",String.valueOf(apps.size()));miniStat(c,922,146,1044,216,"FAVORITES",String.valueOf(prefs.getStringSet("favorite_apps",java.util.Collections.emptySet()).size()));
-        sectionTabs(c,32,330,new String[]{"All","Driving","Media","Tools"},favoriteAppsOnly?0:appCategory);
-        button(c,32,420,914,492,appSearch.isEmpty()?"⌕   SEARCH ALL APPS":"⌕   "+trim(appSearch,28),false);miniStat(c,930,420,1048,492,"LIBRARY",apps.size()+" APPS");
-        panel(c,32,510,804,1278,"");
-        c.save();c.clipRect(x(42),y(525),x(790),y(1265));
+        sectionTabs(c,32,82,new String[]{"All","Driving","Media","Tools"},favoriteAppsOnly?0:appCategory);
+        button(c,32,174,914,254,appSearch.isEmpty()?"⌕   SEARCH ALL APPS":"⌕   "+trim(appSearch,28),false);miniStat(c,930,174,1048,254,"LIBRARY",apps.size()+" APPS");
+        panel(c,32,270,804,1278,"");
+        c.save();c.clipRect(x(42),y(285),x(790),y(1265));
         for(int i=0;i<displayApps.size();i++){
-            int col=i%4,row=i/4;float l=48+col*184,t=530+row*170-appScroll;
-            if(t>360&&t<1270)appTile(c,displayApps.get(i),l,t,l+160,t+154);
+            int col=i%4,row=i/4;float l=48+col*184,t=290+row*170-appScroll;
+            if(t>255&&t<1270)appTile(c,displayApps.get(i),l,t,l+160,t+154);
         }
         c.restore();
-        panel(c,822,510,1048,1278,"");text(c,"QUICK LAUNCH",846,552,11,MUTED,true);drawQuickLaunchV4(c);
-        if(displayApps.isEmpty())text(c,favoriteAppsOnly?"NO FAVORITES YET":"NO APPS IN THIS CATEGORY",58,455,20,MUTED,true);
+        panel(c,822,270,1048,1278,"");text(c,"QUICK LAUNCH",846,312,14,MUTED,true);drawQuickLaunchV4(c);
+        if(displayApps.isEmpty())text(c,favoriteAppsOnly?"NO FAVORITES YET":"NO APPS IN THIS CATEGORY",58,375,20,MUTED,true);
     }
-    private void drawQuickLaunchV4(Canvas c){List<AppEntry> quick=quickApps();for(int i=0;i<Math.min(5,quick.size());i++){float t=585+i*125;RectF q=new RectF(x(842),y(t),x(1028),y(t+96));raisedBox(c,q,false,12);AppEntry a=quick.get(i);int sz=(int)x(48),cx=(int)x(878),top=(int)y(t+22);try{a.icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);a.icon.draw(c);}catch(Throwable ignored){}text(c,trim(a.label,14),916,t+57,11,WHITE,true);}}
+    private void drawQuickLaunchV4(Canvas c){List<AppEntry> quick=quickApps();for(int i=0;i<Math.min(6,quick.size());i++){float t=345+i*145;RectF q=new RectF(x(842),y(t),x(1028),y(t+112));raisedBox(c,q,false,12);AppEntry a=quick.get(i);int sz=(int)x(54),cx=(int)x(878),top=(int)y(t+28);try{a.icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);a.icon.draw(c);}catch(Throwable ignored){}fittedText(c,a.label,916,t+66,1018,13,WHITE,true);}}
     private String currentAppSection(){
         if(favoriteAppsOnly)return "★  FAVORITES";
         if(appCategory==1)return "DRIVING";if(appCategory==2)return "MEDIA";if(appCategory==3)return "TOOLS";return "A–Z";
@@ -582,7 +565,7 @@ public final class DashboardView extends View {
     }
     private boolean containsPackage(List<AppEntry> list,String pkg){for(AppEntry app:list)if(app.packageName.equals(pkg))return true;return false;}
     private AppEntry selectedApp(){for(AppEntry app:apps)if(app.packageName.equals(selectedAppPackage))return app;return null;}
-    private float appActionTop(){int index=-1;for(int i=0;i<displayApps.size();i++)if(displayApps.get(i).packageName.equals(selectedAppPackage)){index=i;break;}if(index<0)return 0;float top=530+(index/4)*170-appScroll+106;return Math.max(545,Math.min(1168,top));}
+    private float appActionTop(){int index=-1;for(int i=0;i<displayApps.size();i++)if(displayApps.get(i).packageName.equals(selectedAppPackage)){index=i;break;}if(index<0)return 0;float top=290+(index/4)*170-appScroll+106;return Math.max(305,Math.min(1168,top));}
     private void drawAppActions(Canvas c){
         AppEntry selected=selectedApp();if(selected==null)return;float top=appActionTop();
         RectF q=new RectF(x(116),y(top),x(796),y(top+82));p.setColor(0xf20b0e12);c.drawRoundRect(q,x(13),x(13),p);
@@ -649,7 +632,7 @@ public final class DashboardView extends View {
     private void refreshDisplayedApps(){
         displayApps=new ArrayList<>();String needle=appSearch.toLowerCase(Locale.US);
         for(AppEntry app:apps)if((!favoriteAppsOnly||isFavorite(app))&&matchesCategory(app)&&(needle.isEmpty()||app.label.toLowerCase(Locale.US).contains(needle)))displayApps.add(app);
-        float rows=(displayApps.size()+3)/4f,max=Math.max(0,530+rows*170-1260);appScroll=Math.max(0,Math.min(max,appScroll));
+        float rows=(displayApps.size()+3)/4f,max=Math.max(0,290+rows*170-1260);appScroll=Math.max(0,Math.min(max,appScroll));
         if(selectedApp()!=null){boolean shown=false;for(AppEntry app:displayApps)if(app.packageName.equals(selectedAppPackage)){shown=true;break;}if(!shown){selectedAppPackage="";selectedAppIndex=-1;}}
     }
     private boolean matchesCategory(AppEntry app){
@@ -663,14 +646,14 @@ public final class DashboardView extends View {
     private List<Character> appLetters(){List<Character> result=new ArrayList<>();for(AppEntry app:displayApps){char letter=Character.toUpperCase(app.label.charAt(0));if(!result.contains(letter))result.add(letter);}return result;}
     private void jumpToLetter(int letterIndex){
         List<Character> letters=appLetters();if(letters.isEmpty())return;letterIndex=Math.max(0,Math.min(letters.size()-1,letterIndex));char target=letters.get(letterIndex);
-        for(int i=0;i<displayApps.size();i++)if(Character.toUpperCase(displayApps.get(i).label.charAt(0))==target){float rows=(displayApps.size()+3)/4f,max=Math.max(0,530+rows*170-1260);appScroll=Math.max(0,Math.min(max,(i/4)*170));break;}invalidate();
+        for(int i=0;i<displayApps.size();i++)if(Character.toUpperCase(displayApps.get(i).label.charAt(0))==target){float rows=(displayApps.size()+3)/4f,max=Math.max(0,290+rows*170-1260);appScroll=Math.max(0,Math.min(max,(i/4)*170));break;}invalidate();
     }
     private int appIndexAt(float xx,float yy){
-        float localX=xx-48,localY=yy-530+appScroll;if(localX<0||localY<0||xx>804)return -1;
+        float localX=xx-48,localY=yy-290+appScroll;if(localX<0||localY<0||xx>804)return -1;
         int col=(int)(localX/184),row=(int)(localY/170);if(col<0||col>=4||localX-col*184>160||localY-row*170>154)return -1;
         int index=row*4+col;return index<displayApps.size()?index:-1;
     }
-    private int maxAppScroll(){float rows=(displayApps.size()+3)/4f;return Math.max(0,Math.round(530+rows*170-1260));}
+    private int maxAppScroll(){float rows=(displayApps.size()+3)/4f;return Math.max(0,Math.round(290+rows*170-1260));}
     
     private void startAppTracking(MotionEvent e){
         if(appScroller!=null&&!appScroller.isFinished())appScroller.abortAnimation();
@@ -685,7 +668,7 @@ public final class DashboardView extends View {
         if(e.getAction()==MotionEvent.ACTION_MOVE){
             touchX=e.getX();touchY=e.getY();if(page==4&&appVelocity!=null)appVelocity.addMovement(e);float movedX=Math.abs(e.getX()-downX),movedY=Math.abs(e.getY()-downY);if(movedX>x(16)||movedY>x(16))cancelHeldApp();
             if(page==2&&e.getY()>y(960)&&e.getY()<y(1245)){float max=Math.max(0,(mediaApps.size()+1)*200-1000);mediaScroll=Math.max(0,Math.min(max,mediaScrollAtDown+(downX-e.getX())/Math.max(.01f,u)));}
-            if(page==4&&e.getY()>y(510)&&e.getX()<x(804)){appScroll=Math.max(0,Math.min(maxAppScroll(),scrollAtDown+(downY-e.getY())/Math.max(.01f,usableH)*1440f));}invalidate();return true;
+            if(page==4&&e.getY()>y(270)&&e.getX()<x(804)){appScroll=Math.max(0,Math.min(maxAppScroll(),scrollAtDown+(downY-e.getY())/Math.max(.01f,usableH)*1440f));}invalidate();return true;
         }
         if(e.getAction()!=MotionEvent.ACTION_UP&&e.getAction()!=MotionEvent.ACTION_CANCEL)return true;clock.removeCallbacks(openHeldAppOptions);
         float upX=e.getX(),upY=e.getY(),xx=upX/u,yy=(upY-safeTop)*1440f/usableH;float moveX=Math.abs(upX-downX),moveY=Math.abs(upY-downY);touchX=touchY=-1;
@@ -693,7 +676,7 @@ public final class DashboardView extends View {
         if(page==4&&appVelocity!=null){appVelocity.addMovement(e);appVelocity.computeCurrentVelocity(1000);float vy=appVelocity.getYVelocity();if(moveY>x(24)&&Math.abs(vy)>180){int logicalVelocity=Math.round(-vy*1440f/Math.max(1,usableH));appScroller.fling(0,Math.round(appScroll),0,logicalVelocity,0,0,0,maxAppScroll());postInvalidateOnAnimation();}}
         if(appVelocity!=null){appVelocity.recycle();appVelocity=null;}cancelHeldApp();
         if(yy>=1300){selectedAppPackage="";selectPage((int)(xx/216),xx/216>page?1:-1);return true;}
-        if(yy>=330&&yy<=400&&xx>=32&&xx<=1048&&moveX<x(18)&&moveY<x(18)){
+        if(yy>=82&&yy<=152&&xx>=32&&xx<=1048&&moveX<x(18)&&moveY<x(18)){
             if(xx>=900){activity.openSettingsScreen();return true;}
             int tab=Math.max(0,Math.min(3,(int)((xx-32)/217)));
             sections[page]=tab;
@@ -703,17 +686,16 @@ public final class DashboardView extends View {
             invalidate();return true;
         }
         if(moveX<x(24)&&moveY<x(24)&&touchSection(xx,yy)){invalidate();return true;}
-        if(page==0&&xx<760&&yy>410&&yy<1280){selectPage(1,1);return true;}
-        if(page==0&&xx>=760&&yy>410&&yy<830){if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}if(yy>610){if(xx<875)MediaBridge.previous(activity);else if(xx<960)MediaBridge.toggle(activity);else MediaBridge.next(activity);}else selectPage(2,1);return true;}
-        if(page==0&&xx>760&&yy>830&&yy<1280){selectPage(3,1);return true;}if(page==1&&xx>700&&yy>1080){activity.openNavigation();return true;}
+        if(page==0&&xx<750&&yy>164&&yy<1290){selectPage(1,1);return true;}
+        if(page==0&&xx>=750&&yy>164&&yy<680){if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}if(yy>580){if(xx<855)MediaBridge.previous(activity);else if(xx<952)MediaBridge.toggle(activity);else MediaBridge.next(activity);}else selectPage(2,1);return true;}
+        if(page==0&&xx>750&&yy>680&&yy<1290){selectPage(3,1);return true;}if(page==1&&xx>700&&yy>1080){activity.openNavigation();return true;}
         if(page==2&&handleMediaTouch(xx,yy,moveX,moveY))return true;
-        if(page==3&&yy>830&&yy<950){if(xx<220)armRun();else if(xx<430)resetRun();return true;}
+        if(page==3&&yy>700&&yy<830){if(xx<220)armRun();else if(xx<430)resetRun();return true;}
         if(page==4){
             AppEntry selected=selectedApp();float actionTop=appActionTop();
             if(selected!=null&&yy>actionTop&&yy<actionTop+88&&xx>110&&xx<805&&moveX<x(18)&&moveY<x(18)){if(xx<342)activity.toggleAppFavoriteFromDashboard(selected);else if(xx<568)activity.openAppInformationFromDashboard(selected);else activity.requestAppUninstallFromDashboard(selected);selectedAppPackage="";selectedAppIndex=-1;invalidate();return true;}
-            if(yy>330&&yy<405&&moveX<x(18)&&moveY<x(18)){selectedAppPackage="";favoriteAppsOnly=false;appScroll=0;appCategory=Math.max(0,Math.min(3,(int)((xx-32)/254)));refreshDisplayedApps();invalidate();return true;}
-            if(yy>415&&yy<500&&xx<920&&moveX<x(18)&&moveY<x(18)){activity.showAppSearch(appSearch);return true;}
-            if(xx>820&&yy>570&&yy<1225&&moveX<x(18)&&moveY<x(18)){int qi=(int)((yy-585)/125);List<AppEntry> quick=quickApps();if(qi>=0&&qi<quick.size())activity.launch(quick.get(qi));return true;}
+            if(yy>170&&yy<260&&xx<920&&moveX<x(18)&&moveY<x(18)){activity.showAppSearch(appSearch);return true;}
+            if(xx>820&&yy>330&&yy<1230&&moveX<x(18)&&moveY<x(18)){int qi=(int)((yy-345)/145);List<AppEntry> quick=quickApps();if(qi>=0&&qi<quick.size())activity.launch(quick.get(qi));return true;}
             if(moveX>x(24)||moveY>x(24)){invalidate();return true;}int index=appIndexAt(xx,yy);if(index>=0){selectedAppPackage="";activity.launch(displayApps.get(index));}else{selectedAppPackage="";invalidate();}
         }
         invalidate();return true;

@@ -30,7 +30,7 @@ for page in 108 324 540 756 972; do
   sleep 2
   python3 scripts/tap-text.py 'GOT IT' || true
   for tab in 140 357 574 791; do
-    adb shell input tap "$tab" 355
+    adb shell input tap "$tab" 115
     sleep 1
     test -n "$(adb shell pidof com.mdiaz.trxlauncher)"
     adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | grep -q 'com.mdiaz.trxlauncher'
@@ -41,7 +41,7 @@ done
 adb shell input tap 324 1360
 sleep 2
 python3 scripts/tap-text.py 'GOT IT' || true
-adb shell input tap 140 375
+adb shell input tap 140 115
 sleep 2
 python3 scripts/tap-text.py 'Where to?'
 adb shell input text 'Stanford%sUniversity'
@@ -61,7 +61,7 @@ adb shell am start -W -n com.mdiaz.trxlauncher/.MainActivity
 sleep 2
 adb shell input tap 108 1360
 sleep 2
-adb shell input tap 974 375
+adb shell input tap 974 115
 sleep 2
 adb exec-out screencap -p > verification/settings.png
 python3 scripts/tap-text.py 'OEM BLUE'
