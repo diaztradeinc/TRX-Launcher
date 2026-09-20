@@ -402,11 +402,19 @@ public class NavigationPanel extends FrameLayout {
         status.postDelayed(() -> {
             if (attempt == mapAttempt && !mapLoaded && !guiding) {
                 mapRequested = false;
-                status.setVisibility(VISIBLE);
-                status.setText("MAP RENDERER TIMEOUT • TAP TO RETRY • HOLD FOR GOOGLE MAPS");
-                Log.e("TRXNavigation", "Map renderer timed out on attempt " + attempt
-                    + "; view=" + navigationView.getWidth() + "x" + navigationView.getHeight()
-                    + "; attached=" + navigationView.isAttachedToWindow());
+                if (googleMap != null) {
+                    // Some automotive renderers display complete tiles before
+                    // Google's onMapLoaded callback. Do not cover a usable map
+                    // with a false timeout warning while that callback catches up.
+                    status.setVisibility(GONE);
+                    Log.w("TRXNavigation", "Map callback delayed on attempt " + attempt);
+                } else {
+                    status.setVisibility(VISIBLE);
+                    status.setText("MAP STILL CONNECTING • TAP TO RETRY • HOLD FOR GOOGLE MAPS");
+                    Log.e("TRXNavigation", "Map renderer unavailable on attempt " + attempt
+                        + "; view=" + navigationView.getWidth() + "x" + navigationView.getHeight()
+                        + "; attached=" + navigationView.isAttachedToWindow());
+                }
             }
         }, 30000);
     }
@@ -880,15 +888,28 @@ public class NavigationPanel extends FrameLayout {
         if(tab==1){showRecentDestinations();return;}
         if(tab==2){
             String[] saved={prefs.getString("home_destination",""),prefs.getString("work_destination","")};
-            new android.app.AlertDialog.Builder(activity).setTitle("Saved destinations")
-                .setItems(new String[]{"Home: "+saved[0],"Work: "+saved[1],"Edit saved destinations"},(d,i)->{
-                    if(i==2)activity.openSettingsScreen();else beginNavigation(saved[i]);
-                }).show();return;
+            showMenu("SAVED DESTINATIONS",new String[]{"⌂  Home: "+saved[0],"▣  Work: "+saved[1],"⚙  Edit saved destinations"},new Runnable[]{
+                ()->beginNavigation(saved[0]),()->beginNavigation(saved[1]),activity::openSettingsScreen});return;
         }
-        new android.app.AlertDialog.Builder(activity).setTitle("Map options")
-            .setItems(new String[]{trafficEnabled?"Turn traffic off":"Turn traffic on",satelliteEnabled?"Road map":"Satellite + labels","Recenter / follow","End guidance"},(d,i)->{
-                if(i==0)toggleTraffic();else if(i==1)toggleMapLayer();else if(i==2)recenterMap();else stopGuidance();
-            }).show();
+        showMenu("MAP OPTIONS",new String[]{trafficEnabled?"T  Turn traffic off":"T  Turn traffic on",satelliteEnabled?"L  Road map":"L  Satellite + labels","◎  Recenter / follow","■  End guidance"},new Runnable[]{
+            this::toggleTraffic,this::toggleMapLayer,this::recenterMap,this::stopGuidance});
+    }
+
+    private void showMenu(String title,String[] labels,Runnable[] actions){
+        LinearLayout body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(dp(18),dp(16),dp(18),dp(18));body.setBackground(panel(0xff080a0e,accent,2,18));
+        TextView heading=new TextView(activity);heading.setText(title);heading.setTextColor(Color.WHITE);heading.setTextSize(18);
+        heading.setTypeface(null,android.graphics.Typeface.BOLD);heading.setPadding(dp(8),0,dp(8),dp(12));body.addView(heading);
+        final android.app.AlertDialog[] holder=new android.app.AlertDialog[1];
+        for(int i=0;i<labels.length;i++){
+            final int index=i;TextView row=new TextView(activity);row.setText(labels[i]);row.setTextColor(Color.WHITE);row.setTextSize(16);
+            row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(18),0,dp(14),0);row.setBackground(panel(0xff11151b,0xff343a43,1,12));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(62));lp.setMargins(0,dp(5),0,dp(5));body.addView(row,lp);
+            row.setOnClickListener(v->{if(holder[0]!=null)holder[0].dismiss();if(index<actions.length&&actions[index]!=null)actions[index].run();});
+        }
+        holder[0]=new android.app.AlertDialog.Builder(activity).setView(body).create();holder[0].setOnShowListener(d->{
+            android.view.Window window=holder[0].getWindow();if(window!=null){window.setBackgroundDrawableResource(android.R.color.transparent);window.setDimAmount(.68f);}
+        });holder[0].show();
     }
 
     private void hideKeyboard() {
