@@ -234,7 +234,7 @@ public class MainActivity extends Activity {
             int usable=Math.max(1,h-topInset-bottomInset);
             int side=Math.round(w*(compact?32f:18f)/1080f);
             FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(
-                Math.max(1,compact?Math.round(w*710f/1080f):w-side*2),Math.max(1,Math.round(usable*(compact?1094f:1118f)/1440f)));
+                Math.max(1,compact?Math.round(w*710f/1080f):w-side*2),Math.max(1,Math.round(usable*(compact?934f:1118f)/1440f)));
             lp.leftMargin=side;
             lp.topMargin=topInset+Math.round(usable*(compact?174f:164f)/1440f);
             mapPanel.setLayoutParams(lp);
@@ -451,6 +451,19 @@ public class MainActivity extends Activity {
     public void openMediaAppPicker(){
         try{startActivity(new Intent(this,MediaAppPickerActivity.class));}
         catch(Throwable ignored){openSystemSettings();}
+    }
+
+    public void openHomeQuickAppPicker(){
+        try{
+            Intent picker=new Intent(this,MediaAppPickerActivity.class);
+            picker.putExtra("selection_key","home_quick_apps");
+            picker.putExtra("picker_title","HOME QUICK LAUNCH");
+            picker.putExtra("picker_help","Choose up to five apps for the shortcut bar below your Home map.");
+            picker.putExtra("picker_hint","HOME SHORTCUTS  •  TAP TO SELECT");
+            picker.putExtra("picker_save","SAVE QUICK LAUNCH");
+            picker.putExtra("max_selection",5);
+            startActivity(picker);
+        }catch(Throwable ignored){openSystemSettings();}
     }
 
     public List<AppEntry> selectedMediaApps(){

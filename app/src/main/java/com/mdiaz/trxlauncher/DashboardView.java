@@ -384,9 +384,10 @@ public final class DashboardView extends View {
 
     private void home(Canvas c,float intro){
         sectionTabs(c,32,82,new String[]{"Dashboard","Drive","Controls","Weather"},0);
-        panel(c,32,164,742,1284,"");
+        panel(c,32,164,742,1110,"");
         text(c,"GOOGLE NAVIGATION",56,206,15,WHITE,true);
         text(c,"LIVE MAP • TAP NAVIGATION FOR SEARCH AND GUIDANCE",56,235,11,MUTED,true);
+        drawHomeQuickLaunch(c);
 
         panel(c,762,164,1048,672,"");text(c,"NOW PLAYING",786,208,14,MUTED,true);
         text(c,MediaBridge.hasAccess(activity)?"● CONNECTED":"● SETUP REQUIRED",786,238,11,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);
@@ -398,6 +399,26 @@ public final class DashboardView extends View {
         text(c,ObdBridge.connected?"● OBDLINK MX+":"● GPS MODE",786,765,11,ObdBridge.connected?0xff55d88a:MUTED,true);
         vehicleValue(c,786,810,"GPS SPEED",Math.round(speedMph)+" MPH");vehicleValue(c,786,925,"COOLANT",obdText(ObdBridge.coolantF,0)+"°F");
         vehicleValue(c,786,1040,"BATTERY",obdText(ObdBridge.batteryV,1)+" V");vehicleValue(c,786,1155,"BOOST",obdText(ObdBridge.boostPsi,1)+" PSI");
+    }
+
+    private void drawHomeQuickLaunch(Canvas c){
+        panel(c,32,1122,742,1284,"");
+        text(c,"QUICK LAUNCH",52,1154,12,MUTED,true);
+        text(c,"EDIT",682,1154,11,RED,true);
+        List<AppEntry> quick=homeQuickApps();
+        for(int i=0;i<5;i++){
+            float left=50+i*116,top=1168,right=left+104;
+            RectF slot=new RectF(x(left),y(top),x(right),y(1268));raisedBox(c,slot,false,11);
+            if(i<quick.size()){
+                AppEntry app=quick.get(i);int size=(int)x(48),cx=(int)x((left+right)/2),iy=(int)y(top+10);
+                try{app.icon.setBounds(cx-size/2,iy,cx+size/2,iy+size);app.icon.draw(c);}catch(Throwable ignored){}
+                paint(WHITE,9,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(trim(app.label,13),x((left+right)/2),y(top+82),p);p.setTextAlign(Paint.Align.LEFT);
+            }else{
+                paint(RED,27,false);p.setTextAlign(Paint.Align.CENTER);c.drawText("+",x((left+right)/2),y(top+57),p);
+                paint(MUTED,9,true);c.drawText("ADD APP",x((left+right)/2),y(top+82),p);p.setTextAlign(Paint.Align.LEFT);
+            }
+        }
+        button(c,638,1178,724,1258,"✎ EDIT",false);
     }
 
     private void miniStat(Canvas c,float l,float top,float r,float bottom,String label,String value){RectF q=new RectF(x(l),y(top),x(r),y(bottom));raisedBox(c,q,false,10);text(c,label,l+14,top+26,9,MUTED,true);text(c,value,l+14,top+56,17,WHITE,true);}
@@ -610,6 +631,13 @@ public final class DashboardView extends View {
         for(AppEntry app:apps)if(result.size()<5&&!containsPackage(result,app.packageName))result.add(app);
         return result;
     }
+    private List<AppEntry> homeQuickApps(){
+        String raw=prefs.getString("home_quick_apps","");List<AppEntry> result=new ArrayList<>();
+        if(!raw.trim().isEmpty())for(String pkg:raw.split(","))for(AppEntry app:apps)if(pkg.trim().equals(app.packageName)&&!containsPackage(result,app.packageName)&&result.size()<5){result.add(app);break;}
+        if(result.isEmpty())result.addAll(quickApps());
+        while(result.size()>5)result.remove(result.size()-1);
+        return result;
+    }
     private boolean containsPackage(List<AppEntry> list,String pkg){for(AppEntry app:list)if(app.packageName.equals(pkg))return true;return false;}
     private AppEntry selectedApp(){for(AppEntry app:apps)if(app.packageName.equals(selectedAppPackage))return app;return null;}
     private float appActionTop(){int index=-1;for(int i=0;i<displayApps.size();i++)if(displayApps.get(i).packageName.equals(selectedAppPackage)){index=i;break;}if(index<0)return 0;float top=290+(index/4)*170-appScroll+106;return Math.max(305,Math.min(1168,top));}
@@ -733,7 +761,12 @@ public final class DashboardView extends View {
             invalidate();return true;
         }
         if(moveX<x(24)&&moveY<x(24)&&touchSection(xx,yy)){invalidate();return true;}
-        if(page==0&&xx<750&&yy>164&&yy<1290){selectPage(1,1);return true;}
+        if(page==0&&xx<750&&yy>164&&yy<1115){selectPage(1,1);return true;}
+        if(page==0&&xx<750&&yy>1120&&yy<1290&&moveX<x(18)&&moveY<x(18)){
+            if(xx>=625){activity.openHomeQuickAppPicker();return true;}
+            int qi=(int)((xx-50)/116);List<AppEntry> quick=homeQuickApps();
+            if(qi>=0&&qi<quick.size())activity.launch(quick.get(qi));else activity.openHomeQuickAppPicker();return true;
+        }
         if(page==0&&xx>=750&&yy>164&&yy<680){if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}if(yy>580){if(xx<855)MediaBridge.previous(activity);else if(xx<952)MediaBridge.toggle(activity);else MediaBridge.next(activity);}else selectPage(2,1);return true;}
         if(page==0&&xx>750&&yy>680&&yy<1290){selectPage(3,1);return true;}if(page==1&&xx>700&&yy>1080){activity.openNavigation();return true;}
         if(page==2&&handleMediaTouch(xx,yy,moveX,moveY))return true;
