@@ -1,35 +1,57 @@
 plugins { id 'com.android.application' }
 
 def mapsApiKey = System.getenv('MAPS_API_KEY') ?: (project.findProperty('MAPS_API_KEY') ?: '')
-def escapedKey = mapsApiKey.replace('\\', '\\\\').replace('"', '\\"')
+def escapedMapsApiKey = mapsApiKey.replace('\\', '\\\\').replace('"', '\\"')
 
 android {
-    namespace 'com.mdiaz.trxlauncher'
-    compileSdk 36
-    defaultConfig {
-        applicationId 'com.mdiaz.trxlauncher'
-        minSdk 26
-        targetSdk 36
-        versionCode 121
-        versionName '5.2.1'
-        manifestPlaceholders = [MAPS_API_KEY: mapsApiKey]
-        buildConfigField 'String', 'MAPS_API_KEY', "\"${escapedKey}\""
-    }
-    buildFeatures { buildConfig true }
     compileOptions {
         coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    namespace 'com.mdiaz.trxlauncher'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.mdiaz.trxlauncher'
+        minSdk 26
+        targetSdk 36
+        versionCode 122
+        versionName '4.1.0'
+        manifestPlaceholders = [MAPS_API_KEY: mapsApiKey]
+        buildConfigField 'String', 'MAPS_API_KEY', "\"${escapedMapsApiKey}\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        permanent {
+            def keyPath = System.getenv('ANDROID_KEYSTORE_FILE')
+            if (keyPath) storeFile file(keyPath)
+            storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            keyAlias System.getenv('ANDROID_KEY_ALIAS') ?: 'trx'
+            keyPassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            storeType 'PKCS12'
+        }
+    }
     buildTypes {
-        release { minifyEnabled false; signingConfig signingConfigs.debug }
+        debug {
+            if (System.getenv('ANDROID_KEYSTORE_FILE')) signingConfig signingConfigs.permanent
+        }
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.permanent
+        }
     }
 }
 
+
 dependencies {
-    implementation 'com.google.android.libraries.navigation:navigation:7.9.0'
+    // Google-native map and turn-by-turn Navigation SDK.
+    api 'com.google.android.libraries.navigation:navigation:7.9.0'
     implementation('com.google.android.libraries.places:places:4.3.1') {
-        // Navigation SDK packages the Maps SDK classes itself.
         exclude group: 'com.google.android.gms', module: 'play-services-maps'
     }
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'

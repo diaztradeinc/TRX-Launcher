@@ -1,45 +1,71 @@
-name: Build Clean TRX Launcher
+name: Build TRX Launcher APK
+
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "master", "clean-v5"]
-permissions: { contents: read }
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
+    name: Build installable APK
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: "17" }
-      - uses: gradle/actions/setup-gradle@v4
-        with: { gradle-version: "8.13" }
-      - name: Verify key
-        env: { MAPS_API_KEY: "${{ secrets.MAPS_API_KEY }}" }
-        run: test -n "$MAPS_API_KEY"
-      - name: Build
-        env: { MAPS_API_KEY: "${{ secrets.MAPS_API_KEY }}" }
-        run: gradle --no-daemon :app:assembleRelease
-      - name: Verify release identity
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Restore permanent signing key
+        env:
+          ANDROID_SIGNING_JSON: ${{ secrets.ANDROID_SIGNING_JSON }}
+        run: python3 scripts/prepare-signing.py
+
+      - name: Verify Google Navigation key
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: |
+          if [ -z "$MAPS_API_KEY" ]; then
+            echo "::error::Repository secret MAPS_API_KEY is missing. Add the restricted Google Navigation SDK key before building."
+            exit 1
+          fi
+
+      - name: Build release APK
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: gradle --no-daemon --stacktrace :app:assembleRelease :app:lintRelease
+
+      - name: Verify APK internal version
         run: |
           AAPT_BIN=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
-          "$AAPT_BIN" dump badging app/build/outputs/apk/release/app-release.apk | tee apk-badging.txt
-          grep "versionCode='121' versionName='5.2.1'" apk-badging.txt
-          grep "application-label:'TRX Launcher 5'" apk-badging.txt
-          grep "launchable-activity: name='com.mdiaz.trxlauncher.MainActivity'" apk-badging.txt
-      - name: Enable emulator acceleration
-        run: sudo chmod a+rw /dev/kvm
-      - name: Android 16 fresh-install launch smoke test
-        uses: reactivecircus/android-emulator-runner@v2
+          "$AAPT_BIN" dump badging app/build/outputs/apk/release/app-release.apk | grep "versionCode='122' versionName='4.1.0'"
+
+      - name: Give APK a friendly name
+        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v4.1.0.apk
+
+      - name: Upload downloadable APK
+        uses: actions/upload-artifact@v4
         with:
-          api-level: 36
-          target: google_apis
-          arch: x86_64
-          disable-animations: true
-          script: bash scripts/smoke-launch.sh
-      - run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v5.2.1-startup-fix.apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: TRX-Launcher-v5.2.1-startup-fix
-          path: TRX-Launcher-v5.2.1-startup-fix.apk
+          name: TRX-Launcher-v4.1.0
+          path: TRX-Launcher-v4.1.0.apk
+          if-no-files-found: error
           retention-days: 30

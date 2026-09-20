@@ -1,20 +1,45 @@
-# TRX Launcher 5 — Clean Architecture
+# TRX Launcher
 
-This project intentionally contains no code from the legacy `DashboardView` build.
+Current build: **v4.0.0 cockpit design**, release version **4.1.0 / 122**. See [verification results and MX+ setup](BUILD-STATUS.md). The signed APK passed build, lint and Android 16 emulator navigation/theme checks.
 
-## Required GitHub secret
+Google Navigation SDK 7.9 now powers the Navigation page directly inside the launcher,
+including live traffic, rerouting, voice guidance, ETA, speed-limit display, themed map
+controls, and compact destination suggestions. GitHub Actions injects the restricted
+`MAPS_API_KEY` repository secret at build time; the key is never committed to source.
 
-`MAPS_API_KEY` must be an Android-restricted key for package `com.mdiaz.trxlauncher` and the SHA-1 used by the build. Enable Navigation SDK, Maps SDK for Android, Places API (New), and Routes API. Billing must remain attached.
+Theme Studio now coordinates the launcher accent with matching realistic TRX hero artwork: TRX Red / Sunset Ridge, Baja Amber / Desert Dusk, Stealth Black / Moon Ridge, OEM Blue / Glacier Night, and a custom-accent mode. The exact approved truck composition, lift, wheels, stance, and black RamBar are preserved across the preset artwork.
 
-## Clean-install test
+Native standalone Android launcher for Michael Diaz's 2023 RAM TRX / Ottocast portrait display.
 
-Uninstall the previous TRX Launcher before installing v5 so obsolete preferences and cached launcher state cannot survive.
+## Build in GitHub (no PC required)
 
-## Architecture
+1. Open the repository's **Actions** tab.
+2. Choose **Build TRX Launcher APK** and tap **Run workflow**.
+3. When the run finishes, open it and download the **TRX-Launcher-APK** artifact.
+4. Unzip the artifact on the Ottocast and install `TRX-Launcher-v4.1.0.apk`. An older installation signed with a different certificate must be uninstalled first, removing its saved settings.
+5. Press Home and select **TRX Launcher** as the default launcher.
 
-- `MainActivity`: persistent shell, header, settings access, bottom navigation.
-- `NavigationScreen`: owns the only Google `NavigationView`, Places predictions, routing, guidance and map options.
-- `ObdService`: dedicated OBDLink MX+ RFCOMM connection and safe standard-PID polling.
-- `MediaAccessService`: Android MediaSession bridge; permission is requested once during onboarding/settings.
+The workflow also builds automatically whenever source is pushed to `main` or `master`. The downloadable Actions artifact is kept for 30 days.
 
-Transmission temperature remains unavailable until a verified 2023 RAM TRX PID is configured; the app does not fabricate it.
+## Local build (optional)
+
+Open this folder in Android Studio, allow Gradle sync, then build the `app` module. From a machine with Gradle and the Android SDK configured, run:
+
+```bash
+gradle :app:assembleRelease
+```
+
+The application registers as both a normal app and an Android HOME launcher. The first Android prompt can set **TRX Launcher** as the default Home app.
+
+## Milestone 0.1.1
+
+- Five-page custom Canvas interface
+- Full-screen portrait automotive UI
+- Live clock/date
+- Navigation intents
+- Installed application discovery and launch
+- Persistent selected page
+- Read-only telemetry model prepared for a Bluetooth OBD service
+- GitHub Actions cloud APK build
+
+OBD/CAN writes are intentionally excluded.

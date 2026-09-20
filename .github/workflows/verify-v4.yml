@@ -1,0 +1,59 @@
+name: Verify v4 completion
+on:
+  workflow_dispatch:
+  push:
+    branches: [finish-v4]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Restore permanent signing key
+        env:
+          ANDROID_SIGNING_JSON: ${{ secrets.ANDROID_SIGNING_JSON }}
+        run: python3 scripts/prepare-signing.py
+      - name: Build and lint
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: |
+          if [ -z "$MAPS_API_KEY" ]; then echo '::error::MAPS_API_KEY is missing; Google services cannot be verified.'; exit 1; fi
+          gradle --no-daemon :app:assembleRelease :app:assembleDebug :app:lintRelease
+      - name: Enable emulator acceleration
+        run: sudo chmod a+rw /dev/kvm
+      - name: Check screen interactions on Android 16
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: bash scripts/verify-v4.sh
+      - name: Print lint failures
+        if: failure()
+        run: test ! -f app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt || cat app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt
+      - name: Package verified APK
+        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v4.1.0.apk
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TRX-Launcher-v4.1.0
+          path: TRX-Launcher-v4.1.0.apk
+          if-no-files-found: error
+      - name: Upload verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-verification-reports
+          path: |
+            app/build/reports
+            verification
