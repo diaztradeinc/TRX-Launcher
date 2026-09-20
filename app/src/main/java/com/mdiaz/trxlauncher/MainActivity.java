@@ -232,11 +232,11 @@ public class MainActivity extends Activity {
                 }
             }catch(Throwable ignored){}
             int usable=Math.max(1,h-topInset-bottomInset);
-            int side=Math.round(w*(compact?48f:18f)/1080f);
+            int side=Math.round(w*(compact?32f:18f)/1080f);
             FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(
-                Math.max(1,compact?Math.round(w*696f/1080f):w-side*2),Math.max(1,Math.round(usable*(compact?550f:868f)/1440f)));
+                Math.max(1,compact?Math.round(w*710f/1080f):w-side*2),Math.max(1,Math.round(usable*(compact?1094f:1118f)/1440f)));
             lp.leftMargin=side;
-            lp.topMargin=topInset+Math.round(usable*(compact?572f:410f)/1440f);
+            lp.topMargin=topInset+Math.round(usable*(compact?174f:164f)/1440f);
             mapPanel.setLayoutParams(lp);
             if(mapPanel.getParent()==null)root.addView(mapPanel);
             mapPanel.setVisibility(View.VISIBLE);mapPanel.bringToFront();
