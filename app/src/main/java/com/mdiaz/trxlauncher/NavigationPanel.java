@@ -30,7 +30,6 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.libraries.navigation.ListenableResultFuture;
 import com.google.android.libraries.navigation.NavigationApi;
@@ -38,7 +37,6 @@ import com.google.android.libraries.navigation.NavigationView;
 import com.google.android.libraries.navigation.Navigator;
 import com.google.android.libraries.navigation.RoutingOptions;
 import com.google.android.libraries.navigation.Waypoint;
-import com.google.android.libraries.navigation.StylingOptions;
 import com.google.android.gms.maps.model.FollowMyLocationOptions;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.net.PlacesClient;
@@ -339,15 +337,7 @@ public class NavigationPanel extends FrameLayout {
                     startTruckTracking();
                     applyTheme();
                     try {
-                        navigationView.setNavigationUiEnabled(true);
-                        navigationView.setHeaderEnabled(!compact);
-                        // Google owns these default controls and renders them as white cards.
-                        // Use the themed TRX controls instead so the route UI is consistent
-                        // and no SDK card can collide with the launcher dock.
-                        navigationView.setEtaCardEnabled(false);
-                        navigationView.setRecenterButtonEnabled(false);
-                        navigationView.setSpeedometerEnabled(false);
-                        navigationView.setSpeedLimitIconEnabled(false);
+                        applyNativeNavigationChrome();
                         if (mapLoaded) {
                             status.setText("GOOGLE MAP READY");
                             if (!guiding) status.postDelayed(() -> status.setVisibility(GONE), 600);
@@ -392,14 +382,9 @@ public class NavigationPanel extends FrameLayout {
                     map.getUiSettings().setZoomGesturesEnabled(true);
                     map.getUiSettings().setScrollGesturesEnabled(true);
                     map.getUiSettings().setRotateGesturesEnabled(true);
-                    // The launcher supplies its own themed recenter control. Keep
-                    // Google's white compass/location controls from resurfacing
-                    // beneath the upper-right End button.
-                    map.getUiSettings().setCompassEnabled(false);
-                    map.getUiSettings().setMyLocationButtonEnabled(false);
+                    map.getUiSettings().setCompassEnabled(true);
+                    map.getUiSettings().setMyLocationButtonEnabled(true);
                     map.setMapType(satelliteEnabled?GoogleMap.MAP_TYPE_HYBRID:GoogleMap.MAP_TYPE_NORMAL);
-                    try { map.setMapStyle(MapStyleOptions.loadRawResourceStyle(activity, R.raw.map_dark)); }
-                    catch (Throwable ignored) { }
                     map.setTrafficEnabled(trafficEnabled);
 
                     LatLng start = new LatLng(40.3323, -74.5819);
@@ -559,8 +544,9 @@ public class NavigationPanel extends FrameLayout {
                             destination.setVisibility(GONE);
                             routeButton.setVisibility(GONE);
                             commandBar.setVisibility(GONE);
-                            stopButton.setVisibility(VISIBLE);
-                            routeSummary.setVisibility(VISIBLE);
+                            stopButton.setVisibility(GONE);
+                            routeSummary.setVisibility(GONE);
+                            applyNativeNavigationChrome();
                             startRouteMetrics();
                             status.setVisibility(GONE);
                         } else {
@@ -591,6 +577,7 @@ public class NavigationPanel extends FrameLayout {
         commandBar.setVisibility(VISIBLE);
         stopButton.setVisibility(GONE);
         routeSummary.setVisibility(GONE);
+        applyNativeNavigationChrome();
         routeMetricsHandler.removeCallbacks(routeMetricsUpdater);
         Toast.makeText(activity, "TRX guidance ended", Toast.LENGTH_SHORT).show();
     }
@@ -678,8 +665,8 @@ public class NavigationPanel extends FrameLayout {
     private void followRoad(){
         if(activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED)return;
         try{if(googleMap!=null){
-            googleMap.getUiSettings().setCompassEnabled(false);
-            googleMap.getUiSettings().setMyLocationButtonEnabled(false);
+            googleMap.getUiSettings().setCompassEnabled(true);
+            googleMap.getUiSettings().setMyLocationButtonEnabled(true);
             googleMap.followMyLocation(GoogleMap.CameraPerspective.TILTED,
                 FollowMyLocationOptions.builder().setZoomLevel(18f).build());
         }
@@ -718,23 +705,28 @@ public class NavigationPanel extends FrameLayout {
 
     public void applyTheme(){
         accent=currentAccent();
-        destination.setBackground(panel(0xee05070a,accent,2,18));
-        routeButton.setBackground(panel(0xff420a12,accent,2,14));
-        routeSummary.setBackground(panel(0xf207090c,accent,2,16));
+        destination.setBackground(panel(0xf2343434,0xff6d7075,1,24));
+        routeButton.setBackground(panel(0xff303134,0xff5f6368,1,20));
+        routeSummary.setBackground(panel(0xf2202124,0xff5f6368,1,16));
         routeTime.setTextColor(accent);
         stopButton.setBackground(panel(0xf207090c,accent,2,14));
         stopButton.setTextColor(accent);
         if(!initialized)return;
+        try{navigationView.setForceNightMode(activity.getSharedPreferences("launcher",Context.MODE_PRIVATE).getInt("display_mode",0));applyNativeNavigationChrome();}
+        catch(RuntimeException error){Log.w("TRXNavigation","Native navigation chrome pending initialization",error);}
+    }
+
+    private void applyNativeNavigationChrome(){
+        if(!initialized)return;
+        boolean full=!compact;
         try{
-        navigationView.setForceNightMode(activity.getSharedPreferences("launcher",Context.MODE_PRIVATE).getInt("display_mode",0));
-        navigationView.setStylingOptions(new StylingOptions()
-            .primaryDayModeThemeColor(0xff151519).primaryNightModeThemeColor(0xff09090c)
-            .secondaryDayModeThemeColor(0xff420a12).secondaryNightModeThemeColor(0xff420a12)
-            .headerLargeManeuverIconColor(accent).headerSmallManeuverIconColor(accent)
-            .headerInstructionsTextColor(Color.WHITE).headerDistanceValueTextColor(Color.WHITE)
-            .headerDistanceUnitsTextColor(Color.WHITE).headerNextStepTextColor(Color.WHITE)
-            .headerGuidanceRecommendedLaneColor(accent));
-        }catch(RuntimeException error){Log.w("TRXNavigation","Theme pending map initialization",error);}
+            navigationView.setNavigationUiEnabled(true);
+            navigationView.setHeaderEnabled(full);
+            navigationView.setEtaCardEnabled(full&&guiding);
+            navigationView.setRecenterButtonEnabled(full);
+            navigationView.setSpeedometerEnabled(full);
+            navigationView.setSpeedLimitIconEnabled(full);
+        }catch(RuntimeException error){Log.w("TRXNavigation","Google navigation controls pending",error);}
     }
 
     private void loadAddressSuggestions(String query, int request) {
@@ -919,9 +911,6 @@ public class NavigationPanel extends FrameLayout {
         prefs.edit().putBoolean("map_satellite",satelliteEnabled).apply();
         if (googleMap != null) {
             googleMap.setMapType(satelliteEnabled ? GoogleMap.MAP_TYPE_HYBRID : GoogleMap.MAP_TYPE_NORMAL);
-            if (!satelliteEnabled) try {
-                googleMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(activity, R.raw.map_dark));
-            } catch (Throwable ignored) { }
         }
         Toast.makeText(activity, satelliteEnabled ? "Hybrid map" : "Dark road map", Toast.LENGTH_SHORT).show();
     }
@@ -1051,11 +1040,11 @@ public class NavigationPanel extends FrameLayout {
     public void setCompact(boolean value){
         compact=value;
         destination.setVisibility(value||guiding?GONE:VISIBLE);routeButton.setVisibility(value||guiding?GONE:VISIBLE);
-        commandBar.setVisibility(value||guiding?GONE:VISIBLE);mapTools.setVisibility(value?GONE:VISIBLE);
-        modeBadge.setVisibility(GONE);stopButton.setVisibility(!value&&guiding?VISIBLE:GONE);
-        routeSummary.setVisibility(!value&&guiding?VISIBLE:GONE);
+        commandBar.setVisibility(value||guiding?GONE:VISIBLE);mapTools.setVisibility(GONE);
+        modeBadge.setVisibility(GONE);stopButton.setVisibility(GONE);
+        routeSummary.setVisibility(GONE);
         suggestionScroller.setVisibility(GONE);
-        if(initialized)try{navigationView.setHeaderEnabled(!value);navigationView.setEtaCardEnabled(false);}catch(RuntimeException ignored){}
+        applyNativeNavigationChrome();
     }
     public void onHiddenPanel() {
         // Keep NavigationView started and resumed while the Activity is alive.

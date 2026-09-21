@@ -91,9 +91,9 @@ public class SettingsActivity extends Activity {
         LinearLayout iconRow=horizontal();iconRow.addView(iconSize,new LinearLayout.LayoutParams(0,dp(48),1));LinearLayout.LayoutParams valueParams=new LinearLayout.LayoutParams(dp(58),dp(48));iconRow.addView(iconSizeValue,valueParams);addControl(leftControls,"APP ICON SIZE",iconRow);
         Button apply=action("APPLY COCKPIT THEME",true,false);rightControls.addView(apply,buttonParams());apply.setOnClickListener(v->{if(saveSettings(false))toast("Cockpit theme applied");});
 
-        LinearLayout navigationPanel=category("// NAVIGATION","The Navigation tab opens the untouched official Google Maps experience.");
-        navigationPanel.addView(infoCard("GOOGLE MAPS","Native app • no launcher overlays or alternate map provider",true),buttonParams());
-        Button openMaps=action("OPEN OFFICIAL GOOGLE MAPS",true,false);navigationPanel.addView(openMaps,buttonParams());openMaps.setOnClickListener(v->openGoogleMaps());
+        LinearLayout navigationPanel=category("// NAVIGATION","Google Navigation SDK runs full-screen inside TRX Launcher.");
+        navigationPanel.addView(infoCard("GOOGLE NAVIGATION","Embedded official map, traffic and turn-by-turn guidance",true),buttonParams());
+        Button openMaps=action("OPEN EMBEDDED NAVIGATION",true,false);navigationPanel.addView(openMaps,buttonParams());openMaps.setOnClickListener(v->openEmbeddedNavigation());
         home=edit(prefs.getString("home_destination","Home"));addControl(navigationPanel,"HOME DESTINATION",home);
         work=edit(prefs.getString("work_destination","Work"));addControl(navigationPanel,"WORK DESTINATION",work);
         TextView navNote=infoCard("GOOGLE MAPS LIVE",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED?"Location ready • native turn-by-turn enabled":"Location permission required for live guidance",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED);navigationPanel.addView(navNote,buttonParams());
@@ -114,8 +114,7 @@ public class SettingsActivity extends Activity {
         voltageWarning=numberEdit(prefs.getFloat("warn_voltage",11.8f));addControl(th3,"LOW VOLTAGE",voltageWarning);
 
         LinearLayout launcherPanel=category("// LAUNCHER","Startup behavior and Android launcher role.");
-        startupPage=spinner(new String[]{"Resume last page","Home","Navigation","Media","Performance","Apps"});
-        int startup=prefs.getInt("startup_page",-1);startupPage.setSelection(startup<0?0:startup+1);addControl(launcherPanel,"STARTUP PAGE",startupPage);
+        startupPage=spinner(new String[]{"Home (fixed startup)"});startupPage.setSelection(0);addControl(launcherPanel,"STARTUP PAGE",startupPage);
         launcherPanel.addView(infoCard("DEFAULT HOME",isDefaultHome()?"TRX Launcher is active":"Android launcher role not selected",isDefaultHome()),buttonParams());
         Button launcher=action("SET AS DEFAULT LAUNCHER",true,false);launcherPanel.addView(launcher,buttonParams());launcher.setOnClickListener(v->{try{startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));}catch(Throwable ignored){startActivity(new Intent(Settings.ACTION_SETTINGS));}});
 
@@ -153,7 +152,7 @@ public class SettingsActivity extends Activity {
     }
     private View settingsDock(){
         LinearLayout dock=horizontal();dock.setPadding(0,dp(8),0,0);String[] names={"⌂  HOME","➤  NAVIGATION","♫  MEDIA","◴  PERFORMANCE","▦  APPS"};
-        for(int i=0;i<names.length;i++){final int page=i;Button b=action(names[i],false,false);b.setTextSize(11);b.setOnClickListener(v->{if(saveSettings(false)){if(page==1){prefs.edit().putInt("page",0).apply();openGoogleMaps();}else prefs.edit().putInt("page",page).apply();setResult(RESULT_OK,new Intent());finish();}});dock.addView(b,weightHeight(68));}return dock;
+        for(int i=0;i<names.length;i++){final int page=i;Button b=action(names[i],false,false);b.setTextSize(11);b.setOnClickListener(v->{if(saveSettings(false)){prefs.edit().putInt("pending_page",page).apply();setResult(RESULT_OK,new Intent());finish();}});dock.addView(b,weightHeight(68));}return dock;
     }
 
     private LinearLayout section(LinearLayout root,String heading,String subtitle){
@@ -197,7 +196,7 @@ public class SettingsActivity extends Activity {
     private boolean saveSettings(boolean showErrors){
         int custom;try{custom=Color.parseColor(customHex.getText().toString().trim());}catch(Throwable ignored){customHex.setError("Use a color such as #FF2338");return false;}
         if(!validNumber(coolantWarning,100,300)||!validNumber(intakeWarning,0,300)||!validNumber(voltageWarning,8,16))return false;
-        int startup=startupPage.getSelectedItemPosition()==0?-1:startupPage.getSelectedItemPosition()-1;
+        int startup=0;
         prefs.edit().putInt("theme_choice",selectedTheme).putInt("custom_accent",custom).putString("custom_hex",customHex.getText().toString().trim())
             .putInt("display_mode",displayMode.getSelectedItemPosition()).putInt("app_icon_percent",iconSize.getProgress()+80).putInt("startup_page",startup)
             .putInt("background_style",backgroundStyle.getSelectedItemPosition()).putBoolean("reduce_motion",reduceMotion.isChecked())
@@ -215,8 +214,8 @@ public class SettingsActivity extends Activity {
         if(android.os.Build.VERSION.SDK_INT>=31&&checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED){ObdSetup.show(this);return;}
         toast("Launcher permissions are healthy");
     }
-    private void openGoogleMaps(){
-        try{Intent launch=getPackageManager().getLaunchIntentForPackage("com.google.android.apps.maps");if(launch==null){launch=new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("geo:0,0?z=15"));launch.setPackage("com.google.android.apps.maps");}startActivity(launch);}catch(Throwable ignored){toast("Install or enable Google Maps first");}
+    private void openEmbeddedNavigation(){
+        prefs.edit().putInt("pending_page",1).apply();setResult(RESULT_OK,new Intent());finish();
     }
     @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){
         super.onRequestPermissionsResult(request,permissions,results);

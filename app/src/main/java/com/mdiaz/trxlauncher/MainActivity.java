@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
+    private static boolean processSplashShown;
     private DashboardView dashboard;
     private volatile float speedMph;
     private volatile String weatherTemp = "--°";
@@ -61,6 +62,7 @@ public class MainActivity extends Activity {
     private TextView mapStatus;
     private boolean mapDark;
     private boolean suppressMapPanel;
+    private boolean startupSplashVisible;
     private int lastCompensatedVolume=-1;
 
     @Override public void onCreate(Bundle state) {
@@ -85,6 +87,7 @@ public class MainActivity extends Activity {
                 if((r-l)!=(or-ol)||(b-t)!=(ob-ot))showLiveMap(dashboard.currentPage()==1);
             });
             dashboard.post(() -> showLiveMap(dashboard.currentPage()==1));
+            if(!processSplashShown){processSplashShown=true;showStartupSplash();}
             startGps();
             fetchWeather();
         } catch (Throwable error) {
@@ -94,11 +97,16 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        suppressMapPanel=false;
+        if(!startupSplashVisible)suppressMapPanel=false;
         if (mapPanel instanceof NavigationPanel) {((NavigationPanel)mapPanel).onResumePanel();((NavigationPanel)mapPanel).applyTheme();}
         MediaBridge.ensureConnected(this);
         ObdBridge.start(this);
-        if (dashboard != null) { dashboard.reloadTheme(); dashboard.reloadMediaApps(); dashboard.reloadApps(); dashboard.postInvalidate(); dashboard.post(()->showLiveMap(false)); }
+        if (dashboard != null) {
+            dashboard.reloadTheme();dashboard.reloadMediaApps();dashboard.reloadApps();
+            int requested=getSharedPreferences("launcher",MODE_PRIVATE).getInt("pending_page",-1);
+            if(requested>=0){getSharedPreferences("launcher",MODE_PRIVATE).edit().remove("pending_page").apply();dashboard.navigateTo(requested);}
+            dashboard.postInvalidate();dashboard.post(()->showLiveMap(dashboard.currentPage()==1));
+        }
     }
 
     @Override protected void onStart(){super.onStart();if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onStartPanel();}
@@ -113,6 +121,19 @@ public class MainActivity extends Activity {
         // INVISIBLE keeps the native map surface measured without drawing it.
         mapPanel.setVisibility(View.INVISIBLE);
         mapPanel.setElevation(12f);
+    }
+
+    private void showStartupSplash(){
+        if(root==null)return;
+        startupSplashVisible=true;suppressMapPanel=true;if(mapPanel!=null)mapPanel.setVisibility(View.INVISIBLE);
+        FrameLayout splash=new FrameLayout(this);splash.setBackgroundColor(0xff020304);splash.setElevation(dp(40));
+        android.widget.ImageView hero=new android.widget.ImageView(this);hero.setImageResource(R.drawable.trx_first_run_hero);hero.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);splash.addView(hero,new FrameLayout.LayoutParams(-1,-1));
+        View shade=new View(this);shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0x16000000,0x55000000,0xf0000000}));splash.addView(shade,new FrameLayout.LayoutParams(-1,-1));
+        android.widget.LinearLayout copy=new android.widget.LinearLayout(this);copy.setOrientation(android.widget.LinearLayout.VERTICAL);copy.setGravity(Gravity.CENTER);copy.setPadding(dp(18),0,dp(18),dp(70));
+        TextView title=new TextView(this);title.setText("RAM TRX LAUNCHER");title.setTextColor(Color.WHITE);title.setTextSize(38);title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);title.setGravity(Gravity.CENTER);copy.addView(title,new android.widget.LinearLayout.LayoutParams(-1,dp(64)));
+        TextView line=new TextView(this);line.setText("SUPERCHARGED 6.2L  •  COCKPIT ONLINE");line.setTextColor(0xffff2338);line.setTextSize(14);line.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);line.setGravity(Gravity.CENTER);copy.addView(line,new android.widget.LinearLayout.LayoutParams(-1,dp(44)));
+        FrameLayout.LayoutParams copyLp=new FrameLayout.LayoutParams(-1,dp(190),Gravity.BOTTOM);splash.addView(copy,copyLp);root.addView(splash,new FrameLayout.LayoutParams(-1,-1));
+        splash.postDelayed(()->splash.animate().alpha(0f).setDuration(320).withEndAction(()->{root.removeView(splash);startupSplashVisible=false;suppressMapPanel=false;showLiveMap(dashboard!=null&&dashboard.currentPage()==1);}).start(),1450);
     }
 
     private void initializeNavigator(){
@@ -183,20 +204,6 @@ public class MainActivity extends Activity {
             Intent web=new Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/maps/dir/?api=1&destination="+Uri.encode(address)+"&travelmode=driving"));
             startActivity(web);
         }catch(Throwable error){Toast.makeText(this,"Google Maps is unavailable",Toast.LENGTH_LONG).show();}
-    }
-
-    public void openGoogleMapsApp(){
-        try{
-            suppressMapPanel=true;
-            if(mapPanel!=null)mapPanel.setVisibility(View.INVISIBLE);
-            Intent launch=getPackageManager().getLaunchIntentForPackage("com.google.android.apps.maps");
-            if(launch==null){
-                launch=new Intent(Intent.ACTION_VIEW,Uri.parse("geo:0,0?z=15"));
-                launch.setPackage("com.google.android.apps.maps");
-            }
-            if(launch.resolveActivity(getPackageManager())!=null){startActivity(launch);return;}
-            startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://maps.google.com")));
-        }catch(Throwable error){Toast.makeText(this,"Install or enable Google Maps to use Navigation",Toast.LENGTH_LONG).show();}
     }
 
     private Button mapButton(String label,boolean primary){

@@ -74,10 +74,8 @@ public final class DashboardView extends View {
             prefs.edit().putInt("theme_choice",0).putBoolean("trx_launcher_v4_migrated",true).apply();
         }
         reloadTheme();
-        int startup=prefs.getInt("startup_page",-1);
-        page=startup<0?Math.max(0,Math.min(4,prefs.getInt("page",0))):Math.max(0,Math.min(4,startup));
-        boolean launchGoogleMaps=page==1;
-        if(launchGoogleMaps)page=0;
+        page=0;
+        prefs.edit().putInt("page",0).apply();
         heroRed=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_banner);
         heroBaja=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_baja);
         heroStealth=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_stealth);
@@ -85,7 +83,6 @@ public final class DashboardView extends View {
         defaultMediaArt=BitmapFactory.decodeResource(getResources(),R.drawable.default_media_art);
         performanceTruck=BitmapFactory.decodeResource(getResources(),R.drawable.trx_topdown_performance);
         reloadMediaApps();clock.post(ticker);
-        if(launchGoogleMaps)postDelayed(activity::openGoogleMapsApp,350);
     }
 
     @Override public WindowInsets onApplyWindowInsets(WindowInsets insets){
@@ -642,7 +639,7 @@ public final class DashboardView extends View {
     }
     private void drawVehicleTelemetry(Canvas c){
         text(c,"TIRE PRESSURE",54,575,11,MUTED,true);text(c,"POWERTRAIN TEMPERATURE",840,575,11,MUTED,true);
-        if(performanceTruck!=null){c.save();c.rotate(-90,x(540),y(713));c.drawBitmap(performanceTruck,null,new RectF(x(430),y(493),x(650),y(933)),p);c.restore();}
+        if(performanceTruck!=null){c.save();c.rotate(-90,x(540),y(713));c.drawBitmap(performanceTruck,null,new RectF(x(421),y(475),x(659),y(951)),p);c.restore();}
         tireValue(c,70,650,"FL","--");tireValue(c,70,790,"RL","--");tireValue(c,735,650,"FR","--");tireValue(c,735,790,"RR","--");
         telemetryValue(c,870,650,"INTAKE",obdText(ObdBridge.intakeF,0)+"°F");telemetryValue(c,870,790,"TRANS",obdText(ObdBridge.transmissionF,0)+"°F");
     }
@@ -793,7 +790,8 @@ public final class DashboardView extends View {
             int color=active?RED:0xffd7d9dc;dockIcon(c,i,cx,1352,color);paint(color,13,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(PAGES[i].toUpperCase(Locale.US),x(cx),y(1398),p);p.setTextAlign(Paint.Align.LEFT);if(active)line(c,l+58,1423,r-58,1423,RED,3);
         }
     }
-    private void selectPage(int next,int direction){next=Math.max(0,Math.min(4,next));if(next==1){prefs.edit().putInt("page",0).apply();activity.openGoogleMapsApp();return;}if(next==page)return;page=next;transitionDirection=direction;transitionAt=SystemClock.uptimeMillis();prefs.edit().putInt("page",page).apply();activity.showLiveMap(false);if(page==4)loadApps();invalidate();}
+    private void selectPage(int next,int direction){next=Math.max(0,Math.min(4,next));if(next==page){activity.showLiveMap(page==1);return;}page=next;transitionDirection=direction;transitionAt=SystemClock.uptimeMillis();prefs.edit().putInt("page",page).apply();activity.showLiveMap(page==1);if(page==4)loadApps();invalidate();}
+    public void navigateTo(int next){selectPage(next,next>=page?1:-1);}
     private void loadApps(){try{apps=activity.installedApps();refreshDisplayedApps();}catch(Throwable ignored){apps=new ArrayList<>();displayApps=new ArrayList<>();appScroll=0;}}
     public void reloadApps(){loadApps();invalidate();}
     public void setAppSearch(String query){appSearch=query==null?"":query.trim();appScroll=0;refreshDisplayedApps();invalidate();}
@@ -861,7 +859,7 @@ public final class DashboardView extends View {
             if(qi>=0&&qi<quick.size())activity.launch(quick.get(qi));else activity.openHomeQuickAppPicker();return true;
         }
         if(page==0&&xx>=696&&yy>164&&yy<638){if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}if(yy>550){if(xx<822)MediaBridge.previous(activity);else if(xx<922)MediaBridge.toggle(activity);else MediaBridge.next(activity);}else selectPage(2,1);return true;}
-        if(page==0&&xx>=696&&yy>650&&yy<1048){selectPage(3,1);return true;}if(page==1&&xx>700&&yy>1080){activity.openNavigation();return true;}
+        if(page==0&&xx>=696&&yy>650&&yy<1048){selectPage(3,1);return true;}
         if(page==2&&handleMediaTouch(xx,yy,moveX,moveY))return true;
         if(page==3&&sections[3]==0&&yy>1180&&yy<1285){if(xx<535)armRun();else resetRun();return true;}
         if(page==4){
