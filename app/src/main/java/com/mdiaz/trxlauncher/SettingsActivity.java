@@ -91,11 +91,12 @@ public class SettingsActivity extends Activity {
         LinearLayout iconRow=horizontal();iconRow.addView(iconSize,new LinearLayout.LayoutParams(0,dp(48),1));LinearLayout.LayoutParams valueParams=new LinearLayout.LayoutParams(dp(58),dp(48));iconRow.addView(iconSizeValue,valueParams);addControl(leftControls,"APP ICON SIZE",iconRow);
         Button apply=action("APPLY COCKPIT THEME",true,false);rightControls.addView(apply,buttonParams());apply.setOnClickListener(v->{if(saveSettings(false))toast("Cockpit theme applied");});
 
-        LinearLayout navigationPanel=category("// NAVIGATION","Google routing, saved destinations and map behavior.");
-        navigationPanel.addView(infoCard("GOOGLE MAPS","Only map and navigation provider • embedded turn-by-turn",true),buttonParams());
+        LinearLayout navigationPanel=category("// NAVIGATION","The Navigation tab opens the untouched official Google Maps experience.");
+        navigationPanel.addView(infoCard("GOOGLE MAPS","Native app • no launcher overlays or alternate map provider",true),buttonParams());
+        Button openMaps=action("OPEN OFFICIAL GOOGLE MAPS",true,false);navigationPanel.addView(openMaps,buttonParams());openMaps.setOnClickListener(v->openGoogleMaps());
         home=edit(prefs.getString("home_destination","Home"));addControl(navigationPanel,"HOME DESTINATION",home);
         work=edit(prefs.getString("work_destination","Work"));addControl(navigationPanel,"WORK DESTINATION",work);
-        TextView navNote=infoCard("GOOGLE MAPS LIVE",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED?"Location ready • turn-by-turn enabled":"Location permission required for live guidance",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED);navigationPanel.addView(navNote,buttonParams());
+        TextView navNote=infoCard("GOOGLE MAPS LIVE",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED?"Location ready • native turn-by-turn enabled":"Location permission required for live guidance",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED);navigationPanel.addView(navNote,buttonParams());
 
         LinearLayout mediaPanel=category("// MEDIA","Choose the default source and manage album artwork.");
         media=spinner(new String[]{"Spotify","YouTube Music","Apple Music","System Default"});media.setSelection(prefs.getInt("media_choice",0));addControl(mediaPanel,"PREFERRED MEDIA",media);
@@ -137,7 +138,8 @@ public class SettingsActivity extends Activity {
         TextView ram=text("RAM",24,WHITE,true);bar.addView(ram,new LinearLayout.LayoutParams(dp(74),-1));
         TextView brand=text("TRX LAUNCHER  /  SETTINGS",15,accent,true);brand.setPadding(dp(12),0,0,0);bar.addView(brand,new LinearLayout.LayoutParams(0,-1,1));
         TextView version=text("v"+BuildConfig.VERSION_NAME,11,MUTED,true);version.setGravity(Gravity.CENTER);bar.addView(version,new LinearLayout.LayoutParams(dp(76),-1));
-        Button done=action("SAVE",true,false);done.setOnClickListener(v->saveAndClose());bar.addView(done,new LinearLayout.LayoutParams(dp(116),dp(50)));return bar;
+        Button close=action("CLOSE",false,false);close.setOnClickListener(v->{saveSettings(false);finish();});bar.addView(close,new LinearLayout.LayoutParams(dp(92),dp(50)));
+        Button done=action("SAVE",true,false);done.setOnClickListener(v->saveAndClose());bar.addView(done,new LinearLayout.LayoutParams(dp(92),dp(50)));return bar;
     }
     private LinearLayout category(String title,String subtitle){
         LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(14),dp(18),dp(18));
@@ -151,7 +153,7 @@ public class SettingsActivity extends Activity {
     }
     private View settingsDock(){
         LinearLayout dock=horizontal();dock.setPadding(0,dp(8),0,0);String[] names={"⌂  HOME","➤  NAVIGATION","♫  MEDIA","◴  PERFORMANCE","▦  APPS"};
-        for(int i=0;i<names.length;i++){final int page=i;Button b=action(names[i],false,false);b.setTextSize(11);b.setOnClickListener(v->{if(saveSettings(false)){prefs.edit().putInt("page",page).apply();setResult(RESULT_OK,new Intent());finish();}});dock.addView(b,weightHeight(68));}return dock;
+        for(int i=0;i<names.length;i++){final int page=i;Button b=action(names[i],false,false);b.setTextSize(11);b.setOnClickListener(v->{if(saveSettings(false)){if(page==1){prefs.edit().putInt("page",0).apply();openGoogleMaps();}else prefs.edit().putInt("page",page).apply();setResult(RESULT_OK,new Intent());finish();}});dock.addView(b,weightHeight(68));}return dock;
     }
 
     private LinearLayout section(LinearLayout root,String heading,String subtitle){
@@ -212,6 +214,9 @@ public class SettingsActivity extends Activity {
         if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},340);return;}
         if(android.os.Build.VERSION.SDK_INT>=31&&checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED){ObdSetup.show(this);return;}
         toast("Launcher permissions are healthy");
+    }
+    private void openGoogleMaps(){
+        try{Intent launch=getPackageManager().getLaunchIntentForPackage("com.google.android.apps.maps");if(launch==null){launch=new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("geo:0,0?z=15"));launch.setPackage("com.google.android.apps.maps");}startActivity(launch);}catch(Throwable ignored){toast("Install or enable Google Maps first");}
     }
     @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){
         super.onRequestPermissionsResult(request,permissions,results);

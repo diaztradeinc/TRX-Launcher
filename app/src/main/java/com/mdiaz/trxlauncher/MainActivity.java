@@ -60,6 +60,7 @@ public class MainActivity extends Activity {
     private EditText destinationInput;
     private TextView mapStatus;
     private boolean mapDark;
+    private boolean suppressMapPanel;
     private int lastCompensatedVolume=-1;
 
     @Override public void onCreate(Bundle state) {
@@ -93,6 +94,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        suppressMapPanel=false;
         if (mapPanel instanceof NavigationPanel) {((NavigationPanel)mapPanel).onResumePanel();((NavigationPanel)mapPanel).applyTheme();}
         MediaBridge.ensureConnected(this);
         ObdBridge.start(this);
@@ -183,6 +185,20 @@ public class MainActivity extends Activity {
         }catch(Throwable error){Toast.makeText(this,"Google Maps is unavailable",Toast.LENGTH_LONG).show();}
     }
 
+    public void openGoogleMapsApp(){
+        try{
+            suppressMapPanel=true;
+            if(mapPanel!=null)mapPanel.setVisibility(View.INVISIBLE);
+            Intent launch=getPackageManager().getLaunchIntentForPackage("com.google.android.apps.maps");
+            if(launch==null){
+                launch=new Intent(Intent.ACTION_VIEW,Uri.parse("geo:0,0?z=15"));
+                launch.setPackage("com.google.android.apps.maps");
+            }
+            if(launch.resolveActivity(getPackageManager())!=null){startActivity(launch);return;}
+            startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://maps.google.com")));
+        }catch(Throwable error){Toast.makeText(this,"Install or enable Google Maps to use Navigation",Toast.LENGTH_LONG).show();}
+    }
+
     private Button mapButton(String label,boolean primary){
         Button button=new Button(this);button.setText(label);button.setTextColor(Color.WHITE);
         button.setTextSize(22);button.setAllCaps(false);button.setGravity(Gravity.CENTER);
@@ -202,6 +218,7 @@ public class MainActivity extends Activity {
 
     public void showLiveMap(boolean visible){
         if(mapPanel==null||root==null)return;
+        if(suppressMapPanel){mapPanel.setVisibility(View.INVISIBLE);return;}
         boolean compact=dashboard!=null&&dashboard.currentPage()==0&&dashboard.currentSection()==0;
         visible=visible||compact;
         if(visible){

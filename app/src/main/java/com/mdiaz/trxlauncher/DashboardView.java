@@ -76,6 +76,8 @@ public final class DashboardView extends View {
         reloadTheme();
         int startup=prefs.getInt("startup_page",-1);
         page=startup<0?Math.max(0,Math.min(4,prefs.getInt("page",0))):Math.max(0,Math.min(4,startup));
+        boolean launchGoogleMaps=page==1;
+        if(launchGoogleMaps)page=0;
         heroRed=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_banner);
         heroBaja=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_baja);
         heroStealth=BitmapFactory.decodeResource(getResources(),R.drawable.trx_hero_stealth);
@@ -83,6 +85,7 @@ public final class DashboardView extends View {
         defaultMediaArt=BitmapFactory.decodeResource(getResources(),R.drawable.default_media_art);
         performanceTruck=BitmapFactory.decodeResource(getResources(),R.drawable.trx_topdown_performance);
         reloadMediaApps();clock.post(ticker);
+        if(launchGoogleMaps)postDelayed(activity::openGoogleMapsApp,350);
     }
 
     @Override public WindowInsets onApplyWindowInsets(WindowInsets insets){
@@ -316,7 +319,18 @@ public final class DashboardView extends View {
         if(prefs.getInt("theme_choice",1)==4){p.setColor((RED&0x00ffffff)|0x30000000);c.drawRect(target,p);}
         p.setShader(new LinearGradient(0,y(top),0,y(bottom),0x00000000,0xd907090c,Shader.TileMode.CLAMP));c.drawRect(0,y(top),W,y(bottom),p);p.setShader(null);
     }
-    private void panel(Canvas c,float l,float t,float r,float b,String title){RectF q=new RectF(x(l),y(t),x(r),y(b));raisedBox(c,q,false,12);if(!title.isEmpty()){line(c,l+16,t+45,r-16,t+45,0xff42474f,1);text(c,title,l+18,t+32,18,WHITE,true);}line(c,l+28,b-5,r-28,b-5,(RED&0x00ffffff)|0xbb000000,2);}
+    private void panel(Canvas c,float l,float t,float r,float b,String title){RectF q=new RectF(x(l),y(t),x(r),y(b));raisedBox(c,q,false,12);if(b-t>500)drawPanelBackground(c,q);if(!title.isEmpty()){line(c,l+16,t+45,r-16,t+45,0xff42474f,1);text(c,title,l+18,t+32,18,WHITE,true);}line(c,l+28,b-5,r-28,b-5,(RED&0x00ffffff)|0xbb000000,2);}
+    private void drawPanelBackground(Canvas c,RectF q){
+        RectF inner=new RectF(q);inner.inset(x(7),x(7));int style=prefs.getInt("background_style",0);c.save();c.clipRect(inner);
+        if(style==2&&prefs.getBoolean("hero_artwork",true)){
+            Bitmap art=themedHero();if(art!=null){p.setStyle(Paint.Style.FILL);p.setAlpha(page==3?145:82);c.drawBitmap(art,null,inner,p);p.setAlpha(255);p.setColor(page==3?0x82020305:0xb8020305);c.drawRect(inner,p);}
+        }else if(style==1){
+            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor((RED&0x00ffffff)|0x26000000);for(int i=0;i<8;i++){float inset=x(18+i*33);c.drawOval(new RectF(inner.left-inset,inner.top+x(70+i*80),inner.right+inset,inner.top+x(330+i*120)),p);}p.setStyle(Paint.Style.FILL);
+        }else{
+            p.setColor(0x251f252b);p.setStrokeWidth(x(1));for(float i=inner.left-inner.height();i<inner.right+inner.height();i+=x(30)){c.drawLine(i,inner.top,i+inner.height(),inner.bottom,p);c.drawLine(i+x(7),inner.top,i+inner.height()+x(7),inner.bottom,p);}
+        }
+        c.restore();p.setAlpha(255);p.setStyle(Paint.Style.FILL);
+    }
     private float introGauge(){return Math.max(0,Math.min(1f,(SystemClock.uptimeMillis()-launchAt-250)/1000f));}
     private void gauge(Canvas c,float l,float t,float r,String label,String value,String unit,float level){RectF q=new RectF(x(l),y(t),x(r),y(t+138));raisedBox(c,q,false,10);p.setStyle(Paint.Style.STROKE);RectF arc=new RectF(x(l+24),y(t+46),x(r-24),y(t+154));p.setStrokeWidth(x(7));p.setColor(0xff333840);c.drawArc(arc,195,150,false,p);p.setColor(RED);c.drawArc(arc,195,Math.max(8,150*level*introGauge()),false,p);p.setStyle(Paint.Style.FILL);text(c,label,l+18,t+32,14,MUTED,true);text(c,value,l+18,t+92,31,WHITE,true);text(c,unit,r-58,t+92,13,MUTED,true);}
 
@@ -623,16 +637,16 @@ public final class DashboardView extends View {
         p.setStyle(Paint.Style.STROKE);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeWidth(x(12));p.setColor(0xff30353d);c.drawArc(outer,145,250,false,p);p.setColor(RED);c.drawArc(outer,145,Math.max(8,250*level),false,p);
         for(int i=0;i<=20;i++){double a=Math.toRadians(145+250*i/20f);float r1=radius-19-(i%5==0?7:0),r2=radius-7;float x1=cx+(float)Math.cos(a)*r1,y1=cy+(float)Math.sin(a)*r1,x2=cx+(float)Math.cos(a)*r2,y2=cy+(float)Math.sin(a)*r2;p.setStrokeWidth(x(i%5==0?2:1));p.setColor(i/20f<=level?RED:0xff69717b);c.drawLine(x(x1),y(y1),x(x2),y(y2),p);}
         paint(0xffd4d7dc,9,true);p.setTextAlign(Paint.Align.CENTER);for(int i=0;i<=5;i++){double a=Math.toRadians(145+250*i/5f);float rr=radius-39;String tick=label.equals("RPM")?String.valueOf(Math.round(7*i/5f)):label.equals("BOOST")?String.valueOf(-10+8*i):String.valueOf(28*i);c.drawText(tick,x(cx+(float)Math.cos(a)*rr),y(cy+(float)Math.sin(a)*rr+3),p);}
-        p.setStrokeWidth(x(1));p.setColor(0xff59616b);c.drawOval(outer,p);p.setStyle(Paint.Style.FILL);p.setStrokeCap(Paint.Cap.BUTT);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0xff59616b);c.drawOval(outer,p);p.setStyle(Paint.Style.FILL);p.setStrokeCap(Paint.Cap.BUTT);
         paint(MUTED,13,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(label,x(cx),y(cy-30),p);paint(WHITE,37,true);c.drawText(value,x(cx),y(cy+20),p);paint(MUTED,12,true);c.drawText(unit,x(cx),y(cy+48),p);p.setTextAlign(Paint.Align.LEFT);
     }
     private void drawVehicleTelemetry(Canvas c){
         text(c,"TIRE PRESSURE",54,575,11,MUTED,true);text(c,"POWERTRAIN TEMPERATURE",840,575,11,MUTED,true);
-        if(prefs.getBoolean("hero_artwork",true)){Bitmap landscape=themedHero();if(landscape!=null){RectF bg=new RectF(x(250),y(565),x(820),y(875));p.setAlpha(42);c.drawBitmap(landscape,null,bg,p);p.setAlpha(255);}}
-        if(performanceTruck!=null){c.save();c.rotate(-90,x(540),y(713));c.drawBitmap(performanceTruck,null,new RectF(x(445),y(523),x(635),y(903)),p);c.restore();}
-        telemetryValue(c,70,650,"FL","-- PSI");telemetryValue(c,70,790,"RL","-- PSI");telemetryValue(c,735,650,"FR","-- PSI");telemetryValue(c,735,790,"RR","-- PSI");
+        if(performanceTruck!=null){c.save();c.rotate(-90,x(540),y(713));c.drawBitmap(performanceTruck,null,new RectF(x(430),y(493),x(650),y(933)),p);c.restore();}
+        tireValue(c,70,650,"FL","--");tireValue(c,70,790,"RL","--");tireValue(c,735,650,"FR","--");tireValue(c,735,790,"RR","--");
         telemetryValue(c,870,650,"INTAKE",obdText(ObdBridge.intakeF,0)+"°F");telemetryValue(c,870,790,"TRANS",obdText(ObdBridge.transmissionF,0)+"°F");
     }
+    private void tireValue(Canvas c,float left,float top,String label,String value){text(c,value,left,top,26,WHITE,true);text(c,"PSI",left+48,top,12,MUTED,true);text(c,label,left,top+27,10,MUTED,true);line(c,left,top+37,left+112,top+37,RED,2);}
     private void telemetryValue(Canvas c,float left,float top,String label,String value){text(c,value,left,top,24,WHITE,true);text(c,label,left,top+27,10,MUTED,true);line(c,left,top+37,left+112,top+37,RED,2);}
     private void drawPerformanceSummary(Canvas c){
         RectF run=new RectF(x(54),y(895),x(650),y(1175));raisedBox(c,run,false,12);text(c,"0–60 MPH",76,934,14,WHITE,true);p.setTextAlign(Paint.Align.RIGHT);text(c,runActive?"RUNNING":runArmed?"ARMED":"READY",628,934,11,0xff55d88a,true);p.setTextAlign(Paint.Align.LEFT);text(c,runTime(),76,1000,36,WHITE,true);
@@ -779,7 +793,7 @@ public final class DashboardView extends View {
             int color=active?RED:0xffd7d9dc;dockIcon(c,i,cx,1352,color);paint(color,13,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(PAGES[i].toUpperCase(Locale.US),x(cx),y(1398),p);p.setTextAlign(Paint.Align.LEFT);if(active)line(c,l+58,1423,r-58,1423,RED,3);
         }
     }
-    private void selectPage(int next,int direction){next=Math.max(0,Math.min(4,next));if(next==page)return;page=next;transitionDirection=direction;transitionAt=SystemClock.uptimeMillis();prefs.edit().putInt("page",page).apply();activity.showLiveMap(page==1);if(page==4)loadApps();invalidate();}
+    private void selectPage(int next,int direction){next=Math.max(0,Math.min(4,next));if(next==1){prefs.edit().putInt("page",0).apply();activity.openGoogleMapsApp();return;}if(next==page)return;page=next;transitionDirection=direction;transitionAt=SystemClock.uptimeMillis();prefs.edit().putInt("page",page).apply();activity.showLiveMap(false);if(page==4)loadApps();invalidate();}
     private void loadApps(){try{apps=activity.installedApps();refreshDisplayedApps();}catch(Throwable ignored){apps=new ArrayList<>();displayApps=new ArrayList<>();appScroll=0;}}
     public void reloadApps(){loadApps();invalidate();}
     public void setAppSearch(String query){appSearch=query==null?"":query.trim();appScroll=0;refreshDisplayedApps();invalidate();}
