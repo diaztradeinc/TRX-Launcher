@@ -600,8 +600,9 @@ public final class DashboardView extends View {
     }
     private boolean handleMediaTouch(float xx,float yy,float moveX,float moveY){
         if(moveX>x(24)||moveY>x(24))return true;
+        if(yy>765&&yy<950&&xx>450&&xx<630){MediaBridge.playOrOpenYouTubeMusic(activity);return true;}
         if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}
-        if(yy>765&&yy<950){if(xx>250&&xx<450)MediaBridge.previous(activity);else if(xx>450&&xx<630)MediaBridge.toggle(activity);else if(xx>630&&xx<820)MediaBridge.next(activity);return true;}
+        if(yy>765&&yy<950){if(xx>250&&xx<450)MediaBridge.previous(activity);else if(xx>630&&xx<820)MediaBridge.next(activity);return true;}
         if(yy>455&&yy<530&&xx>430){long duration=MediaBridge.durationMs;if(duration>0)MediaBridge.seekTo(activity,Math.round(duration*Math.max(0,Math.min(1,(xx-450)/560f))));return true;}
         if(yy>1000&&yy<1155){int item=(int)((xx-54)/322);if(item>=0&&item<3)MediaBridge.playQueueItem(activity,item);return true;}
         return false;
@@ -639,7 +640,14 @@ public final class DashboardView extends View {
     }
     private void drawVehicleTelemetry(Canvas c){
         text(c,"TIRE PRESSURE",54,575,11,MUTED,true);text(c,"POWERTRAIN TEMPERATURE",840,575,11,MUTED,true);
-        if(performanceTruck!=null){c.save();c.rotate(-90,x(540),y(713));c.drawBitmap(performanceTruck,null,new RectF(x(421),y(475),x(659),y(951)),p);c.restore();}
+        if(performanceTruck!=null){
+            // Crop transparent source padding so the visible truck—not the
+            // bitmap canvas—is centered between all four tire readings.
+            Rect truckSource=new Rect(0,0,Math.min(324,performanceTruck.getWidth()),Math.min(540,performanceTruck.getHeight()));
+            c.save();c.rotate(-90,x(540),y(713));
+            c.drawBitmap(performanceTruck,truckSource,new RectF(x(421),y(475),x(659),y(951)),p);
+            c.restore();
+        }
         tireValue(c,70,650,"FL","--");tireValue(c,70,790,"RL","--");tireValue(c,735,650,"FR","--");tireValue(c,735,790,"RR","--");
         telemetryValue(c,870,650,"INTAKE",obdText(ObdBridge.intakeF,0)+"°F");telemetryValue(c,870,790,"TRANS",obdText(ObdBridge.transmissionF,0)+"°F");
     }
@@ -858,7 +866,11 @@ public final class DashboardView extends View {
             int qi=(int)((xx-54)/194);List<AppEntry> quick=homeQuickApps();
             if(qi>=0&&qi<quick.size())activity.launch(quick.get(qi));else activity.openHomeQuickAppPicker();return true;
         }
-        if(page==0&&xx>=696&&yy>164&&yy<638){if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}if(yy>550){if(xx<822)MediaBridge.previous(activity);else if(xx<922)MediaBridge.toggle(activity);else MediaBridge.next(activity);}else selectPage(2,1);return true;}
+        if(page==0&&xx>=696&&yy>164&&yy<638){
+            if(yy>550&&xx>=822&&xx<922){MediaBridge.playOrOpenYouTubeMusic(activity);return true;}
+            if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}
+            if(yy>550){if(xx<822)MediaBridge.previous(activity);else MediaBridge.next(activity);}else selectPage(2,1);return true;
+        }
         if(page==0&&xx>=696&&yy>650&&yy<1048){selectPage(3,1);return true;}
         if(page==2&&handleMediaTouch(xx,yy,moveX,moveY))return true;
         if(page==3&&sections[3]==0&&yy>1180&&yy<1285){if(xx<535)armRun();else resetRun();return true;}

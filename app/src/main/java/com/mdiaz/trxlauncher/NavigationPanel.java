@@ -60,6 +60,7 @@ public class NavigationPanel extends FrameLayout {
     private final ScrollView suggestionScroller;
     private final LinearLayout commandBar;
     private final LinearLayout mapTools;
+    private final Button layersButton;
     private final TextView status;
     private final TextView modeBadge;
     private final LinearLayout routeSummary;
@@ -98,7 +99,7 @@ public class NavigationPanel extends FrameLayout {
         }
         return arrivalRequested?arrival:distance;
     }
-    private boolean satelliteEnabled;
+    private int mapType;
     private int suggestionRequest;
     private boolean selectingSuggestion;
     private boolean guiding;
@@ -118,7 +119,7 @@ public class NavigationPanel extends FrameLayout {
         activity = context;
         prefs = context.getSharedPreferences("launcher", Context.MODE_PRIVATE);
         trafficEnabled=prefs.getBoolean("map_traffic",true);
-        satelliteEnabled=prefs.getBoolean("map_satellite",false);
+        mapType=prefs.getInt("map_type",prefs.getBoolean("map_satellite",false)?GoogleMap.MAP_TYPE_HYBRID:GoogleMap.MAP_TYPE_NORMAL);
         initialState = state == null ? null : new Bundle(state);
         accent = currentAccent();
         setBackgroundColor(0xff05070a);
@@ -215,6 +216,18 @@ public class NavigationPanel extends FrameLayout {
         toolsLp.setMargins(0, 0, dp(14), 0);
         addView(mapTools, toolsLp);
 
+        // One native-style floating control replaces the old themed tool rail.
+        // Map movement itself is handled directly by Google's touch gestures.
+        layersButton = button("▱", false);
+        layersButton.setTextSize(24);
+        layersButton.setContentDescription("Google map layers and options");
+        layersButton.setPadding(0,0,0,0);
+        layersButton.setBackground(panel(0xf2343434,0xff73777e,1,28));
+        LayoutParams layersLp=new LayoutParams(dp(54),dp(54),Gravity.RIGHT|Gravity.TOP);
+        layersLp.setMargins(0,dp(76),dp(16),0);
+        addView(layersButton,layersLp);
+        layersButton.setOnClickListener(v->showMapOptions());
+
         status = new TextView(context);
         status.setText("CONNECTING TO GOOGLE NAVIGATION…");
         status.setTextColor(Color.WHITE);
@@ -280,7 +293,8 @@ public class NavigationPanel extends FrameLayout {
         stopButton.setTextColor(0xffff7883);
         stopButton.setVisibility(GONE);
         LayoutParams stopLp = new LayoutParams(dp(112), dp(54), Gravity.RIGHT | Gravity.BOTTOM);
-        stopLp.setMargins(0, 0, dp(16), dp(22));
+        // Keep END above Google's native ETA/recenter area instead of covering it.
+        stopLp.setMargins(0, 0, dp(16), dp(92));
         addView(stopButton, stopLp);
         stopButton.setOnClickListener(v -> stopGuidance());
 
@@ -382,9 +396,13 @@ public class NavigationPanel extends FrameLayout {
                     map.getUiSettings().setZoomGesturesEnabled(true);
                     map.getUiSettings().setScrollGesturesEnabled(true);
                     map.getUiSettings().setRotateGesturesEnabled(true);
+                    map.getUiSettings().setTiltGesturesEnabled(true);
+                    map.getUiSettings().setIndoorLevelPickerEnabled(true);
+                    map.getUiSettings().setZoomControlsEnabled(false);
                     map.getUiSettings().setCompassEnabled(true);
                     map.getUiSettings().setMyLocationButtonEnabled(true);
-                    map.setMapType(satelliteEnabled?GoogleMap.MAP_TYPE_HYBRID:GoogleMap.MAP_TYPE_NORMAL);
+                    map.setBuildingsEnabled(true);
+                    map.setMapType(mapType);
                     map.setTrafficEnabled(trafficEnabled);
 
                     LatLng start = new LatLng(40.3323, -74.5819);
@@ -544,7 +562,8 @@ public class NavigationPanel extends FrameLayout {
                             destination.setVisibility(GONE);
                             routeButton.setVisibility(GONE);
                             commandBar.setVisibility(GONE);
-                            stopButton.setVisibility(GONE);
+                            stopButton.setVisibility(compact?GONE:VISIBLE);
+                            layersButton.setVisibility(compact?GONE:VISIBLE);
                             routeSummary.setVisibility(GONE);
                             applyNativeNavigationChrome();
                             startRouteMetrics();
@@ -576,6 +595,7 @@ public class NavigationPanel extends FrameLayout {
         routeButton.setVisibility(VISIBLE);
         commandBar.setVisibility(VISIBLE);
         stopButton.setVisibility(GONE);
+        layersButton.setVisibility(compact?GONE:VISIBLE);
         routeSummary.setVisibility(GONE);
         applyNativeNavigationChrome();
         routeMetricsHandler.removeCallbacks(routeMetricsUpdater);
@@ -907,12 +927,35 @@ public class NavigationPanel extends FrameLayout {
     }
 
     private void toggleMapLayer() {
-        satelliteEnabled = !satelliteEnabled;
-        prefs.edit().putBoolean("map_satellite",satelliteEnabled).apply();
-        if (googleMap != null) {
-            googleMap.setMapType(satelliteEnabled ? GoogleMap.MAP_TYPE_HYBRID : GoogleMap.MAP_TYPE_NORMAL);
-        }
-        Toast.makeText(activity, satelliteEnabled ? "Hybrid map" : "Dark road map", Toast.LENGTH_SHORT).show();
+        int next=mapType==GoogleMap.MAP_TYPE_NORMAL?GoogleMap.MAP_TYPE_SATELLITE:
+            mapType==GoogleMap.MAP_TYPE_SATELLITE?GoogleMap.MAP_TYPE_HYBRID:GoogleMap.MAP_TYPE_NORMAL;
+        setMapType(next);
+    }
+
+    private void setMapType(int type){
+        mapType=type;
+        prefs.edit().putInt("map_type",type).putBoolean("map_satellite",type!=GoogleMap.MAP_TYPE_NORMAL).apply();
+        if(googleMap!=null)googleMap.setMapType(type);
+        String name=type==GoogleMap.MAP_TYPE_SATELLITE?"Satellite":type==GoogleMap.MAP_TYPE_HYBRID?"Satellite + labels":"Road map";
+        Toast.makeText(activity,name,Toast.LENGTH_SHORT).show();
+    }
+
+    private void showMapOptions(){
+        showMenu("GOOGLE MAP OPTIONS",new String[]{
+            (mapType==GoogleMap.MAP_TYPE_NORMAL?"✓  ":"○  ")+"Road map",
+            (mapType==GoogleMap.MAP_TYPE_SATELLITE?"✓  ":"○  ")+"Satellite",
+            (mapType==GoogleMap.MAP_TYPE_HYBRID?"✓  ":"○  ")+"Satellite + labels",
+            trafficEnabled?"T  Turn live traffic off":"T  Turn live traffic on",
+            "◎  Recenter / follow vehicle",
+            guiding?"■  END NAVIGATION":"■  No active navigation"
+        },new Runnable[]{
+            ()->setMapType(GoogleMap.MAP_TYPE_NORMAL),
+            ()->setMapType(GoogleMap.MAP_TYPE_SATELLITE),
+            ()->setMapType(GoogleMap.MAP_TYPE_HYBRID),
+            this::toggleTraffic,
+            this::recenterMap,
+            ()->{if(guiding)stopGuidance();else Toast.makeText(activity,"No active navigation",Toast.LENGTH_SHORT).show();}
+        });
     }
 
     private void showRecentDestinations() {
@@ -958,8 +1001,7 @@ public class NavigationPanel extends FrameLayout {
             showMenu("SAVED DESTINATIONS",new String[]{"⌂  Home: "+saved[0],"▣  Work: "+saved[1],"⚙  Edit saved destinations"},new Runnable[]{
                 ()->beginNavigation(saved[0]),()->beginNavigation(saved[1]),activity::openSettingsScreen});return;
         }
-        showMenu("MAP OPTIONS",new String[]{trafficEnabled?"T  Turn traffic off":"T  Turn traffic on",satelliteEnabled?"L  Road map":"L  Satellite + labels","◎  Recenter / follow","■  End guidance"},new Runnable[]{
-            this::toggleTraffic,this::toggleMapLayer,this::recenterMap,this::stopGuidance});
+        showMapOptions();
     }
 
     private void showMenu(String title,String[] labels,Runnable[] actions){
@@ -1041,7 +1083,8 @@ public class NavigationPanel extends FrameLayout {
         compact=value;
         destination.setVisibility(value||guiding?GONE:VISIBLE);routeButton.setVisibility(value||guiding?GONE:VISIBLE);
         commandBar.setVisibility(value||guiding?GONE:VISIBLE);mapTools.setVisibility(GONE);
-        modeBadge.setVisibility(GONE);stopButton.setVisibility(GONE);
+        modeBadge.setVisibility(GONE);stopButton.setVisibility(!value&&guiding?VISIBLE:GONE);
+        layersButton.setVisibility(value?GONE:VISIBLE);
         routeSummary.setVisibility(GONE);
         suggestionScroller.setVisibility(GONE);
         applyNativeNavigationChrome();
