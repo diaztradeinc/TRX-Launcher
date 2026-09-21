@@ -98,7 +98,7 @@ public class MainActivity extends Activity {
         if (mapPanel instanceof NavigationPanel) {((NavigationPanel)mapPanel).onResumePanel();((NavigationPanel)mapPanel).applyTheme();}
         MediaBridge.ensureConnected(this);
         ObdBridge.start(this);
-        if (dashboard != null) { dashboard.reloadTheme(); dashboard.reloadMediaApps(); dashboard.reloadApps(); dashboard.postInvalidate(); }
+        if (dashboard != null) { dashboard.reloadTheme(); dashboard.reloadMediaApps(); dashboard.reloadApps(); dashboard.postInvalidate(); dashboard.post(()->showLiveMap(false)); }
     }
 
     @Override protected void onStart(){super.onStart();if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).onStartPanel();}

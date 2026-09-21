@@ -322,7 +322,7 @@ public final class DashboardView extends View {
     private void panel(Canvas c,float l,float t,float r,float b,String title){RectF q=new RectF(x(l),y(t),x(r),y(b));raisedBox(c,q,false,12);if(b-t>500)drawPanelBackground(c,q);if(!title.isEmpty()){line(c,l+16,t+45,r-16,t+45,0xff42474f,1);text(c,title,l+18,t+32,18,WHITE,true);}line(c,l+28,b-5,r-28,b-5,(RED&0x00ffffff)|0xbb000000,2);}
     private void drawPanelBackground(Canvas c,RectF q){
         RectF inner=new RectF(q);inner.inset(x(7),x(7));int style=prefs.getInt("background_style",0);c.save();c.clipRect(inner);
-        if(style==2&&prefs.getBoolean("hero_artwork",true)){
+        if((page==3||style==2)&&prefs.getBoolean("hero_artwork",true)){
             Bitmap art=themedHero();if(art!=null){p.setStyle(Paint.Style.FILL);p.setAlpha(page==3?145:82);c.drawBitmap(art,null,inner,p);p.setAlpha(255);p.setColor(page==3?0x82020305:0xb8020305);c.drawRect(inner,p);}
         }else if(style==1){
             p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor((RED&0x00ffffff)|0x26000000);for(int i=0;i<8;i++){float inset=x(18+i*33);c.drawOval(new RectF(inner.left-inset,inner.top+x(70+i*80),inner.right+inset,inner.top+x(330+i*120)),p);}p.setStyle(Paint.Style.FILL);
