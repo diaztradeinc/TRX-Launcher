@@ -27,9 +27,9 @@ import android.widget.TextView;
 public class SettingsActivity extends Activity {
     private static final int BG=0xff030507,PANEL=0xff0b0e12,CARD=0xff10141a,WHITE=0xfff5f5f7,MUTED=0xffaeb2ba,GREEN=0xff50dc83;
     private SharedPreferences prefs;
-    private Spinner navigation,media,displayMode,startupPage;
+    private Spinner navigation,media,displayMode,startupPage,backgroundStyle;
     private EditText home,work,coolantWarning,intakeWarning,voltageWarning,customHex;
-    private android.widget.Switch alerts,onlineArtwork;
+    private android.widget.Switch alerts,onlineArtwork,reduceMotion;
     private SeekBar iconSize;
     private TextView iconSizeValue;
     private ImageView themePreview;
@@ -57,7 +57,7 @@ public class SettingsActivity extends Activity {
 
         LinearLayout appearance=section(root,"// APPEARANCE","Choose a complete cockpit personality. Truck paint, landscape and accents move together.");
         TextView themeLabel=label("THEME PICKER");appearance.addView(themeLabel);
-        LinearLayout themes=horizontal();String[] names={"TRX RED","BAJA AMBER","STEALTH","OEM BLUE","CUSTOM"};
+        LinearLayout themes=horizontal();String[] names={"TRX RED","BAJA AMBER","STEALTH SILVER","HYDRO BLUE","CUSTOM"};
         for(int i=0;i<names.length;i++){final int index=i;Button button=new Button(this);button.setText(names[i]);button.setTextSize(11);button.setTextColor(WHITE);button.setAllCaps(false);button.setPadding(dp(3),0,dp(3),0);button.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);updateThemeButtons();styleAccentControls();updateThemePreview();});themeButtons.add(button);themes.addView(button,weightHeight(72));}
         appearance.addView(themes);updateThemeButtons();
 
@@ -72,6 +72,9 @@ public class SettingsActivity extends Activity {
         addControl(appearance,"CUSTOM ACCENT HEX",customHex);
         displayMode=spinner(new String[]{"Automatic day / night","Day cockpit","Night cockpit"});
         displayMode.setSelection(prefs.getInt("display_mode",0));addControl(appearance,"DISPLAY MODE",displayMode);
+        backgroundStyle=spinner(new String[]{"Carbon fiber","Topographic","Mountain silhouette"});
+        backgroundStyle.setSelection(prefs.getInt("background_style",0));addControl(appearance,"BACKGROUND STYLE",backgroundStyle);
+        reduceMotion=toggle("Reduce page animation and motion",prefs.getBoolean("reduce_motion",false));addControl(appearance,"REDUCE MOTION",reduceMotion);
         iconSize=new SeekBar(this);iconSize.setMax(40);iconSize.setProgress(Math.max(0,Math.min(40,prefs.getInt("app_icon_percent",100)-80)));
         iconSizeValue=text((iconSize.getProgress()+80)+"%",14,WHITE,true);iconSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int progress,boolean fromUser){iconSizeValue.setText((progress+80)+"%");}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}});
         LinearLayout iconRow=horizontal();iconRow.addView(iconSize,new LinearLayout.LayoutParams(0,dp(58),1));LinearLayout.LayoutParams valueParams=new LinearLayout.LayoutParams(dp(70),dp(58));iconRow.addView(iconSizeValue,valueParams);addControl(appearance,"APP ICON SIZE",iconRow);
@@ -146,6 +149,7 @@ public class SettingsActivity extends Activity {
         int startup=startupPage.getSelectedItemPosition()==0?-1:startupPage.getSelectedItemPosition()-1;
         prefs.edit().putInt("theme_choice",selectedTheme).putInt("custom_accent",custom).putString("custom_hex",customHex.getText().toString().trim())
             .putInt("display_mode",displayMode.getSelectedItemPosition()).putInt("app_icon_percent",iconSize.getProgress()+80).putInt("startup_page",startup)
+            .putInt("background_style",backgroundStyle.getSelectedItemPosition()).putBoolean("reduce_motion",reduceMotion.isChecked())
             .putInt("nav_choice",navigation.getSelectedItemPosition()).putInt("media_choice",media.getSelectedItemPosition())
             .putString("home_destination",home.getText().toString().trim()).putString("work_destination",work.getText().toString().trim())
             .putBoolean("online_artwork",onlineArtwork.isChecked()).putBoolean("performance_alerts",alerts.isChecked())

@@ -273,7 +273,7 @@ public class NavigationPanel extends FrameLayout {
         routeSummary.addView(routeDetail, new LinearLayout.LayoutParams(
             LayoutParams.MATCH_PARENT, 0, 1));
 
-        LayoutParams summaryLp = new LayoutParams(dp(360), dp(66), Gravity.LEFT | Gravity.BOTTOM);
+        LayoutParams summaryLp = new LayoutParams(dp(520), dp(70), Gravity.LEFT | Gravity.BOTTOM);
         summaryLp.setMargins(dp(16), 0, 0, dp(16));
         addView(routeSummary, summaryLp);
 
@@ -281,8 +281,8 @@ public class NavigationPanel extends FrameLayout {
         stopButton.setTextSize(13);
         stopButton.setTextColor(0xffff7883);
         stopButton.setVisibility(GONE);
-        LayoutParams stopLp = new LayoutParams(dp(120), dp(52), Gravity.RIGHT | Gravity.TOP);
-        stopLp.setMargins(0, dp(16), dp(16), 0);
+        LayoutParams stopLp = new LayoutParams(dp(112), dp(54), Gravity.RIGHT | Gravity.BOTTOM);
+        stopLp.setMargins(0, 0, dp(16), dp(22));
         addView(stopButton, stopLp);
         stopButton.setOnClickListener(v -> stopGuidance());
 
