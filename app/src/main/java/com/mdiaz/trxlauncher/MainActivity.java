@@ -599,13 +599,13 @@ public class MainActivity extends Activity {
         for(String category:categories){
             Intent query=new Intent(Intent.ACTION_MAIN).addCategory(category);
             for(ResolveInfo r:pm.queryIntentActivities(query,0)){
-                ActivityInfo a=r.activityInfo;if(a==null||a.packageName==null||a.packageName.equals(getPackageName())||found.containsKey(a.packageName))continue;
+                ActivityInfo a=r.activityInfo;if(a==null||a.packageName==null||a.packageName.equals(getPackageName())||isAlternateMap(a.packageName)||found.containsKey(a.packageName))continue;
                 try{CharSequence label=r.loadLabel(pm);found.put(a.packageName,new AppEntry(label==null?a.packageName:label.toString(),a.packageName,a.name,r.loadIcon(pm)));}catch(Throwable ignored){}
             }
         }
         try{
             for(android.content.pm.ApplicationInfo info:pm.getInstalledApplications(0)){
-                if(info.packageName.equals(getPackageName())||found.containsKey(info.packageName))continue;
+                if(info.packageName.equals(getPackageName())||isAlternateMap(info.packageName)||found.containsKey(info.packageName))continue;
                 Intent launch=pm.getLaunchIntentForPackage(info.packageName);if(launch==null)launch=pm.getLeanbackLaunchIntentForPackage(info.packageName);
                 android.content.ComponentName component=launch==null?null:launch.getComponent();if(component==null)continue;
                 CharSequence label=pm.getApplicationLabel(info);found.put(info.packageName,new AppEntry(label==null?info.packageName:label.toString(),info.packageName,component.getClassName(),info.loadIcon(pm)));
@@ -613,6 +613,7 @@ public class MainActivity extends Activity {
         }catch(Throwable ignored){}
         List<AppEntry> result=new ArrayList<>(found.values());Collections.sort(result,Comparator.comparing(x->x.label.toLowerCase(Locale.US)));return result;
     }
+    private boolean isAlternateMap(String packageName){return "com.waze".equals(packageName)||"com.here.app.maps".equals(packageName)||"com.mapquest.android.ace".equals(packageName)||"com.tomtom.gplay.navapp".equals(packageName);}
 
     public void launch(AppEntry app) {
         try {

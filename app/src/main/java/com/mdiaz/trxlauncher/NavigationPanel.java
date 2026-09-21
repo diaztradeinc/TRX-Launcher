@@ -1122,11 +1122,8 @@ public class NavigationPanel extends FrameLayout {
 
     private int currentAccent() {
         int theme = prefs.getInt("theme_choice", 1);
-        if (theme == 1) return 0xffff9f1a;
-        if (theme == 2) return 0xffd9dde3;
-        if (theme == 3) return 0xff438cff;
-        if (theme == 4) return prefs.getInt("custom_accent", 0xffff2338);
-        return 0xffff2338;
+        int color=theme == 1?0xffff9f1a:theme == 2?0xffd9dde3:theme == 3?0xff438cff:theme == 4?prefs.getInt("custom_accent",0xffff2338):0xffff2338;
+        float[] hsv=new float[3];Color.colorToHSV(color,hsv);float brightness=.35f+.65f*Math.max(0,Math.min(100,prefs.getInt("accent_brightness",88)))/100f;hsv[2]=Math.max(.16f,hsv[2]*brightness);return Color.HSVToColor(hsv);
     }
 
     private int dp(int value) {

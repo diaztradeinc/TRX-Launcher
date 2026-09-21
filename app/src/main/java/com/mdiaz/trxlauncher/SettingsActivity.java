@@ -62,7 +62,7 @@ public class SettingsActivity extends Activity {
         LinearLayout appearance=category("// APPEARANCE","Choose a complete cockpit personality. Paint, landscape and accents move together.");
         appearance.addView(label("THEME PICKER"));
         LinearLayout themes=horizontal();String[] names={"TRX RED","BAJA AMBER","STEALTH SILVER","HYDRO BLUE","CUSTOM"};int[] themeArt={R.drawable.trx_hero_banner,R.drawable.trx_hero_baja,R.drawable.trx_hero_stealth,R.drawable.trx_hero_blue,R.drawable.trx_hero_banner};
-        for(int i=0;i<names.length;i++){final int index=i;Button button=new Button(this);button.setText(names[i]);button.setTextSize(10);button.setTextColor(WHITE);button.setAllCaps(false);button.setGravity(Gravity.CENTER);button.setPadding(dp(4),dp(5),dp(4),dp(5));button.setCompoundDrawablePadding(dp(4));button.setCompoundDrawables(null,scaledDrawable(themeArt[i],112,58),null,null);button.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);updateThemeButtons();styleAccentControls();updateThemePreview();});themeButtons.add(button);themes.addView(button,weightHeight(112));}
+        for(int i=0;i<names.length;i++){final int index=i;Button button=new Button(this);button.setText(names[i]);button.setTextSize(10);button.setTextColor(WHITE);button.setAllCaps(false);button.setGravity(Gravity.CENTER);button.setPadding(dp(4),dp(5),dp(4),dp(5));button.setCompoundDrawablePadding(dp(4));button.setCompoundDrawables(null,scaledDrawable(themeArt[i],112,58),null,null);button.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);prefs.edit().putInt("theme_choice",index).apply();updateThemeButtons();styleAccentControls();updateThemePreview();});themeButtons.add(button);themes.addView(button,weightHeight(112));}
         appearance.addView(themes);updateThemeButtons();
 
         FrameLayout previewFrame=new FrameLayout(this);previewFrame.setBackground(background(0xff07090c,0xff3b424c,12));
@@ -83,6 +83,9 @@ public class SettingsActivity extends Activity {
         reduceMotion=toggle("Reduce animation",prefs.getBoolean("reduce_motion",false));addControl(rightControls,"REDUCE MOTION",reduceMotion);
         heroArtwork=toggle("Show full-width truck artwork",prefs.getBoolean("hero_artwork",true));addControl(leftControls,"HERO ARTWORK",heroArtwork);
         accentBrightness=new SeekBar(this);accentBrightness.setMax(100);accentBrightness.setProgress(prefs.getInt("accent_brightness",88));addControl(rightControls,"ACCENT BRIGHTNESS",accentBrightness);
+        displayMode.setOnItemSelectedListener(saveSelection("display_mode"));backgroundStyle.setOnItemSelectedListener(saveSelection("background_style"));
+        heroArtwork.setOnCheckedChangeListener((v,checked)->prefs.edit().putBoolean("hero_artwork",checked).apply());reduceMotion.setOnCheckedChangeListener((v,checked)->prefs.edit().putBoolean("reduce_motion",checked).apply());
+        accentBrightness.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int value,boolean user){if(user)prefs.edit().putInt("accent_brightness",value).apply();}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}});
         iconSize=new SeekBar(this);iconSize.setMax(40);iconSize.setProgress(Math.max(0,Math.min(40,prefs.getInt("app_icon_percent",100)-80)));
         iconSizeValue=text((iconSize.getProgress()+80)+"%",14,WHITE,true);iconSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int progress,boolean fromUser){iconSizeValue.setText((progress+80)+"%");}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}});
         LinearLayout iconRow=horizontal();iconRow.addView(iconSize,new LinearLayout.LayoutParams(0,dp(48),1));LinearLayout.LayoutParams valueParams=new LinearLayout.LayoutParams(dp(58),dp(48));iconRow.addView(iconSizeValue,valueParams);addControl(leftControls,"APP ICON SIZE",iconRow);
@@ -134,7 +137,7 @@ public class SettingsActivity extends Activity {
         TextView ram=text("RAM",24,WHITE,true);bar.addView(ram,new LinearLayout.LayoutParams(dp(74),-1));
         TextView brand=text("TRX LAUNCHER  /  SETTINGS",15,accent,true);brand.setPadding(dp(12),0,0,0);bar.addView(brand,new LinearLayout.LayoutParams(0,-1,1));
         TextView version=text("v"+BuildConfig.VERSION_NAME,11,MUTED,true);version.setGravity(Gravity.CENTER);bar.addView(version,new LinearLayout.LayoutParams(dp(76),-1));
-        Button done=action("SAVE & RETURN",true,false);done.setOnClickListener(v->saveAndClose());bar.addView(done,new LinearLayout.LayoutParams(dp(142),dp(50)));return bar;
+        Button done=action("SAVE",true,false);done.setOnClickListener(v->saveAndClose());bar.addView(done,new LinearLayout.LayoutParams(dp(116),dp(50)));return bar;
     }
     private LinearLayout category(String title,String subtitle){
         LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(14),dp(18),dp(18));
@@ -231,6 +234,7 @@ public class SettingsActivity extends Activity {
             @Override public View getDropDownView(int position,View convertView,android.view.ViewGroup parent){TextView v=(TextView)super.getDropDownView(position,convertView,parent);style(v);v.setMinHeight(dp(52));return v;}
         };result.setAdapter(adapter);return result;
     }
+    private android.widget.AdapterView.OnItemSelectedListener saveSelection(String key){return new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){prefs.edit().putInt(key,position).apply();}public void onNothingSelected(android.widget.AdapterView<?> parent){}};}
     private EditText edit(String value){EditText r=new EditText(this);r.setText(value);r.setTextColor(WHITE);r.setHintTextColor(0xff6d727b);r.setTextSize(16);r.setSingleLine(true);r.setPadding(dp(16),0,dp(16),0);r.setBackground(background(CARD,0xff343a42,10));return r;}
     private EditText numberEdit(float value){EditText r=edit(value==Math.round(value)?String.valueOf(Math.round(value)):String.format(java.util.Locale.US,"%.1f",value));r.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);return r;}
     private android.widget.Switch toggle(String title,boolean checked){android.widget.Switch s=new android.widget.Switch(this);s.setText(title);s.setTextColor(WHITE);s.setTextSize(15);s.setChecked(checked);s.setPadding(dp(14),0,dp(14),0);s.setBackground(background(CARD,0xff343a42,10));return s;}

@@ -99,10 +99,12 @@ public final class DashboardView extends View {
         else if(choice==3)RED=0xff438cff;
         else if(choice==4)RED=prefs.getInt("custom_accent",0xffff2338);
         else RED=0xffff2338;
+        float brightness=.35f+.65f*Math.max(0,Math.min(100,prefs.getInt("accent_brightness",88)))/100f;
+        float[] accentHsv=new float[3];android.graphics.Color.colorToHSV(RED,accentHsv);accentHsv[2]=Math.max(.16f,accentHsv[2]*brightness);RED=android.graphics.Color.HSVToColor(accentHsv);
         float[] hsv=new float[3];android.graphics.Color.colorToHSV(RED,hsv);hsv[2]=Math.max(.12f,hsv[2]*.42f);hsv[1]=Math.min(1f,hsv[1]*1.12f);DEEP_RED=android.graphics.Color.HSVToColor(hsv);
         int display=prefs.getInt("display_mode",0),hour=java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY);
         boolean night=display==2||(display==0&&(hour<7||hour>=19));
-        BACKGROUND=night?0xff020305:0xff07090d;MUTED=night?0xff9da2ab:0xffb8bdc5;lastThemeRefresh=SystemClock.uptimeMillis();invalidate();
+        BACKGROUND=night?0xff020305:0xff11151b;MUTED=night?0xff9da2ab:0xffc9cdd3;lastThemeRefresh=SystemClock.uptimeMillis();invalidate();
     }
 
     @Override protected void onDraw(Canvas c){try{if(SystemClock.uptimeMillis()-lastThemeRefresh>60000)reloadTheme();drawLauncher(c);}catch(Throwable error){c.drawColor(0xff050607);p.setColor(RED);p.setTextSize(28);c.drawText("TRX LAUNCHER DIAGNOSTIC",30,90,p);p.setColor(WHITE);p.setTextSize(18);c.drawText(error.getClass().getSimpleName()+": "+String.valueOf(error.getMessage()),30,135,p);}}
@@ -144,6 +146,7 @@ public final class DashboardView extends View {
     }
     private void status(Canvas c){
         RectF r=new RectF(0,y(0),W,y(72));p.setShader(new LinearGradient(0,y(0),W,y(0),0xff020304,0xff101317,Shader.TileMode.CLAMP));c.drawRect(r,p);p.setShader(null);
+        if(prefs.getBoolean("hero_artwork",true)){Bitmap header=themedHero();if(header!=null){Rect src=new Rect(0,0,header.getWidth(),Math.max(1,header.getHeight()/3));p.setAlpha(105);c.drawBitmap(header,src,r,p);p.setAlpha(255);p.setColor(0xaa020304);c.drawRect(r,p);}}
         String now=new SimpleDateFormat("h:mm a",Locale.US).format(new Date());
         paint(WHITE,11,true);p.setTextAlign(Paint.Align.LEFT);c.drawText(activity.weatherTemp(),x(30),y(31),p);
         paint(WHITE,25,true);p.setTextAlign(Paint.Align.CENTER);c.drawText("RAM",x(540),y(30),p);
@@ -453,23 +456,23 @@ public final class DashboardView extends View {
         boolean activeMedia=MediaBridge.title!=null&&!MediaBridge.title.trim().isEmpty();
         p.setTextAlign(Paint.Align.RIGHT);text(c,activeMedia?"● MEDIA SESSION LIVE":MediaBridge.hasAccess(activity)?"● MEDIA ACCESS READY":"● MEDIA ACCESS REQUIRED",1024,204,10,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);p.setTextAlign(Paint.Align.LEFT);
 
-        drawSquareMediaArtwork(c,54,224,360);
-        fittedText(c,MediaBridge.title==null||MediaBridge.title.isEmpty()?"NO TRACK PLAYING":MediaBridge.title.toUpperCase(Locale.US),450,316,1010,36,WHITE,true);
-        fittedText(c,MediaBridge.artist==null||MediaBridge.artist.isEmpty()?"OPEN A MEDIA SOURCE":MediaBridge.artist.toUpperCase(Locale.US),450,367,1010,22,RED,true);
-        fittedText(c,activity.audioRouteName(),450,411,900,12,MUTED,true);
-        text(c,"♥",960,373,31,RED,true);text(c,"◉",960,432,27,MUTED,true);
-        mediaProgress(c,450,485,1010);
+        drawSquareMediaArtwork(c,54,224,394);
+        fittedText(c,MediaBridge.title==null||MediaBridge.title.isEmpty()?"NO TRACK PLAYING":MediaBridge.title.toUpperCase(Locale.US),474,318,1008,43,WHITE,true);
+        fittedText(c,MediaBridge.artist==null||MediaBridge.artist.isEmpty()?"OPEN A MEDIA SOURCE":MediaBridge.artist.toUpperCase(Locale.US),474,374,1008,25,RED,true);
+        fittedText(c,activity.audioRouteName(),474,422,900,13,MUTED,true);
+        text(c,"♥",960,377,34,RED,true);text(c,"◉",960,438,28,MUTED,true);
+        mediaProgress(c,474,500,1008);
 
-        drawMediaVisualizer(c,54,610,1010,770);
-        mediaControl(c,130,855,40,"SHUFFLE",false);
-        mediaControl(c,358,855,62,"PREVIOUS",false);
-        mediaControl(c,540,855,78,MediaBridge.playing?"PAUSE":"PLAY",true);
-        mediaControl(c,722,855,62,"NEXT",false);
-        mediaControl(c,950,855,40,"REPEAT",false);
+        drawMediaVisualizer(c,54,635,1010,810);
+        mediaControl(c,130,900,40,"SHUFFLE",false);
+        mediaControl(c,358,900,64,"PREVIOUS",false);
+        mediaControl(c,540,900,82,MediaBridge.playing?"PAUSE":"PLAY",true);
+        mediaControl(c,722,900,64,"NEXT",false);
+        mediaControl(c,950,900,40,"REPEAT",false);
 
-        text(c,"UP NEXT",54,995,13,MUTED,true);
-        p.setTextAlign(Paint.Align.RIGHT);text(c,"LIVE QUEUE",1010,995,10,0xff55d88a,true);p.setTextAlign(Paint.Align.LEFT);
-        drawBottomMediaQueue(c,54,1012);
+        text(c,"UP NEXT",54,1030,13,MUTED,true);
+        p.setTextAlign(Paint.Align.RIGHT);text(c,"LIVE QUEUE",1010,1030,10,0xff55d88a,true);p.setTextAlign(Paint.Align.LEFT);
+        drawBottomMediaQueue(c,54,1047);
         text(c,"SOURCE  •  "+(mediaApps.isEmpty()?"SYSTEM DEFAULT":trim(mediaApps.get(0).label.toUpperCase(Locale.US),24)),54,1257,10,MUTED,true);
     }
 
@@ -619,13 +622,15 @@ public final class DashboardView extends View {
         RectF outer=new RectF(x(cx-radius),y(cy-radius),x(cx+radius),y(cy+radius));p.setShader(new RadialGradient(x(cx),y(cy),x(radius),0xff15191e,0xff020304,Shader.TileMode.CLAMP));c.drawOval(outer,p);p.setShader(null);
         p.setStyle(Paint.Style.STROKE);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeWidth(x(12));p.setColor(0xff30353d);c.drawArc(outer,145,250,false,p);p.setColor(RED);c.drawArc(outer,145,Math.max(8,250*level),false,p);
         for(int i=0;i<=20;i++){double a=Math.toRadians(145+250*i/20f);float r1=radius-19-(i%5==0?7:0),r2=radius-7;float x1=cx+(float)Math.cos(a)*r1,y1=cy+(float)Math.sin(a)*r1,x2=cx+(float)Math.cos(a)*r2,y2=cy+(float)Math.sin(a)*r2;p.setStrokeWidth(x(i%5==0?2:1));p.setColor(i/20f<=level?RED:0xff69717b);c.drawLine(x(x1),y(y1),x(x2),y(y2),p);}
+        paint(0xffd4d7dc,9,true);p.setTextAlign(Paint.Align.CENTER);for(int i=0;i<=5;i++){double a=Math.toRadians(145+250*i/5f);float rr=radius-39;String tick=label.equals("RPM")?String.valueOf(Math.round(7*i/5f)):label.equals("BOOST")?String.valueOf(-10+8*i):String.valueOf(28*i);c.drawText(tick,x(cx+(float)Math.cos(a)*rr),y(cy+(float)Math.sin(a)*rr+3),p);}
         p.setStrokeWidth(x(1));p.setColor(0xff59616b);c.drawOval(outer,p);p.setStyle(Paint.Style.FILL);p.setStrokeCap(Paint.Cap.BUTT);
         paint(MUTED,13,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(label,x(cx),y(cy-30),p);paint(WHITE,37,true);c.drawText(value,x(cx),y(cy+20),p);paint(MUTED,12,true);c.drawText(unit,x(cx),y(cy+48),p);p.setTextAlign(Paint.Align.LEFT);
     }
     private void drawVehicleTelemetry(Canvas c){
         text(c,"TIRE PRESSURE",54,575,11,MUTED,true);text(c,"POWERTRAIN TEMPERATURE",840,575,11,MUTED,true);
-        if(performanceTruck!=null){c.save();c.rotate(90,x(540),y(713));c.drawBitmap(performanceTruck,null,new RectF(x(429),y(491),x(651),y(935)),p);c.restore();}
-        telemetryValue(c,70,650,"FL","-- PSI");telemetryValue(c,70,790,"RL","-- PSI");telemetryValue(c,690,650,"FR","-- PSI");telemetryValue(c,690,790,"RR","-- PSI");
+        if(prefs.getBoolean("hero_artwork",true)){Bitmap landscape=themedHero();if(landscape!=null){RectF bg=new RectF(x(250),y(565),x(820),y(875));p.setAlpha(42);c.drawBitmap(landscape,null,bg,p);p.setAlpha(255);}}
+        if(performanceTruck!=null){c.save();c.rotate(-90,x(540),y(713));c.drawBitmap(performanceTruck,null,new RectF(x(445),y(523),x(635),y(903)),p);c.restore();}
+        telemetryValue(c,70,650,"FL","-- PSI");telemetryValue(c,70,790,"RL","-- PSI");telemetryValue(c,735,650,"FR","-- PSI");telemetryValue(c,735,790,"RR","-- PSI");
         telemetryValue(c,870,650,"INTAKE",obdText(ObdBridge.intakeF,0)+"°F");telemetryValue(c,870,790,"TRANS",obdText(ObdBridge.transmissionF,0)+"°F");
     }
     private void telemetryValue(Canvas c,float left,float top,String label,String value){text(c,value,left,top,24,WHITE,true);text(c,label,left,top+27,10,MUTED,true);line(c,left,top+37,left+112,top+37,RED,2);}
