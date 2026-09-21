@@ -141,7 +141,13 @@ public final class DashboardView extends View {
     private void carbon(Canvas c){
         p.setColor(0xff07090c);c.drawRect(0,safeTop,W,H-safeBottom,p);p.setStrokeWidth(x(1));int style=prefs.getInt("background_style",0);
         if(style==1){p.setStyle(Paint.Style.STROKE);p.setColor(0x252f363f);for(int i=0;i<9;i++)c.drawOval(new RectF(x(60-i*45),y(170+i*115),x(1020+i*55),y(520+i*145)),p);p.setStyle(Paint.Style.FILL);}
-        else if(style==2){mountains(c,70,390);}
+        else if(style==2){
+            Bitmap art=themedHero();
+            if(art!=null&&prefs.getBoolean("hero_artwork",true)){
+                RectF full=new RectF(0,safeTop,W,H-safeBottom);p.setAlpha(92);c.drawBitmap(art,null,full,p);p.setAlpha(255);p.setColor(0xc9020305);c.drawRect(full,p);
+            }
+            mountains(c,70,1360);
+        }
         else{p.setColor(0x221f252b);for(float i=-H;i<W+H;i+=x(34)){c.drawLine(i,safeTop,i+H,H-safeBottom,p);c.drawLine(i+x(8),safeTop,i+H+x(8),H-safeBottom,p);}}
     }
     private void status(Canvas c){
@@ -319,8 +325,8 @@ public final class DashboardView extends View {
     private void panel(Canvas c,float l,float t,float r,float b,String title){RectF q=new RectF(x(l),y(t),x(r),y(b));raisedBox(c,q,false,12);if(b-t>500)drawPanelBackground(c,q);if(!title.isEmpty()){line(c,l+16,t+45,r-16,t+45,0xff42474f,1);text(c,title,l+18,t+32,18,WHITE,true);}line(c,l+28,b-5,r-28,b-5,(RED&0x00ffffff)|0xbb000000,2);}
     private void drawPanelBackground(Canvas c,RectF q){
         RectF inner=new RectF(q);inner.inset(x(7),x(7));int style=prefs.getInt("background_style",0);c.save();c.clipRect(inner);
-        if((page==3||style==2)&&prefs.getBoolean("hero_artwork",true)){
-            Bitmap art=themedHero();if(art!=null){p.setStyle(Paint.Style.FILL);p.setAlpha(page==3?145:82);c.drawBitmap(art,null,inner,p);p.setAlpha(255);p.setColor(page==3?0x82020305:0xb8020305);c.drawRect(inner,p);}
+        if(style==2&&prefs.getBoolean("hero_artwork",true)){
+            Bitmap art=themedHero();if(art!=null){p.setStyle(Paint.Style.FILL);p.setAlpha(105);c.drawBitmap(art,null,inner,p);p.setAlpha(255);p.setColor(0xa8020305);c.drawRect(inner,p);}
         }else if(style==1){
             p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor((RED&0x00ffffff)|0x26000000);for(int i=0;i<8;i++){float inset=x(18+i*33);c.drawOval(new RectF(inner.left-inset,inner.top+x(70+i*80),inner.right+inset,inner.top+x(330+i*120)),p);}p.setStyle(Paint.Style.FILL);
         }else{
@@ -468,10 +474,10 @@ public final class DashboardView extends View {
         p.setTextAlign(Paint.Align.RIGHT);text(c,activeMedia?"● MEDIA SESSION LIVE":MediaBridge.hasAccess(activity)?"● MEDIA ACCESS READY":"● MEDIA ACCESS REQUIRED",1024,204,10,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);p.setTextAlign(Paint.Align.LEFT);
 
         drawSquareMediaArtwork(c,54,224,394);
-        fittedText(c,MediaBridge.title==null||MediaBridge.title.isEmpty()?"NO TRACK PLAYING":MediaBridge.title.toUpperCase(Locale.US),474,318,1008,43,WHITE,true);
-        fittedText(c,MediaBridge.artist==null||MediaBridge.artist.isEmpty()?"OPEN A MEDIA SOURCE":MediaBridge.artist.toUpperCase(Locale.US),474,374,1008,25,RED,true);
+        marquee(c,MediaBridge.title==null||MediaBridge.title.isEmpty()?"NO TRACK PLAYING":MediaBridge.title.toUpperCase(Locale.US),474,318,918,43,WHITE,true);
+        fittedText(c,MediaBridge.artist==null||MediaBridge.artist.isEmpty()?"OPEN A MEDIA SOURCE":MediaBridge.artist.toUpperCase(Locale.US),474,374,918,25,RED,true);
         fittedText(c,activity.audioRouteName(),474,422,900,13,MUTED,true);
-        text(c,"♥",960,377,34,RED,true);text(c,"◉",960,438,28,MUTED,true);
+        text(c,isCurrentTrackFavorite()?"♥":"♡",965,339,42,RED,true);
         mediaProgress(c,474,500,1008);
 
         drawMediaVisualizer(c,54,635,1010,810);
@@ -600,12 +606,22 @@ public final class DashboardView extends View {
     }
     private boolean handleMediaTouch(float xx,float yy,float moveX,float moveY){
         if(moveX>x(24)||moveY>x(24))return true;
+        if(xx>920&&yy>260&&yy<410){toggleCurrentTrackFavorite();return true;}
         if(yy>765&&yy<950&&xx>450&&xx<630){MediaBridge.playOrOpenYouTubeMusic(activity);return true;}
         if(!MediaBridge.hasAccess(activity)){activity.requestMediaAccess();return true;}
         if(yy>765&&yy<950){if(xx>250&&xx<450)MediaBridge.previous(activity);else if(xx>630&&xx<820)MediaBridge.next(activity);return true;}
         if(yy>455&&yy<530&&xx>430){long duration=MediaBridge.durationMs;if(duration>0)MediaBridge.seekTo(activity,Math.round(duration*Math.max(0,Math.min(1,(xx-450)/560f))));return true;}
         if(yy>1000&&yy<1155){int item=(int)((xx-54)/322);if(item>=0&&item<3)MediaBridge.playQueueItem(activity,item);return true;}
         return false;
+    }
+    private String currentTrackKey(){return ((MediaBridge.title==null?"":MediaBridge.title)+"|"+(MediaBridge.artist==null?"":MediaBridge.artist)).trim().toLowerCase(Locale.US);}
+    private boolean isCurrentTrackFavorite(){String key=currentTrackKey();return key.length()>1&&prefs.getStringSet("favorite_tracks",java.util.Collections.emptySet()).contains(key);}
+    private void toggleCurrentTrackFavorite(){
+        String key=currentTrackKey();if(key.length()<2||MediaBridge.title==null||MediaBridge.title.trim().isEmpty())return;
+        java.util.Set<String> saved=prefs.getStringSet("favorite_tracks",java.util.Collections.emptySet());java.util.HashSet<String> next=new java.util.HashSet<>(saved);
+        boolean added;if(next.contains(key)){next.remove(key);added=false;}else{next.add(key);added=true;}
+        prefs.edit().putStringSet("favorite_tracks",next).apply();performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+        android.widget.Toast.makeText(activity,added?"Added to favorites":"Removed from favorites",android.widget.Toast.LENGTH_SHORT).show();invalidate();
     }
     private String obdText(float value,int decimals){
         if(Float.isNaN(value))return "--";
@@ -645,7 +661,7 @@ public final class DashboardView extends View {
             // bitmap canvas—is centered between all four tire readings.
             Rect truckSource=new Rect(0,0,Math.min(324,performanceTruck.getWidth()),Math.min(540,performanceTruck.getHeight()));
             c.save();c.rotate(-90,x(540),y(713));
-            c.drawBitmap(performanceTruck,truckSource,new RectF(x(421),y(475),x(659),y(951)),p);
+            c.drawBitmap(performanceTruck,truckSource,new RectF(x(405),y(413),x(675),y(1013)),p);
             c.restore();
         }
         tireValue(c,70,650,"FL","--");tireValue(c,70,790,"RL","--");tireValue(c,735,650,"FR","--");tireValue(c,735,790,"RR","--");

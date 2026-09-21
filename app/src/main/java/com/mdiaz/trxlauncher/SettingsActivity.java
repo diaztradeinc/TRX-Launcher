@@ -7,11 +7,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -39,7 +35,7 @@ public class SettingsActivity extends Activity {
     private ImageView themePreview;
     private TextView themePreviewTitle;
     private int selectedTheme,accent;
-    private final java.util.ArrayList<Button> themeButtons=new java.util.ArrayList<>();
+    private final java.util.ArrayList<FrameLayout> themeButtons=new java.util.ArrayList<>();
     private final java.util.ArrayList<View> categoryPanels=new java.util.ArrayList<>();
     private final java.util.ArrayList<Button> categoryButtons=new java.util.ArrayList<>();
 
@@ -62,7 +58,16 @@ public class SettingsActivity extends Activity {
         LinearLayout appearance=category("// APPEARANCE","Choose a complete cockpit personality. Paint, landscape and accents move together.");
         appearance.addView(label("THEME PICKER"));
         LinearLayout themes=horizontal();String[] names={"TRX RED","BAJA AMBER","STEALTH SILVER","HYDRO BLUE","CUSTOM"};int[] themeArt={R.drawable.trx_hero_banner,R.drawable.trx_hero_baja,R.drawable.trx_hero_stealth,R.drawable.trx_hero_blue,R.drawable.trx_hero_banner};
-        for(int i=0;i<names.length;i++){final int index=i;Button button=new Button(this);button.setText(names[i]);button.setTextSize(10);button.setTextColor(WHITE);button.setAllCaps(false);button.setGravity(Gravity.CENTER);button.setPadding(dp(4),dp(5),dp(4),dp(5));button.setCompoundDrawablePadding(dp(4));button.setCompoundDrawables(null,scaledDrawable(themeArt[i],112,58),null,null);button.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);prefs.edit().putInt("theme_choice",index).apply();updateThemeButtons();styleAccentControls();updateThemePreview();});themeButtons.add(button);themes.addView(button,weightHeight(112));}
+        for(int i=0;i<names.length;i++){
+            final int index=i;
+            FrameLayout tile=new FrameLayout(this);tile.setClipToOutline(true);
+            ImageView artwork=new ImageView(this);artwork.setScaleType(ImageView.ScaleType.CENTER_CROP);artwork.setImageResource(themeArt[i]);
+            FrameLayout.LayoutParams artParams=new FrameLayout.LayoutParams(-1,-1);artParams.setMargins(dp(2),dp(2),dp(2),dp(2));tile.addView(artwork,artParams);
+            View shade=new View(this);shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0x00000000,0x25000000,0xe0000000}));tile.addView(shade,new FrameLayout.LayoutParams(-1,-1));
+            TextView name=text(names[i],11,WHITE,true);name.setGravity(Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);name.setPadding(dp(4),0,dp(4),dp(12));tile.addView(name,new FrameLayout.LayoutParams(-1,-1));
+            tile.setContentDescription(names[i]+" theme");tile.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);prefs.edit().putInt("theme_choice",index).apply();updateThemeButtons();styleAccentControls();updateThemePreview();});
+            themeButtons.add(tile);themes.addView(tile,weightHeight(112));
+        }
         appearance.addView(themes);updateThemeButtons();
 
         FrameLayout previewFrame=new FrameLayout(this);previewFrame.setBackground(background(0xff07090c,0xff3b424c,12));
@@ -167,7 +172,7 @@ public class SettingsActivity extends Activity {
     }
 
     private void updateThemeButtons(){
-        for(int i=0;i<themeButtons.size();i++){int color=themeColor(i);int fill=darken(color,i==selectedTheme?.30f:.13f);themeButtons.get(i).setBackground(background(fill,i==selectedTheme?color:0xff343a42,12));}
+        for(int i=0;i<themeButtons.size();i++){int color=themeColor(i);themeButtons.get(i).setBackground(background(0xff080a0d,i==selectedTheme?color:0xff343a42,12));themeButtons.get(i).setElevation(dp(i==selectedTheme?8:2));}
     }
     private void styleAccentControls(){
         if(iconSize!=null){iconSize.setProgressTintList(android.content.res.ColorStateList.valueOf(accent));iconSize.setThumbTintList(android.content.res.ColorStateList.valueOf(accent));}
@@ -242,7 +247,6 @@ public class SettingsActivity extends Activity {
     private EditText edit(String value){EditText r=new EditText(this);r.setText(value);r.setTextColor(WHITE);r.setHintTextColor(0xff6d727b);r.setTextSize(16);r.setSingleLine(true);r.setPadding(dp(16),0,dp(16),0);r.setBackground(background(CARD,0xff343a42,10));return r;}
     private EditText numberEdit(float value){EditText r=edit(value==Math.round(value)?String.valueOf(Math.round(value)):String.format(java.util.Locale.US,"%.1f",value));r.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);return r;}
     private android.widget.Switch toggle(String title,boolean checked){android.widget.Switch s=new android.widget.Switch(this);s.setText(title);s.setTextColor(WHITE);s.setTextSize(15);s.setChecked(checked);s.setPadding(dp(14),0,dp(14),0);s.setBackground(background(CARD,0xff343a42,10));return s;}
-    private Drawable scaledDrawable(int resource,int width,int height){Bitmap source=BitmapFactory.decodeResource(getResources(),resource);Bitmap scaled=Bitmap.createScaledBitmap(source,dp(width),dp(height),true);BitmapDrawable drawable=new BitmapDrawable(getResources(),scaled);drawable.setBounds(0,0,dp(width),dp(height));return drawable;}
     private Button action(String title,boolean primary,boolean danger){Button b=new Button(this);b.setText(title);b.setTextSize(14);b.setTextColor(danger?0xffff7682:WHITE);b.setTypeface(Typeface.DEFAULT_BOLD);b.setAllCaps(false);b.setBackground(background(primary?darken(accent,.28f):CARD,primary?accent:danger?0xff7a1722:0xff3c434c,12));return b;}
     private TextView text(String value,int size,int color,boolean bold){TextView r=new TextView(this);r.setText(value);r.setTextSize(size);r.setTextColor(color);r.setGravity(Gravity.CENTER_VERTICAL);if(bold)r.setTypeface(Typeface.DEFAULT_BOLD);return r;}
     private GradientDrawable panelBackground(){GradientDrawable g=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xff141920,0xff080a0e});g.setCornerRadius(dp(16));g.setStroke(dp(1),0xff3a414a);return g;}

@@ -4,7 +4,13 @@ import android.Manifest;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
+import android.graphics.RectF;
 import android.graphics.drawable.GradientDrawable;
 import android.location.Address;
 import android.location.Location;
@@ -138,11 +144,11 @@ public class NavigationPanel extends FrameLayout {
         destination.setTextColor(Color.WHITE);
         destination.setHintTextColor(0xff9ca1aa);
         destination.setTextSize(15);
-        destination.setPadding(dp(18), 0, dp(58), 0);
+        destination.setPadding(dp(18), 0, dp(18), 0);
         destination.setBackground(panel(0xf205070a, accent, 1, 14));
         destination.setElevation(dp(10));
         LayoutParams searchLp = new LayoutParams(LayoutParams.MATCH_PARENT, dp(50), Gravity.TOP);
-        searchLp.setMargins(dp(14), dp(12), dp(14), 0);
+        searchLp.setMargins(dp(14), dp(12), dp(78), 0);
         addView(destination, searchLp);
 
         suggestions = new LinearLayout(context);
@@ -183,8 +189,8 @@ public class NavigationPanel extends FrameLayout {
 
         routeButton = button("➤", true);
         routeButton.setContentDescription("Start navigation");
-        LayoutParams routeLp = new LayoutParams(dp(42), dp(42), Gravity.TOP | Gravity.RIGHT);
-        routeLp.setMargins(0, dp(16), dp(18), 0);
+        LayoutParams routeLp = new LayoutParams(dp(50), dp(50), Gravity.TOP | Gravity.RIGHT);
+        routeLp.setMargins(0, dp(12), dp(14), 0);
         addView(routeButton, routeLp);
         routeButton.setOnClickListener(v -> beginNavigation(destination.getText().toString()));
 
@@ -706,15 +712,22 @@ public class NavigationPanel extends FrameLayout {
         if(!activityResumed||!roadListenerAdded||googleMap==null)return;
         LatLng point=new LatLng(location.getLatitude(),location.getLongitude());
         if(truckMarker==null){
-            android.graphics.Bitmap source=android.graphics.BitmapFactory.decodeResource(
-                getResources(),R.drawable.trx_navigation_marker);
-            android.graphics.Bitmap bitmap=android.graphics.Bitmap.createScaledBitmap(
-                source,dp(66),dp(99),true);
-            truckMarker=googleMap.addMarker(new com.google.android.gms.maps.model.MarkerOptions().position(point).anchor(.5f,.5f).flat(true).zIndex(1000).icon(com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(bitmap)));
+            Bitmap bitmap=createTruckMarkerBitmap();
+            truckMarker=googleMap.addMarker(new com.google.android.gms.maps.model.MarkerOptions().position(point).anchor(.5f,.55f).flat(true).zIndex(1000).icon(com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(bitmap)));
             if(truckMarker!=null)Log.i("TRXNavigation","TRUCK_READY");
         }
         if(truckMarker!=null){truckMarker.setPosition(point);if(location.hasBearing())truckMarker.setRotation(location.getBearing());truckMarker.setVisible(true);}
         try{if(googleMap.isMyLocationEnabled())googleMap.setMyLocationEnabled(false);}catch(SecurityException denied){stopTruckTracking();}
+    }
+
+    private Bitmap createTruckMarkerBitmap(){
+        Bitmap source=android.graphics.BitmapFactory.decodeResource(getResources(),R.drawable.trx_navigation_marker);
+        int width=dp(86),height=dp(126);Bitmap result=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas canvas=new Canvas(result);
+        Paint shadow=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);shadow.setAlpha(150);shadow.setColorFilter(new PorterDuffColorFilter(Color.BLACK,PorterDuff.Mode.SRC_IN));
+        canvas.drawBitmap(source,null,new RectF(dp(10),dp(10),width-dp(4),height-dp(2)),shadow);
+        Paint glow=new Paint(Paint.ANTI_ALIAS_FLAG);glow.setStyle(Paint.Style.STROKE);glow.setStrokeWidth(dp(2));glow.setColor(0x66ff2338);canvas.drawOval(new RectF(dp(8),dp(4),width-dp(8),height-dp(10)),glow);
+        Paint body=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);canvas.drawBitmap(source,null,new RectF(dp(7),dp(2),width-dp(7),height-dp(16)),body);
+        return result;
     }
 
     private void stopTruckTracking(){
