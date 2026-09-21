@@ -36,27 +36,27 @@ public class SettingsActivity extends Activity {
     private TextView themePreviewTitle;
     private int selectedTheme,accent;
     private final java.util.ArrayList<Button> themeButtons=new java.util.ArrayList<>();
+    private final java.util.ArrayList<View> categoryPanels=new java.util.ArrayList<>();
+    private final java.util.ArrayList<Button> categoryButtons=new java.util.ArrayList<>();
 
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
         prefs=getSharedPreferences("launcher",MODE_PRIVATE);
         selectedTheme=prefs.getInt("theme_choice",0);accent=currentAccent();
         getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
+        getWindow().getDecorView().setSystemUiVisibility(0);
 
-        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(BG);
-        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(24),dp(22),dp(24),dp(44));scroll.addView(root);
+        LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(dp(18),dp(8),dp(18),dp(8));root.setBackgroundColor(BG);root.setFitsSystemWindows(true);
+        root.addView(settingsHeader(),new LinearLayout.LayoutParams(-1,dp(72)));
 
-        TextView eyebrow=text("// TRX COMMAND SYSTEM  •  v"+BuildConfig.VERSION_NAME,12,accent,true);root.addView(eyebrow);
-        TextView title=text("SETTINGS COMMAND CENTER",30,WHITE,true);title.setPadding(0,dp(4),0,0);root.addView(title);
-        TextView subtitle=text("Personalize the cockpit, startup behavior, apps and vehicle alerts.",14,MUTED,false);subtitle.setPadding(0,dp(5),0,dp(18));root.addView(subtitle);
+        LinearLayout cockpit=horizontal();LinearLayout.LayoutParams cockpitLp=new LinearLayout.LayoutParams(-1,0,1);cockpitLp.topMargin=dp(8);root.addView(cockpit,cockpitLp);
+        LinearLayout rail=new LinearLayout(this);rail.setOrientation(LinearLayout.VERTICAL);rail.setPadding(dp(8),dp(10),dp(8),dp(10));rail.setBackground(panelBackground());
+        LinearLayout.LayoutParams railLp=new LinearLayout.LayoutParams(dp(178),-1);railLp.rightMargin=dp(12);cockpit.addView(rail,railLp);
+        TextView railTitle=text("COMMANDS",11,MUTED,true);railTitle.setPadding(dp(10),0,0,dp(8));rail.addView(railTitle,new LinearLayout.LayoutParams(-1,dp(32)));
+        FrameLayout stage=new FrameLayout(this);stage.setBackground(panelBackground());cockpit.addView(stage,new LinearLayout.LayoutParams(0,-1,1));
 
-        LinearLayout health=horizontal();health.addView(statusCard("HOME","TRX DEFAULT",isDefaultHome()),weight());
-        health.addView(statusCard("MEDIA",MediaBridge.hasAccess(this)?"CONNECTED":"ACCESS NEEDED",MediaBridge.hasAccess(this)),weight());
-        boolean gps=checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED;
-        health.addView(statusCard("LOCATION",gps?"READY":"ACCESS NEEDED",gps),weight());root.addView(health);
-
-        LinearLayout appearance=section(root,"// APPEARANCE","Choose a complete cockpit personality. Truck paint, landscape and accents move together.");
-        TextView themeLabel=label("THEME PICKER");appearance.addView(themeLabel);
+        LinearLayout appearance=category("// APPEARANCE","Choose a complete cockpit personality. Paint, landscape and accents move together.");
+        appearance.addView(label("THEME PICKER"));
         LinearLayout themes=horizontal();String[] names={"TRX RED","BAJA AMBER","STEALTH SILVER","HYDRO BLUE","CUSTOM"};
         for(int i=0;i<names.length;i++){final int index=i;Button button=new Button(this);button.setText(names[i]);button.setTextSize(11);button.setTextColor(WHITE);button.setAllCaps(false);button.setPadding(dp(3),0,dp(3),0);button.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);updateThemeButtons();styleAccentControls();updateThemePreview();});themeButtons.add(button);themes.addView(button,weightHeight(72));}
         appearance.addView(themes);updateThemeButtons();
@@ -65,49 +65,84 @@ public class SettingsActivity extends Activity {
         themePreview=new ImageView(this);themePreview.setScaleType(ImageView.ScaleType.CENTER_CROP);previewFrame.addView(themePreview,new FrameLayout.LayoutParams(-1,-1));
         android.view.View shade=new android.view.View(this);shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0x10000000,0xd9000000}));previewFrame.addView(shade,new FrameLayout.LayoutParams(-1,-1));
         themePreviewTitle=text("",14,WHITE,true);themePreviewTitle.setGravity(Gravity.BOTTOM|Gravity.LEFT);themePreviewTitle.setPadding(dp(16),0,dp(16),dp(13));previewFrame.addView(themePreviewTitle,new FrameLayout.LayoutParams(-1,-1));
-        LinearLayout.LayoutParams previewParams=new LinearLayout.LayoutParams(-1,dp(150));previewParams.topMargin=dp(8);appearance.addView(previewFrame,previewParams);updateThemePreview();
+        LinearLayout.LayoutParams previewParams=new LinearLayout.LayoutParams(-1,dp(162));previewParams.topMargin=dp(7);appearance.addView(previewFrame,previewParams);updateThemePreview();
 
         customHex=edit(String.format(java.util.Locale.US,"#%06X",prefs.getInt("custom_accent",0xffff2338)&0xffffff));
         customHex.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){if(selectedTheme==4){accent=themeColor(4);updateThemeButtons();styleAccentControls();updateThemePreview();}}public void afterTextChanged(android.text.Editable s){}});
-        addControl(appearance,"CUSTOM ACCENT HEX",customHex);
+        LinearLayout appearanceControls=horizontal();LinearLayout leftControls=new LinearLayout(this),rightControls=new LinearLayout(this);leftControls.setOrientation(LinearLayout.VERTICAL);rightControls.setOrientation(LinearLayout.VERTICAL);
+        appearanceControls.addView(leftControls,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams rc=new LinearLayout.LayoutParams(0,-2,1);rc.leftMargin=dp(8);appearanceControls.addView(rightControls,rc);appearance.addView(appearanceControls);
+        addControl(leftControls,"CUSTOM ACCENT HEX",customHex);
         displayMode=spinner(new String[]{"Automatic day / night","Day cockpit","Night cockpit"});
-        displayMode.setSelection(prefs.getInt("display_mode",0));addControl(appearance,"DISPLAY MODE",displayMode);
+        displayMode.setSelection(prefs.getInt("display_mode",0));addControl(rightControls,"DISPLAY MODE",displayMode);
         backgroundStyle=spinner(new String[]{"Carbon fiber","Topographic","Mountain silhouette"});
-        backgroundStyle.setSelection(prefs.getInt("background_style",0));addControl(appearance,"BACKGROUND STYLE",backgroundStyle);
-        reduceMotion=toggle("Reduce page animation and motion",prefs.getBoolean("reduce_motion",false));addControl(appearance,"REDUCE MOTION",reduceMotion);
+        backgroundStyle.setSelection(prefs.getInt("background_style",0));addControl(leftControls,"BACKGROUND STYLE",backgroundStyle);
+        reduceMotion=toggle("Reduce animation",prefs.getBoolean("reduce_motion",false));addControl(rightControls,"REDUCE MOTION",reduceMotion);
         iconSize=new SeekBar(this);iconSize.setMax(40);iconSize.setProgress(Math.max(0,Math.min(40,prefs.getInt("app_icon_percent",100)-80)));
         iconSizeValue=text((iconSize.getProgress()+80)+"%",14,WHITE,true);iconSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int progress,boolean fromUser){iconSizeValue.setText((progress+80)+"%");}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}});
-        LinearLayout iconRow=horizontal();iconRow.addView(iconSize,new LinearLayout.LayoutParams(0,dp(58),1));LinearLayout.LayoutParams valueParams=new LinearLayout.LayoutParams(dp(70),dp(58));iconRow.addView(iconSizeValue,valueParams);addControl(appearance,"APP ICON SIZE",iconRow);
+        LinearLayout iconRow=horizontal();iconRow.addView(iconSize,new LinearLayout.LayoutParams(0,dp(48),1));LinearLayout.LayoutParams valueParams=new LinearLayout.LayoutParams(dp(58),dp(48));iconRow.addView(iconSizeValue,valueParams);addControl(leftControls,"APP ICON SIZE",iconRow);
+        Button apply=action("APPLY COCKPIT THEME",true,false);rightControls.addView(apply,buttonParams());apply.setOnClickListener(v->{if(saveSettings(false))toast("Cockpit theme applied");});
 
-        LinearLayout behavior=section(root,"// STARTUP & DEFAULTS","Control what appears when the Ottocast wakes up.");
-        startupPage=spinner(new String[]{"Resume last page","Home","Navigation","Media","Performance","Apps"});
-        int startup=prefs.getInt("startup_page",-1);startupPage.setSelection(startup<0?0:startup+1);addControl(behavior,"STARTUP PAGE",startupPage);
-        navigation=spinner(new String[]{"Google Maps","Waze"});navigation.setSelection(prefs.getInt("nav_choice",0));addControl(behavior,"PREFERRED NAVIGATION",navigation);
-        media=spinner(new String[]{"Spotify","YouTube Music","Apple Music","System Default"});media.setSelection(prefs.getInt("media_choice",0));addControl(behavior,"PREFERRED MEDIA",media);
-        home=edit(prefs.getString("home_destination","Home"));addControl(behavior,"HOME DESTINATION",home);
-        work=edit(prefs.getString("work_destination","Work"));addControl(behavior,"WORK DESTINATION",work);
+        LinearLayout navigationPanel=category("// NAVIGATION","Google routing, saved destinations and map behavior.");
+        navigation=spinner(new String[]{"Google Maps","Waze"});navigation.setSelection(prefs.getInt("nav_choice",0));addControl(navigationPanel,"PREFERRED NAVIGATION",navigation);
+        home=edit(prefs.getString("home_destination","Home"));addControl(navigationPanel,"HOME DESTINATION",home);
+        work=edit(prefs.getString("work_destination","Work"));addControl(navigationPanel,"WORK DESTINATION",work);
+        TextView navNote=infoCard("GOOGLE MAPS LIVE",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED?"Location ready • turn-by-turn enabled":"Location permission required for live guidance",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED);navigationPanel.addView(navNote,buttonParams());
 
-        LinearLayout mediaPanel=section(root,"// MEDIA SYSTEM","Manage online queue artwork and the local cover cache.");
+        LinearLayout mediaPanel=category("// MEDIA","Choose the default source and manage album artwork.");
+        media=spinner(new String[]{"Spotify","YouTube Music","Apple Music","System Default"});media.setSelection(prefs.getInt("media_choice",0));addControl(mediaPanel,"PREFERRED MEDIA",media);
         onlineArtwork=toggle("Look up missing Up Next covers",prefs.getBoolean("online_artwork",true));addControl(mediaPanel,"QUEUE ARTWORK",onlineArtwork);
+        mediaPanel.addView(infoCard("MEDIA SESSION",MediaBridge.hasAccess(this)?"Access connected":"Tap Permission Health to connect",MediaBridge.hasAccess(this)),buttonParams());
         Button clearArt=action("CLEAR ARTWORK CACHE",false,false);mediaPanel.addView(clearArt,buttonParams());clearArt.setOnClickListener(v->{MediaBridge.clearArtworkCache();toast("Artwork cache cleared");});
 
-        LinearLayout performance=section(root,"// PERFORMANCE SAFETY","Visual reminders only; factory vehicle warnings always take priority.");
-        Button obdSetup=action("SET UP OBDLINK MX+",false,false);performance.addView(obdSetup,buttonParams());obdSetup.setOnClickListener(v->ObdSetup.show(this));
-        alerts=toggle("Enable visual gauge warnings",prefs.getBoolean("performance_alerts",true));addControl(performance,"WARNING DISPLAY",alerts);
-        coolantWarning=numberEdit(prefs.getFloat("warn_coolant",235f));addControl(performance,"COOLANT WARNING (°F)",coolantWarning);
-        intakeWarning=numberEdit(prefs.getFloat("warn_intake",170f));addControl(performance,"INTAKE TEMPERATURE WARNING (°F)",intakeWarning);
-        voltageWarning=numberEdit(prefs.getFloat("warn_voltage",11.8f));addControl(performance,"LOW-VOLTAGE WARNING (V)",voltageWarning);
+        LinearLayout vehicle=category("// VEHICLE & OBD","Pair OBDLink MX+ and set visual safety thresholds.");
+        vehicle.addView(infoCard("OBDLINK MX+",ObdBridge.connected?"CONNECTED":"READY TO PAIR",ObdBridge.connected),buttonParams());
+        Button obdSetup=action("SET UP OBDLINK MX+",true,false);vehicle.addView(obdSetup,buttonParams());obdSetup.setOnClickListener(v->ObdSetup.show(this));
+        alerts=toggle("Enable visual gauge warnings",prefs.getBoolean("performance_alerts",true));addControl(vehicle,"WARNING DISPLAY",alerts);
+        LinearLayout thresholds=horizontal();LinearLayout th1=new LinearLayout(this),th2=new LinearLayout(this),th3=new LinearLayout(this);th1.setOrientation(LinearLayout.VERTICAL);th2.setOrientation(LinearLayout.VERTICAL);th3.setOrientation(LinearLayout.VERTICAL);thresholds.addView(th1,new LinearLayout.LayoutParams(0,-2,1));thresholds.addView(th2,new LinearLayout.LayoutParams(0,-2,1));thresholds.addView(th3,new LinearLayout.LayoutParams(0,-2,1));vehicle.addView(thresholds);
+        coolantWarning=numberEdit(prefs.getFloat("warn_coolant",235f));addControl(th1,"COOLANT °F",coolantWarning);
+        intakeWarning=numberEdit(prefs.getFloat("warn_intake",170f));addControl(th2,"INTAKE °F",intakeWarning);
+        voltageWarning=numberEdit(prefs.getFloat("warn_voltage",11.8f));addControl(th3,"LOW VOLTAGE",voltageWarning);
 
-        LinearLayout system=section(root,"// SYSTEM TOOLS","Launcher role, permissions, history and first-run controls.");
-        LinearLayout systemButtons=horizontal();Button launcher=action("DEFAULT LAUNCHER",false,false),permissions=action("PERMISSION HEALTH",false,false);systemButtons.addView(launcher,weightHeight(62));systemButtons.addView(permissions,weightHeight(62));system.addView(systemButtons);
-        launcher.setOnClickListener(v->{try{startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));}catch(Throwable ignored){startActivity(new Intent(Settings.ACTION_SETTINGS));}});
+        LinearLayout launcherPanel=category("// LAUNCHER","Startup behavior and Android launcher role.");
+        startupPage=spinner(new String[]{"Resume last page","Home","Navigation","Media","Performance","Apps"});
+        int startup=prefs.getInt("startup_page",-1);startupPage.setSelection(startup<0?0:startup+1);addControl(launcherPanel,"STARTUP PAGE",startupPage);
+        launcherPanel.addView(infoCard("DEFAULT HOME",isDefaultHome()?"TRX Launcher is active":"Android launcher role not selected",isDefaultHome()),buttonParams());
+        Button launcher=action("SET AS DEFAULT LAUNCHER",true,false);launcherPanel.addView(launcher,buttonParams());launcher.setOnClickListener(v->{try{startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));}catch(Throwable ignored){startActivity(new Intent(Settings.ACTION_SETTINGS));}});
+
+        LinearLayout system=category("// SYSTEM","Permissions, history and first-run controls.");
+        LinearLayout systemButtons=horizontal();Button systemLauncher=action("DEFAULT LAUNCHER",false,false),permissions=action("PERMISSION HEALTH",false,false);systemButtons.addView(systemLauncher,weightHeight(62));systemButtons.addView(permissions,weightHeight(62));system.addView(systemButtons);
+        systemLauncher.setOnClickListener(v->{try{startActivity(new Intent(Settings.ACTION_HOME_SETTINGS));}catch(Throwable ignored){startActivity(new Intent(Settings.ACTION_SETTINGS));}});
         permissions.setOnClickListener(v->openMissingPermission());
         Button clearRuns=action("CLEAR 0–60 HISTORY",false,false);system.addView(clearRuns,buttonParams());clearRuns.setOnClickListener(v->{prefs.edit().remove("performance_runs").apply();toast("Performance history cleared");});
         Button reset=action("RESET FIRST-RUN EXPERIENCE",false,true);system.addView(reset,buttonParams());reset.setOnClickListener(v->{prefs.edit().putBoolean("first_run_complete",false).apply();startActivity(new Intent(this,FirstRunActivity.class));finish();});
 
-        Button save=action("SAVE & RETURN TO TRX",true,false);LinearLayout.LayoutParams saveParams=new LinearLayout.LayoutParams(-1,dp(72));saveParams.topMargin=dp(18);root.addView(save,saveParams);save.setOnClickListener(v->saveAndClose());
-        TextView footer=text("BUILT TO DOMINATE  //  SETTINGS APPLY AFTER RETURN",11,MUTED,true);footer.setGravity(Gravity.CENTER);footer.setPadding(0,dp(16),0,0);root.addView(footer);
-        setContentView(scroll);styleAccentControls();
+        String[] categories={"APPEARANCE","NAVIGATION","MEDIA","VEHICLE & OBD","LAUNCHER","SYSTEM"};View[] panels={wrap(appearance),wrap(navigationPanel),wrap(mediaPanel),wrap(vehicle),wrap(launcherPanel),wrap(system)};
+        for(int i=0;i<categories.length;i++){final int index=i;Button b=action(categories[i],false,false);b.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);b.setPadding(dp(14),0,dp(8),0);b.setOnClickListener(v->selectCategory(index));categoryButtons.add(b);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,0,1);bp.setMargins(0,dp(3),0,dp(3));rail.addView(b,bp);categoryPanels.add(panels[i]);stage.addView(panels[i],new FrameLayout.LayoutParams(-1,-1));}
+        selectCategory(0);
+        root.addView(settingsDock(),new LinearLayout.LayoutParams(-1,dp(82)));
+        setContentView(root);styleAccentControls();
+    }
+
+    private View settingsHeader(){
+        LinearLayout bar=horizontal();bar.setPadding(dp(12),0,dp(10),0);bar.setBackground(background(0xff080b0f,accent,12));
+        TextView ram=text("RAM",24,WHITE,true);bar.addView(ram,new LinearLayout.LayoutParams(dp(74),-1));
+        TextView brand=text("TRX LAUNCHER  /  SETTINGS",15,accent,true);brand.setPadding(dp(12),0,0,0);bar.addView(brand,new LinearLayout.LayoutParams(0,-1,1));
+        TextView version=text("v"+BuildConfig.VERSION_NAME,11,MUTED,true);version.setGravity(Gravity.CENTER);bar.addView(version,new LinearLayout.LayoutParams(dp(76),-1));
+        Button done=action("SAVE & RETURN",true,false);done.setOnClickListener(v->saveAndClose());bar.addView(done,new LinearLayout.LayoutParams(dp(142),dp(50)));return bar;
+    }
+    private LinearLayout category(String title,String subtitle){
+        LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(18),dp(14),dp(18),dp(18));
+        panel.addView(text(title,22,WHITE,true),new LinearLayout.LayoutParams(-1,dp(34)));
+        TextView note=text(subtitle,12,MUTED,false);note.setPadding(0,0,0,dp(8));panel.addView(note,new LinearLayout.LayoutParams(-1,dp(34)));return panel;
+    }
+    private View wrap(View content){ScrollView s=new ScrollView(this);s.setFillViewport(true);s.setOverScrollMode(View.OVER_SCROLL_NEVER);s.addView(content,new ScrollView.LayoutParams(-1,-2));return s;}
+    private TextView infoCard(String title,String detail,boolean ready){TextView v=text(title+"   •   "+detail,13,ready?GREEN:0xffff7682,true);v.setPadding(dp(16),0,dp(16),0);v.setBackground(background(CARD,ready?0xff24663c:0xff6d2630,10));return v;}
+    private void selectCategory(int selected){
+        for(int i=0;i<categoryPanels.size();i++){categoryPanels.get(i).setVisibility(i==selected?View.VISIBLE:View.GONE);Button b=categoryButtons.get(i);b.setTextColor(i==selected?accent:WHITE);b.setBackground(background(i==selected?darken(accent,.25f):CARD,i==selected?accent:0xff343a42,10));}
+    }
+    private View settingsDock(){
+        LinearLayout dock=horizontal();dock.setPadding(0,dp(8),0,0);String[] names={"⌂  HOME","➤  NAVIGATION","♫  MEDIA","◴  PERFORMANCE","▦  APPS"};
+        for(int i=0;i<names.length;i++){final int page=i;Button b=action(names[i],false,false);b.setTextSize(11);b.setOnClickListener(v->{if(saveSettings(false)){prefs.edit().putInt("page",page).apply();setResult(RESULT_OK,new Intent());finish();}});dock.addView(b,weightHeight(68));}return dock;
     }
 
     private LinearLayout section(LinearLayout root,String heading,String subtitle){
@@ -144,8 +179,12 @@ public class SettingsActivity extends Activity {
     private int darken(int color,float factor){return Color.rgb(Math.round(Color.red(color)*factor),Math.round(Color.green(color)*factor),Math.round(Color.blue(color)*factor));}
 
     private void saveAndClose(){
-        int custom;try{custom=Color.parseColor(customHex.getText().toString().trim());}catch(Throwable ignored){customHex.setError("Use a color such as #FF2338");return;}
-        if(!validNumber(coolantWarning,100,300)||!validNumber(intakeWarning,0,300)||!validNumber(voltageWarning,8,16))return;
+        if(!saveSettings(true))return;
+        setResult(RESULT_OK,new Intent());finish();
+    }
+    private boolean saveSettings(boolean showErrors){
+        int custom;try{custom=Color.parseColor(customHex.getText().toString().trim());}catch(Throwable ignored){customHex.setError("Use a color such as #FF2338");return false;}
+        if(!validNumber(coolantWarning,100,300)||!validNumber(intakeWarning,0,300)||!validNumber(voltageWarning,8,16))return false;
         int startup=startupPage.getSelectedItemPosition()==0?-1:startupPage.getSelectedItemPosition()-1;
         prefs.edit().putInt("theme_choice",selectedTheme).putInt("custom_accent",custom).putString("custom_hex",customHex.getText().toString().trim())
             .putInt("display_mode",displayMode.getSelectedItemPosition()).putInt("app_icon_percent",iconSize.getProgress()+80).putInt("startup_page",startup)
@@ -154,7 +193,7 @@ public class SettingsActivity extends Activity {
             .putString("home_destination",home.getText().toString().trim()).putString("work_destination",work.getText().toString().trim())
             .putBoolean("online_artwork",onlineArtwork.isChecked()).putBoolean("performance_alerts",alerts.isChecked())
             .putFloat("warn_coolant",number(coolantWarning,235f)).putFloat("warn_intake",number(intakeWarning,170f)).putFloat("warn_voltage",number(voltageWarning,11.8f)).apply();
-        setResult(RESULT_OK,new Intent());finish();
+        return true;
     }
 
     private void openMissingPermission(){

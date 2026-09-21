@@ -451,7 +451,8 @@ public final class DashboardView extends View {
         sectionTabs(c,32,82,new String[]{"Now Playing","Queue","Sources","Audio"},0);
         panel(c,32,164,1048,1284,"");
         text(c,"NOW PLAYING",54,204,12,RED,true);
-        p.setTextAlign(Paint.Align.RIGHT);text(c,MediaBridge.hasAccess(activity)?"● MEDIA SESSION LIVE":"● MEDIA ACCESS REQUIRED",1024,204,10,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);p.setTextAlign(Paint.Align.LEFT);
+        boolean activeMedia=MediaBridge.title!=null&&!MediaBridge.title.trim().isEmpty();
+        p.setTextAlign(Paint.Align.RIGHT);text(c,activeMedia?"● MEDIA SESSION LIVE":MediaBridge.hasAccess(activity)?"● MEDIA ACCESS READY":"● MEDIA ACCESS REQUIRED",1024,204,10,MediaBridge.hasAccess(activity)?0xff55d88a:RED,true);p.setTextAlign(Paint.Align.LEFT);
 
         drawSquareMediaArtwork(c,54,224,360);
         fittedText(c,MediaBridge.title==null||MediaBridge.title.isEmpty()?"NO TRACK PLAYING":MediaBridge.title.toUpperCase(Locale.US),450,316,1010,36,WHITE,true);
@@ -461,11 +462,11 @@ public final class DashboardView extends View {
         mediaProgress(c,450,485,1010);
 
         drawMediaVisualizer(c,54,610,1010,770);
-        button(c,86,812,176,898,"↝",false);
-        button(c,286,790,430,925,"|◀",false);
-        button(c,468,770,612,945,MediaBridge.playing?"Ⅱ":"▶",true);
-        button(c,650,790,794,925,"▶|",false);
-        button(c,904,812,994,898,"↻",false);
+        mediaControl(c,130,855,40,"SHUFFLE",false);
+        mediaControl(c,358,855,62,"PREVIOUS",false);
+        mediaControl(c,540,855,78,MediaBridge.playing?"PAUSE":"PLAY",true);
+        mediaControl(c,722,855,62,"NEXT",false);
+        mediaControl(c,950,855,40,"REPEAT",false);
 
         text(c,"UP NEXT",54,995,13,MUTED,true);
         p.setTextAlign(Paint.Align.RIGHT);text(c,"LIVE QUEUE",1010,995,10,0xff55d88a,true);p.setTextAlign(Paint.Align.LEFT);
@@ -482,11 +483,24 @@ public final class DashboardView extends View {
     private void drawSquareMediaArtwork(Canvas c,float left,float top,float size){
         RectF frame=new RectF(x(left),y(top),x(left+size),y(top+size));raisedBox(c,frame,true,18);
         RectF art=new RectF(x(left+12),y(top+12),x(left+size-12),y(top+size-12));
-        Bitmap source=MediaBridge.artwork!=null?MediaBridge.artwork:defaultMediaArt;
+        Bitmap source=MediaBridge.artwork;
         path.reset();path.addRoundRect(art,x(12),x(12),Path.Direction.CW);c.save();c.clipPath(path);
         p.setColor(0xff130609);c.drawRect(art,p);
-        if(source!=null){int side=Math.min(source.getWidth(),source.getHeight());int sx=(source.getWidth()-side)/2,sy=(source.getHeight()-side)/2;c.drawBitmap(source,new Rect(sx,sy,sx+side,sy+side),art,p);}
+        if(source!=null){int side=Math.min(source.getWidth(),source.getHeight());int sx=(source.getWidth()-side)/2,sy=(source.getHeight()-side)/2;c.drawBitmap(source,new Rect(sx,sy,sx+side,sy+side),art,p);}else drawMediaPlaceholder(c,art);
         c.restore();p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(2));p.setColor((RED&0x00ffffff)|0xcc000000);c.drawRoundRect(art,x(12),x(12),p);p.setStyle(Paint.Style.FILL);
+    }
+
+    private void drawMediaPlaceholder(Canvas c,RectF art){
+        float cx=(art.left+art.right)/2,cy=(art.top+art.bottom)/2,r=(art.right-art.left)*.34f;
+        p.setShader(new RadialGradient(cx,cy,r*1.4f,0xff2c1117,0xff050608,Shader.TileMode.CLAMP));c.drawRect(art,p);p.setShader(null);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(18));p.setColor(0xff171a1f);c.drawCircle(cx,cy,r,p);p.setStrokeWidth(x(4));p.setColor(0xff5a2028);c.drawCircle(cx,cy,r*.72f,p);p.setStrokeWidth(x(2));p.setColor(RED);c.drawCircle(cx,cy,r*.36f,p);p.setStyle(Paint.Style.FILL);
+        for(int i=0;i<29;i++){float xx=cx-r*.78f+i*r*1.56f/28f,amp=x(7+(float)Math.abs(Math.sin(i*.64))*25);line(c,xx/u,(cy-amp-safeTop)*1440f/usableH,xx/u,(cy+amp-safeTop)*1440f/usableH,i%3==0?RED:0xff8c1e2c,2);}
+    }
+
+    private void mediaControl(Canvas c,float cx,float cy,float radius,String kind,boolean primary){
+        p.setShader(new RadialGradient(x(cx),y(cy),x(radius),primary?0xff65131e:0xff252a31,0xff050608,Shader.TileMode.CLAMP));c.drawCircle(x(cx),y(cy),x(radius),p);p.setShader(null);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(primary?3:1));p.setColor(primary?RED:0xff565d66);c.drawCircle(x(cx),y(cy),x(radius),p);if(primary){p.setStrokeWidth(x(1));p.setColor(0x99ffffff);c.drawCircle(x(cx),y(cy),x(radius-8),p);}p.setStyle(Paint.Style.FILL);
+        paint(primary?WHITE:0xffe6e7e9,primary?30:22,true);p.setTextAlign(Paint.Align.CENTER);String icon=kind.equals("PLAY")?"▶":kind.equals("PAUSE")?"Ⅱ":kind.equals("PREVIOUS")?"◀❙":kind.equals("NEXT")?"❙▶":kind.equals("SHUFFLE")?"⇄":"↻";c.drawText(icon,x(cx),y(cy+(primary?11:8)),p);p.setTextAlign(Paint.Align.LEFT);
     }
 
     private void drawBottomMediaQueue(Canvas c,float left,float top){
@@ -509,7 +523,7 @@ public final class DashboardView extends View {
         int bars=72;float width=(right-left)/bars,phase=MediaBridge.playing?SystemClock.uptimeMillis()/155f:0;
         for(int i=0;i<bars;i++){
             float wave=(float)(.18+.82*Math.abs(Math.sin(i*.41+phase)*Math.cos(i*.17-phase*.73)));
-            if(!MediaBridge.playing)wave=.12f+(i%7)*.018f;
+            if(!MediaBridge.playing)wave=(float)(.22+.44*Math.abs(Math.sin(i*.39)*Math.cos(i*.13+.7)));
             float h=(bottom-top-20)*wave*.46f,cx=left+(i+.5f)*width,mid=(top+bottom)/2;
             p.setShader(new LinearGradient(x(cx),y(mid-h),x(cx),y(mid+h),0x44ff2338,RED,Shader.TileMode.CLAMP));
             c.drawRoundRect(new RectF(x(cx-width*.24f),y(mid-h),x(cx+width*.24f),y(mid+h)),x(3),x(3),p);p.setShader(null);
@@ -591,12 +605,12 @@ public final class DashboardView extends View {
     private void performance(Canvas c){
         sectionTabs(c,32,82,new String[]{"Gauges","Performance","Diagnostics","OBD Setup"},0);
         panel(c,32,164,1048,1284,"");
-        text(c,"●  "+trim(ObdBridge.status,58),54,200,12,ObdBridge.connected?0xff55d88a:MUTED,true);
-        p.setTextAlign(Paint.Align.RIGHT);text(c,ObdBridge.connected?"LIVE DATA":"GPS FALLBACK",1022,200,10,ObdBridge.connected?0xff55d88a:MUTED,true);p.setTextAlign(Paint.Align.LEFT);
-        performanceGauge(c,58,235,340,"RPM",obdText(ObdBridge.rpm,0),"RPM",obdLevel(ObdBridge.rpm,0,7000));
-        performanceGauge(c,399,235,681,"BOOST",obdText(ObdBridge.boostPsi,1),"PSI",obdLevel(ObdBridge.boostPsi,0,15));
+        RectF connection=new RectF(x(52),y(178),x(1028),y(222));raisedBox(c,connection,ObdBridge.connected,10);text(c,"●  "+trim(ObdBridge.status,58),70,207,11,ObdBridge.connected?0xff55d88a:WHITE,true);
+        p.setTextAlign(Paint.Align.RIGHT);text(c,ObdBridge.connected?"OBDLINK MX+  •  LIVE DATA":"TAP OBD SETUP TO PAIR  •  GPS FALLBACK",1008,207,10,ObdBridge.connected?0xff55d88a:MUTED,true);p.setTextAlign(Paint.Align.LEFT);
+        performanceGauge(c,58,240,340,"RPM",obdText(ObdBridge.rpm,0),"RPM",obdLevel(ObdBridge.rpm,0,7000));
+        performanceGauge(c,399,240,681,"BOOST",obdText(ObdBridge.boostPsi,1),"PSI",obdLevel(ObdBridge.boostPsi,0,15));
         float liveSpeed=Float.isNaN(ObdBridge.obdSpeedMph)?speedMph:ObdBridge.obdSpeedMph;
-        performanceGauge(c,740,235,1022,"SPEED",obdText(liveSpeed,0),"MPH",obdLevel(liveSpeed,0,120));
+        performanceGauge(c,740,240,1022,"SPEED",obdText(liveSpeed,0),"MPH",obdLevel(liveSpeed,0,120));
         drawVehicleTelemetry(c);
         drawPerformanceSummary(c);
     }
@@ -605,19 +619,23 @@ public final class DashboardView extends View {
         float cx=(left+right)/2,cy=top+142,radius=(right-left)/2-16;
         RectF outer=new RectF(x(cx-radius),y(cy-radius),x(cx+radius),y(cy+radius));p.setShader(new RadialGradient(x(cx),y(cy),x(radius),0xff15191e,0xff020304,Shader.TileMode.CLAMP));c.drawOval(outer,p);p.setShader(null);
         p.setStyle(Paint.Style.STROKE);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeWidth(x(12));p.setColor(0xff30353d);c.drawArc(outer,145,250,false,p);p.setColor(RED);c.drawArc(outer,145,Math.max(8,250*level),false,p);
+        for(int i=0;i<=20;i++){double a=Math.toRadians(145+250*i/20f);float r1=radius-19-(i%5==0?7:0),r2=radius-7;float x1=cx+(float)Math.cos(a)*r1,y1=cy+(float)Math.sin(a)*r1,x2=cx+(float)Math.cos(a)*r2,y2=cy+(float)Math.sin(a)*r2;p.setStrokeWidth(x(i%5==0?2:1));p.setColor(i/20f<=level?RED:0xff69717b);c.drawLine(x(x1),y(y1),x(x2),y(y2),p);}
         p.setStrokeWidth(x(1));p.setColor(0xff59616b);c.drawOval(outer,p);p.setStyle(Paint.Style.FILL);p.setStrokeCap(Paint.Cap.BUTT);
         paint(MUTED,13,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(label,x(cx),y(cy-30),p);paint(WHITE,37,true);c.drawText(value,x(cx),y(cy+20),p);paint(MUTED,12,true);c.drawText(unit,x(cx),y(cy+48),p);p.setTextAlign(Paint.Align.LEFT);
     }
     private void drawVehicleTelemetry(Canvas c){
-        text(c,"TIRE PRESSURE",54,575,11,MUTED,true);text(c,"INTAKE AIR",860,575,11,MUTED,true);
-        float cx=540,top=568,bottom=858;
-        p.setShader(new LinearGradient(x(cx-120),y(top),x(cx+120),y(bottom),0xffff3448,0xff4d050c,Shader.TileMode.CLAMP));
-        RectF body=new RectF(x(cx-92),y(top+24),x(cx+92),y(bottom-16));c.drawRoundRect(body,x(42),x(42),p);p.setShader(null);
-        p.setColor(0xff050608);c.drawRoundRect(new RectF(x(cx-68),y(top+68),x(cx+68),y(top+132)),x(18),x(18),p);c.drawRoundRect(new RectF(x(cx-65),y(top+166),x(cx+65),y(top+224)),x(16),x(16),p);
-        p.setColor(0xff171a1f);for(int side=-1;side<=1;side+=2){c.drawRoundRect(new RectF(x(cx+side*104-18),y(top+54),x(cx+side*104+18),y(top+115)),x(10),x(10),p);c.drawRoundRect(new RectF(x(cx+side*104-18),y(top+188),x(cx+side*104+18),y(top+249)),x(10),x(10),p);}
-        paint(WHITE,14,true);p.setTextAlign(Paint.Align.CENTER);c.drawText("TRX",x(cx),y(top+163),p);p.setTextAlign(Paint.Align.LEFT);
-        telemetryValue(c,70,650,"FL","-- PSI");telemetryValue(c,70,790,"RL","-- PSI");telemetryValue(c,770,650,"FR","-- PSI");telemetryValue(c,770,790,"RR","-- PSI");
-        telemetryValue(c,850,635,"INTAKE",obdText(ObdBridge.intakeF,0)+"°F");telemetryValue(c,850,765,"TRANS",obdText(ObdBridge.transmissionF,0)+"°F");
+        text(c,"TIRE PRESSURE",54,575,11,MUTED,true);text(c,"POWERTRAIN TEMPERATURE",840,575,11,MUTED,true);
+        float cx=540,top=570,bottom=862;
+        // Detailed top-down TRX silhouette: hood, cab, bed, lighting and four exposed tires.
+        p.setColor(0xff101318);for(int side=-1;side<=1;side+=2){c.drawRoundRect(new RectF(x(cx+side*105-18),y(top+55),x(cx+side*105+18),y(top+120)),x(9),x(9),p);c.drawRoundRect(new RectF(x(cx+side*105-18),y(top+198),x(cx+side*105+18),y(top+263)),x(9),x(9),p);}
+        path.reset();path.moveTo(x(cx-78),y(top+22));path.lineTo(x(cx+78),y(top+22));path.lineTo(x(cx+91),y(top+72));path.lineTo(x(cx+86),y(bottom-28));path.lineTo(x(cx+70),y(bottom));path.lineTo(x(cx-70),y(bottom));path.lineTo(x(cx-86),y(bottom-28));path.lineTo(x(cx-91),y(top+72));path.close();p.setShader(new LinearGradient(x(cx-90),y(top),x(cx+90),y(bottom),0xffff3046,0xff610711,Shader.TileMode.CLAMP));c.drawPath(path,p);p.setShader(null);
+        p.setColor(0xff090b0e);c.drawRoundRect(new RectF(x(cx-64),y(top+70),x(cx+64),y(top+139)),x(13),x(13),p);c.drawRoundRect(new RectF(x(cx-68),y(top+188),x(cx+68),y(top+254)),x(10),x(10),p);
+        p.setColor(0xff282d34);c.drawRoundRect(new RectF(x(cx-56),y(top+82),x(cx+56),y(top+126)),x(8),x(8),p);line(c,cx,top+82,cx,top+126,0xff111419,2);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(3));p.setColor(0xffcf2233);c.drawRoundRect(new RectF(x(cx-68),y(top+188),x(cx+68),y(top+254)),x(10),x(10),p);p.setStyle(Paint.Style.FILL);
+        p.setColor(0xffffe8cf);c.drawRoundRect(new RectF(x(cx-58),y(top+28),x(cx-18),y(top+35)),x(3),x(3),p);c.drawRoundRect(new RectF(x(cx+18),y(top+28),x(cx+58),y(top+35)),x(3),x(3),p);
+        paint(WHITE,12,true);p.setTextAlign(Paint.Align.CENTER);c.drawText("RAM",x(cx),y(top+174),p);p.setTextAlign(Paint.Align.LEFT);
+        telemetryValue(c,70,650,"FL","-- PSI");telemetryValue(c,70,790,"RL","-- PSI");telemetryValue(c,710,650,"FR","-- PSI");telemetryValue(c,710,790,"RR","-- PSI");
+        telemetryValue(c,870,650,"INTAKE",obdText(ObdBridge.intakeF,0)+"°F");telemetryValue(c,870,790,"TRANS",obdText(ObdBridge.transmissionF,0)+"°F");
     }
     private void telemetryValue(Canvas c,float left,float top,String label,String value){text(c,value,left,top,24,WHITE,true);text(c,label,left,top+27,10,MUTED,true);line(c,left,top+37,left+112,top+37,RED,2);}
     private void drawPerformanceSummary(Canvas c){
@@ -651,7 +669,7 @@ public final class DashboardView extends View {
         }
         c.restore();
         drawAppRailFull(c);
-        text(c,"HOLD AN APP FOR OPTIONS  •  EDIT CHANGES HOME QUICK LAUNCH",54,1260,10,MUTED,true);
+        text(c,"HOLD FOR OPTIONS   •   EDIT HOME QUICK LAUNCH",54,1266,10,MUTED,true);
         if(displayApps.isEmpty())text(c,favoriteAppsOnly?"NO FAVORITES YET":"NO APPS IN THIS CATEGORY",58,375,20,MUTED,true);
     }
     private void drawAppRailFull(Canvas c){
@@ -740,8 +758,8 @@ public final class DashboardView extends View {
         p.setShader(new LinearGradient(card.left,card.top,card.left,card.bottom,selected?0xff343a42:0xff242930,0xff050608,Shader.TileMode.CLAMP));c.drawRoundRect(card,x(18),x(18),p);p.setShader(null);
         p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(selected?2:1));p.setColor(selected?0xffe2e5e9:0xff333941);c.drawRoundRect(card,x(18),x(18),p);p.setStyle(Paint.Style.FILL);
         line(c,l+22,t+9,r-22,t+9,selected?0x99ffffff:0x446f7781,1);
-        Drawable icon=a.icon;float iconScale=Math.max(.8f,Math.min(1.2f,prefs.getInt("app_icon_percent",100)/100f));int sz=Math.max(1,Math.round(74*scale*iconScale)),top=(int)y(t+17+(74-74*iconScale)/2f);try{icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);icon.draw(c);}catch(Throwable ignored){}
-        line(c,l+17,t+107,r-17,t+107,selected?0x88aab0b8:0x443b424b,1);
+        Drawable icon=a.icon;float iconScale=Math.max(.8f,Math.min(1.2f,prefs.getInt("app_icon_percent",100)/100f));int sz=Math.max(1,Math.round(92*scale*iconScale)),top=(int)y(t+14+(92-92*iconScale)/2f);try{icon.setBounds(cx-sz/2,top,cx+sz/2,top+sz);icon.draw(c);}catch(Throwable ignored){}
+        line(c,l+17,t+119,r-17,t+119,selected?0x88aab0b8:0x443b424b,1);
         drawAppLabel(c,a.label,cx,l+10,r-10,b+1,scale);
         if(isFavorite(a)){paint(RED,12,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText("★",x(r-13),y(t+23),p);p.setTextAlign(Paint.Align.LEFT);}
     }

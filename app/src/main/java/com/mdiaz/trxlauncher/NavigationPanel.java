@@ -134,16 +134,16 @@ public class NavigationPanel extends FrameLayout {
             LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
         destination = new EditText(context);
-        destination.setHint("Where to?");
+        destination.setHint("Search destination");
         destination.setSingleLine(true);
         destination.setTextColor(Color.WHITE);
         destination.setHintTextColor(0xff9ca1aa);
-        destination.setTextSize(17);
-        destination.setPadding(dp(22), 0, dp(72), 0);
-        destination.setBackground(panel(0xee05070a, 0xff656a74, 2, 18));
+        destination.setTextSize(15);
+        destination.setPadding(dp(18), 0, dp(58), 0);
+        destination.setBackground(panel(0xf205070a, accent, 1, 14));
         destination.setElevation(dp(10));
-        LayoutParams searchLp = new LayoutParams(LayoutParams.MATCH_PARENT, dp(64), Gravity.TOP);
-        searchLp.setMargins(dp(16), dp(16), dp(16), 0);
+        LayoutParams searchLp = new LayoutParams(LayoutParams.MATCH_PARENT, dp(50), Gravity.TOP);
+        searchLp.setMargins(dp(14), dp(12), dp(14), 0);
         addView(destination, searchLp);
 
         suggestions = new LinearLayout(context);
@@ -160,7 +160,7 @@ public class NavigationPanel extends FrameLayout {
             LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
         LayoutParams suggestionLp = new LayoutParams(
             LayoutParams.MATCH_PARENT, dp(340), Gravity.TOP);
-        suggestionLp.setMargins(dp(16), dp(88), dp(16), 0);
+        suggestionLp.setMargins(dp(14), dp(68), dp(14), 0);
         addView(suggestionScroller, suggestionLp);
 
         destination.setImeOptions(EditorInfo.IME_ACTION_GO);
@@ -184,8 +184,8 @@ public class NavigationPanel extends FrameLayout {
 
         routeButton = button("➤", true);
         routeButton.setContentDescription("Start navigation");
-        LayoutParams routeLp = new LayoutParams(dp(54), dp(54), Gravity.TOP | Gravity.RIGHT);
-        routeLp.setMargins(0, dp(21), dp(21), 0);
+        LayoutParams routeLp = new LayoutParams(dp(42), dp(42), Gravity.TOP | Gravity.RIGHT);
+        routeLp.setMargins(0, dp(16), dp(18), 0);
         addView(routeButton, routeLp);
         routeButton.setOnClickListener(v -> beginNavigation(destination.getText().toString()));
 
@@ -198,8 +198,8 @@ public class NavigationPanel extends FrameLayout {
         addCommand("⌂  HOME", () -> beginNavigation("Home"));
         addCommand("▣  WORK", () -> beginNavigation("Work"));
         addCommand("↻  RECENT", this::showRecentDestinations);
-        LayoutParams commandLp = new LayoutParams(dp(390), dp(54), Gravity.LEFT | Gravity.TOP);
-        commandLp.setMargins(dp(16), dp(92), 0, 0);
+        LayoutParams commandLp = new LayoutParams(dp(318), dp(44), Gravity.LEFT | Gravity.TOP);
+        commandLp.setMargins(dp(14), dp(72), 0, 0);
         addView(commandBar, commandLp);
 
         mapTools = new LinearLayout(context);
@@ -213,8 +213,8 @@ public class NavigationPanel extends FrameLayout {
         addMapTool("◎", this::recenterMap, "Recenter map");
         addMapTool("T", this::toggleTraffic, "Toggle live traffic");
         addMapTool("L", this::toggleMapLayer, "Toggle map layer");
-        LayoutParams toolsLp = new LayoutParams(dp(58), dp(280), Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-        toolsLp.setMargins(0, 0, dp(16), 0);
+        LayoutParams toolsLp = new LayoutParams(dp(50), dp(224), Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        toolsLp.setMargins(0, 0, dp(14), 0);
         addView(mapTools, toolsLp);
 
         status = new TextView(context);
@@ -420,7 +420,7 @@ public class NavigationPanel extends FrameLayout {
                         Log.w("TRXNavigation", "Location setup failed", locationError);
                     }
 
-                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(start, 14.2f));
+                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(start, 15.4f));
                     startTruckTracking();
                     status.setText("MAP CONNECTED • LOADING BASEMAP TILES…");
                     map.setOnMapLoadedCallback(() -> {
@@ -702,7 +702,7 @@ public class NavigationPanel extends FrameLayout {
             android.graphics.Bitmap source=android.graphics.BitmapFactory.decodeResource(
                 getResources(),R.drawable.trx_navigation_marker);
             android.graphics.Bitmap bitmap=android.graphics.Bitmap.createScaledBitmap(
-                source,dp(58),dp(87),true);
+                source,dp(66),dp(99),true);
             truckMarker=googleMap.addMarker(new com.google.android.gms.maps.model.MarkerOptions().position(point).anchor(.5f,.5f).flat(true).zIndex(1000).icon(com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(bitmap)));
             if(truckMarker!=null)Log.i("TRXNavigation","TRUCK_READY");
         }
@@ -866,12 +866,12 @@ public class NavigationPanel extends FrameLayout {
 
     private void addMapTool(String label, Runnable action, String description) {
         Button control = button(label, false);
-        control.setTextSize(19);
+        control.setTextSize(17);
         control.setContentDescription(description);
         control.setMinWidth(0);
         control.setMinimumWidth(0);
         control.setPadding(0, 0, 0, 0);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(46), 0, 1);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(40), 0, 1);
         lp.setMargins(0, dp(2), 0, dp(2));
         mapTools.addView(control, lp);
         control.setOnClickListener(v -> action.run());
