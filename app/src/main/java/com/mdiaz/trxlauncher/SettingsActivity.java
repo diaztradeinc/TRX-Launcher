@@ -7,7 +7,11 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -27,10 +31,10 @@ import android.widget.TextView;
 public class SettingsActivity extends Activity {
     private static final int BG=0xff030507,PANEL=0xff0b0e12,CARD=0xff10141a,WHITE=0xfff5f5f7,MUTED=0xffaeb2ba,GREEN=0xff50dc83;
     private SharedPreferences prefs;
-    private Spinner navigation,media,displayMode,startupPage,backgroundStyle;
+    private Spinner media,displayMode,startupPage,backgroundStyle;
     private EditText home,work,coolantWarning,intakeWarning,voltageWarning,customHex;
-    private android.widget.Switch alerts,onlineArtwork,reduceMotion;
-    private SeekBar iconSize;
+    private android.widget.Switch alerts,onlineArtwork,reduceMotion,heroArtwork;
+    private SeekBar iconSize,accentBrightness;
     private TextView iconSizeValue;
     private ImageView themePreview;
     private TextView themePreviewTitle;
@@ -57,8 +61,8 @@ public class SettingsActivity extends Activity {
 
         LinearLayout appearance=category("// APPEARANCE","Choose a complete cockpit personality. Paint, landscape and accents move together.");
         appearance.addView(label("THEME PICKER"));
-        LinearLayout themes=horizontal();String[] names={"TRX RED","BAJA AMBER","STEALTH SILVER","HYDRO BLUE","CUSTOM"};
-        for(int i=0;i<names.length;i++){final int index=i;Button button=new Button(this);button.setText(names[i]);button.setTextSize(11);button.setTextColor(WHITE);button.setAllCaps(false);button.setPadding(dp(3),0,dp(3),0);button.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);updateThemeButtons();styleAccentControls();updateThemePreview();});themeButtons.add(button);themes.addView(button,weightHeight(72));}
+        LinearLayout themes=horizontal();String[] names={"TRX RED","BAJA AMBER","STEALTH SILVER","HYDRO BLUE","CUSTOM"};int[] themeArt={R.drawable.trx_hero_banner,R.drawable.trx_hero_baja,R.drawable.trx_hero_stealth,R.drawable.trx_hero_blue,R.drawable.trx_hero_banner};
+        for(int i=0;i<names.length;i++){final int index=i;Button button=new Button(this);button.setText(names[i]);button.setTextSize(10);button.setTextColor(WHITE);button.setAllCaps(false);button.setGravity(Gravity.CENTER);button.setPadding(dp(4),dp(5),dp(4),dp(5));button.setCompoundDrawablePadding(dp(4));button.setCompoundDrawables(null,scaledDrawable(themeArt[i],112,58),null,null);button.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);updateThemeButtons();styleAccentControls();updateThemePreview();});themeButtons.add(button);themes.addView(button,weightHeight(112));}
         appearance.addView(themes);updateThemeButtons();
 
         FrameLayout previewFrame=new FrameLayout(this);previewFrame.setBackground(background(0xff07090c,0xff3b424c,12));
@@ -77,13 +81,15 @@ public class SettingsActivity extends Activity {
         backgroundStyle=spinner(new String[]{"Carbon fiber","Topographic","Mountain silhouette"});
         backgroundStyle.setSelection(prefs.getInt("background_style",0));addControl(leftControls,"BACKGROUND STYLE",backgroundStyle);
         reduceMotion=toggle("Reduce animation",prefs.getBoolean("reduce_motion",false));addControl(rightControls,"REDUCE MOTION",reduceMotion);
+        heroArtwork=toggle("Show full-width truck artwork",prefs.getBoolean("hero_artwork",true));addControl(leftControls,"HERO ARTWORK",heroArtwork);
+        accentBrightness=new SeekBar(this);accentBrightness.setMax(100);accentBrightness.setProgress(prefs.getInt("accent_brightness",88));addControl(rightControls,"ACCENT BRIGHTNESS",accentBrightness);
         iconSize=new SeekBar(this);iconSize.setMax(40);iconSize.setProgress(Math.max(0,Math.min(40,prefs.getInt("app_icon_percent",100)-80)));
         iconSizeValue=text((iconSize.getProgress()+80)+"%",14,WHITE,true);iconSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int progress,boolean fromUser){iconSizeValue.setText((progress+80)+"%");}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}});
         LinearLayout iconRow=horizontal();iconRow.addView(iconSize,new LinearLayout.LayoutParams(0,dp(48),1));LinearLayout.LayoutParams valueParams=new LinearLayout.LayoutParams(dp(58),dp(48));iconRow.addView(iconSizeValue,valueParams);addControl(leftControls,"APP ICON SIZE",iconRow);
         Button apply=action("APPLY COCKPIT THEME",true,false);rightControls.addView(apply,buttonParams());apply.setOnClickListener(v->{if(saveSettings(false))toast("Cockpit theme applied");});
 
         LinearLayout navigationPanel=category("// NAVIGATION","Google routing, saved destinations and map behavior.");
-        navigation=spinner(new String[]{"Google Maps","Waze"});navigation.setSelection(prefs.getInt("nav_choice",0));addControl(navigationPanel,"PREFERRED NAVIGATION",navigation);
+        navigationPanel.addView(infoCard("GOOGLE MAPS","Only map and navigation provider • embedded turn-by-turn",true),buttonParams());
         home=edit(prefs.getString("home_destination","Home"));addControl(navigationPanel,"HOME DESTINATION",home);
         work=edit(prefs.getString("work_destination","Work"));addControl(navigationPanel,"WORK DESTINATION",work);
         TextView navNote=infoCard("GOOGLE MAPS LIVE",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED?"Location ready • turn-by-turn enabled":"Location permission required for live guidance",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED);navigationPanel.addView(navNote,buttonParams());
@@ -161,6 +167,7 @@ public class SettingsActivity extends Activity {
     }
     private void styleAccentControls(){
         if(iconSize!=null){iconSize.setProgressTintList(android.content.res.ColorStateList.valueOf(accent));iconSize.setThumbTintList(android.content.res.ColorStateList.valueOf(accent));}
+        if(accentBrightness!=null){accentBrightness.setProgressTintList(android.content.res.ColorStateList.valueOf(accent));accentBrightness.setThumbTintList(android.content.res.ColorStateList.valueOf(accent));}
     }
 
     private void updateThemePreview(){
@@ -189,7 +196,8 @@ public class SettingsActivity extends Activity {
         prefs.edit().putInt("theme_choice",selectedTheme).putInt("custom_accent",custom).putString("custom_hex",customHex.getText().toString().trim())
             .putInt("display_mode",displayMode.getSelectedItemPosition()).putInt("app_icon_percent",iconSize.getProgress()+80).putInt("startup_page",startup)
             .putInt("background_style",backgroundStyle.getSelectedItemPosition()).putBoolean("reduce_motion",reduceMotion.isChecked())
-            .putInt("nav_choice",navigation.getSelectedItemPosition()).putInt("media_choice",media.getSelectedItemPosition())
+            .putBoolean("hero_artwork",heroArtwork.isChecked()).putInt("accent_brightness",accentBrightness.getProgress())
+            .putInt("media_choice",media.getSelectedItemPosition())
             .putString("home_destination",home.getText().toString().trim()).putString("work_destination",work.getText().toString().trim())
             .putBoolean("online_artwork",onlineArtwork.isChecked()).putBoolean("performance_alerts",alerts.isChecked())
             .putFloat("warn_coolant",number(coolantWarning,235f)).putFloat("warn_intake",number(intakeWarning,170f)).putFloat("warn_voltage",number(voltageWarning,11.8f)).apply();
@@ -226,6 +234,7 @@ public class SettingsActivity extends Activity {
     private EditText edit(String value){EditText r=new EditText(this);r.setText(value);r.setTextColor(WHITE);r.setHintTextColor(0xff6d727b);r.setTextSize(16);r.setSingleLine(true);r.setPadding(dp(16),0,dp(16),0);r.setBackground(background(CARD,0xff343a42,10));return r;}
     private EditText numberEdit(float value){EditText r=edit(value==Math.round(value)?String.valueOf(Math.round(value)):String.format(java.util.Locale.US,"%.1f",value));r.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);return r;}
     private android.widget.Switch toggle(String title,boolean checked){android.widget.Switch s=new android.widget.Switch(this);s.setText(title);s.setTextColor(WHITE);s.setTextSize(15);s.setChecked(checked);s.setPadding(dp(14),0,dp(14),0);s.setBackground(background(CARD,0xff343a42,10));return s;}
+    private Drawable scaledDrawable(int resource,int width,int height){Bitmap source=BitmapFactory.decodeResource(getResources(),resource);Bitmap scaled=Bitmap.createScaledBitmap(source,dp(width),dp(height),true);BitmapDrawable drawable=new BitmapDrawable(getResources(),scaled);drawable.setBounds(0,0,dp(width),dp(height));return drawable;}
     private Button action(String title,boolean primary,boolean danger){Button b=new Button(this);b.setText(title);b.setTextSize(14);b.setTextColor(danger?0xffff7682:WHITE);b.setTypeface(Typeface.DEFAULT_BOLD);b.setAllCaps(false);b.setBackground(background(primary?darken(accent,.28f):CARD,primary?accent:danger?0xff7a1722:0xff3c434c,12));return b;}
     private TextView text(String value,int size,int color,boolean bold){TextView r=new TextView(this);r.setText(value);r.setTextSize(size);r.setTextColor(color);r.setGravity(Gravity.CENTER_VERTICAL);if(bold)r.setTypeface(Typeface.DEFAULT_BOLD);return r;}
     private GradientDrawable panelBackground(){GradientDrawable g=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xff141920,0xff080a0e});g.setCornerRadius(dp(16));g.setStroke(dp(1),0xff3a414a);return g;}

@@ -168,20 +168,7 @@ public class MainActivity extends Activity {
     }
 
     private void openPreferredNavigation(String destination){
-        int choice=getSharedPreferences("launcher",MODE_PRIVATE).getInt("nav_choice",0);
-        if(choice==1)openWazeNavigation(destination);else openGoogleMapsNavigation(destination);
-    }
-
-    public void openWazeNavigation(String destination){
-        String address=destination==null?"":destination.trim();
-        if(address.isEmpty()){Toast.makeText(this,"Enter a destination",Toast.LENGTH_SHORT).show();return;}
-        try{
-            Intent intent=new Intent(Intent.ACTION_VIEW,Uri.parse("https://waze.com/ul?q="+Uri.encode(address)+"&navigate=yes"));
-            intent.setPackage("com.waze");
-            if(intent.resolveActivity(getPackageManager())!=null){startActivity(intent);return;}
-            Toast.makeText(this,"Waze is not installed • opening Google Maps",Toast.LENGTH_LONG).show();
-            openGoogleMapsNavigation(address);
-        }catch(Throwable error){openGoogleMapsNavigation(address);}
+        openGoogleMapsNavigation(destination);
     }
 
     public void openGoogleMapsNavigation(String destination){
@@ -234,9 +221,9 @@ public class MainActivity extends Activity {
             int usable=Math.max(1,h-topInset-bottomInset);
             int side=Math.round(w*(compact?32f:18f)/1080f);
             FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(
-                Math.max(1,compact?Math.round(w*710f/1080f):w-side*2),Math.max(1,Math.round(usable*(compact?934f:1118f)/1440f)));
+                Math.max(1,compact?Math.round(w*648f/1080f):w-side*2),Math.max(1,Math.round(usable*(compact?884f:1118f)/1440f)));
             lp.leftMargin=side;
-            lp.topMargin=topInset+Math.round(usable*(compact?174f:164f)/1440f);
+            lp.topMargin=topInset+Math.round(usable*164f/1440f);
             mapPanel.setLayoutParams(lp);
             if(mapPanel.getParent()==null)root.addView(mapPanel);
             mapPanel.setVisibility(View.VISIBLE);mapPanel.bringToFront();
@@ -385,20 +372,12 @@ public class MainActivity extends Activity {
 
     public void openNavigationTo(String destination) {
         try {
-            int choice=getSharedPreferences("launcher",MODE_PRIVATE)
-                .getInt("nav_choice",0);
-            Intent i;
-            if(choice==1){
-                i=new Intent(Intent.ACTION_VIEW,Uri.parse(
-                    "https://waze.com/ul?q="+Uri.encode(destination)+"&navigate=yes"));
-                i.setPackage("com.waze");
-            }else{
-                i=new Intent(Intent.ACTION_VIEW,Uri.parse(
-                    "google.navigation:q="+Uri.encode(destination)));
-            }
+            Intent i=new Intent(Intent.ACTION_VIEW,Uri.parse(
+                "google.navigation:q="+Uri.encode(destination)+"&mode=d"));
+            i.setPackage("com.google.android.apps.maps");
             if(i.resolveActivity(getPackageManager())==null)
                 i=new Intent(Intent.ACTION_VIEW,Uri.parse(
-                    "geo:0,0?q="+Uri.encode(destination)));
+                    "https://www.google.com/maps/dir/?api=1&destination="+Uri.encode(destination)+"&travelmode=driving"));
             startActivity(i);
         } catch(Throwable ignored){openSystemSettings();}
     }
