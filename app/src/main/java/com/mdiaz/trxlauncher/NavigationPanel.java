@@ -147,11 +147,12 @@ public class NavigationPanel extends FrameLayout {
         destination.setTextColor(Color.WHITE);
         destination.setHintTextColor(0xff9ca1aa);
         destination.setTextSize(15);
-        destination.setPadding(dp(18), 0, dp(18), 0);
+        // Reserve a clean in-field action zone for Save, Clear and Navigate.
+        destination.setPadding(dp(18), 0, dp(142), 0);
         destination.setBackground(panel(0xf205070a, accent, 1, 14));
         destination.setElevation(dp(10));
         LayoutParams searchLp = new LayoutParams(LayoutParams.MATCH_PARENT, dp(50), Gravity.TOP);
-        searchLp.setMargins(dp(14), dp(12), dp(174), 0);
+        searchLp.setMargins(dp(14), dp(12), dp(14), 0);
         addView(destination, searchLp);
 
         suggestions = new LinearLayout(context);
@@ -196,16 +197,16 @@ public class NavigationPanel extends FrameLayout {
 
         routeButton = button("➤", true);
         routeButton.setContentDescription("Start navigation");
-        LayoutParams routeLp = new LayoutParams(dp(50), dp(50), Gravity.TOP | Gravity.RIGHT);
-        routeLp.setMargins(0, dp(12), dp(14), 0);
+        LayoutParams routeLp = new LayoutParams(dp(38), dp(38), Gravity.TOP | Gravity.RIGHT);
+        routeLp.setMargins(0, dp(18), dp(20), 0);
         addView(routeButton, routeLp);
         routeButton.setOnClickListener(v -> beginNavigation(destination.getText().toString()));
 
         clearButton=button("×",false);clearButton.setTextSize(24);clearButton.setContentDescription("Clear destination");clearButton.setVisibility(GONE);
-        LayoutParams clearLp=new LayoutParams(dp(42),dp(42),Gravity.TOP|Gravity.RIGHT);clearLp.setMargins(0,dp(16),dp(70),0);addView(clearButton,clearLp);
+        LayoutParams clearLp=new LayoutParams(dp(38),dp(38),Gravity.TOP|Gravity.RIGHT);clearLp.setMargins(0,dp(18),dp(62),0);addView(clearButton,clearLp);
         clearButton.setOnClickListener(v->{destination.setText("");destination.requestFocus();showKeyboard();});
         favoriteButton=button("☆",false);favoriteButton.setTextSize(22);favoriteButton.setContentDescription("Favorite destination");favoriteButton.setVisibility(GONE);
-        LayoutParams favoriteLp=new LayoutParams(dp(42),dp(42),Gravity.TOP|Gravity.RIGHT);favoriteLp.setMargins(0,dp(16),dp(118),0);addView(favoriteButton,favoriteLp);
+        LayoutParams favoriteLp=new LayoutParams(dp(38),dp(38),Gravity.TOP|Gravity.RIGHT);favoriteLp.setMargins(0,dp(18),dp(104),0);addView(favoriteButton,favoriteLp);
         favoriteButton.setOnClickListener(v->toggleFavorite(destination.getText().toString()));
 
         commandBar = new LinearLayout(context);

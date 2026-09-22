@@ -57,15 +57,15 @@ jobs:
       - name: Verify APK internal version
         run: |
           AAPT_BIN=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
-          "$AAPT_BIN" dump badging app/build/outputs/apk/release/app-release.apk | grep "versionCode='136' versionName='4.3.9'"
+          "$AAPT_BIN" dump badging app/build/outputs/apk/release/app-release.apk | grep "versionCode='137' versionName='4.3.10'"
 
       - name: Give APK a friendly name
-        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v4.3.9.apk
+        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v4.3.10.apk
 
       - name: Upload downloadable APK
         uses: actions/upload-artifact@v4
         with:
-          name: TRX-Launcher-v4.3.9
-          path: TRX-Launcher-v4.3.9.apk
+          name: TRX-Launcher-v4.3.10
+          path: TRX-Launcher-v4.3.10.apk
           if-no-files-found: error
           retention-days: 30

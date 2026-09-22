@@ -577,7 +577,23 @@ public class MainActivity extends Activity {
     public void navigationSection(int tab){
         if(mapPanel instanceof NavigationPanel)((NavigationPanel)mapPanel).showSection(tab);
     }
-    public void refreshWeather(){fetchWeather();}
+    public void refreshWeather(){
+        weatherCondition="UPDATING WEATHER";weatherUpdated="REFRESHING";weatherRequestedAt=0;
+        if(dashboard!=null)dashboard.invalidate();
+        if(weatherLocation==null){
+            try{
+                if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED){startGps();return;}
+                if(locationManager==null)locationManager=(LocationManager)getSystemService(LOCATION_SERVICE);
+                if(locationManager!=null){
+                    Location gps=locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    Location network=locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                    Location best=gps==null?network:network==null?gps:gps.getTime()>=network.getTime()?gps:network;
+                    if(best!=null)weatherLocation=new Location(best);
+                }
+            }catch(Throwable ignored){}
+        }
+        if(weatherLocation!=null)fetchWeather();else{weatherCondition="WAITING FOR GPS";startGps();if(dashboard!=null)dashboard.invalidate();}
+    }
     public void openObdSetup(){ObdSetup.show(this);}
     public String routeMetric(boolean arrival){return mapPanel instanceof NavigationPanel?((NavigationPanel)mapPanel).routeMetric(arrival):arrival?"--:--":"-- MI";}
 
