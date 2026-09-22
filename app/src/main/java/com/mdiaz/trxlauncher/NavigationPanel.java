@@ -725,7 +725,6 @@ public class NavigationPanel extends FrameLayout {
         int width=dp(86),height=dp(126);Bitmap result=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);Canvas canvas=new Canvas(result);
         Paint shadow=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);shadow.setAlpha(150);shadow.setColorFilter(new PorterDuffColorFilter(Color.BLACK,PorterDuff.Mode.SRC_IN));
         canvas.drawBitmap(source,null,new RectF(dp(10),dp(10),width-dp(4),height-dp(2)),shadow);
-        Paint glow=new Paint(Paint.ANTI_ALIAS_FLAG);glow.setStyle(Paint.Style.STROKE);glow.setStrokeWidth(dp(2));glow.setColor(0x66ff2338);canvas.drawOval(new RectF(dp(8),dp(4),width-dp(8),height-dp(10)),glow);
         Paint body=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);canvas.drawBitmap(source,null,new RectF(dp(7),dp(2),width-dp(7),height-dp(16)),body);
         return result;
     }

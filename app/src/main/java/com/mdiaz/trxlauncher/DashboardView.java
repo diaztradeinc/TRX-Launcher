@@ -140,7 +140,7 @@ public final class DashboardView extends View {
     }
     private void carbon(Canvas c){
         p.setColor(0xff07090c);c.drawRect(0,safeTop,W,H-safeBottom,p);p.setStrokeWidth(x(1));int style=prefs.getInt("background_style",0);
-        if(style==1){p.setStyle(Paint.Style.STROKE);p.setColor(0x252f363f);for(int i=0;i<9;i++)c.drawOval(new RectF(x(60-i*45),y(170+i*115),x(1020+i*55),y(520+i*145)),p);p.setStyle(Paint.Style.FILL);}
+        if(style==1){p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(2));p.setColor((RED&0x00ffffff)|0x44000000);for(int i=0;i<11;i++)c.drawOval(new RectF(x(60-i*45),y(150+i*105),x(1020+i*55),y(500+i*135)),p);p.setStyle(Paint.Style.FILL);}
         else if(style==2){
             Bitmap art=themedHero();
             if(art!=null&&prefs.getBoolean("hero_artwork",true)){
@@ -148,7 +148,7 @@ public final class DashboardView extends View {
             }
             mountains(c,70,1360);
         }
-        else{p.setColor(0x221f252b);for(float i=-H;i<W+H;i+=x(34)){c.drawLine(i,safeTop,i+H,H-safeBottom,p);c.drawLine(i+x(8),safeTop,i+H+x(8),H-safeBottom,p);}}
+        else{p.setColor(0x3a2d343d);p.setStrokeWidth(x(1));for(float i=-H;i<W+H;i+=x(30)){c.drawLine(i,safeTop,i+H,H-safeBottom,p);c.drawLine(i+x(7),safeTop,i+H+x(7),H-safeBottom,p);}}
     }
     private void status(Canvas c){
         RectF r=new RectF(0,y(0),W,y(72));p.setShader(new LinearGradient(0,y(0),W,y(0),0xff020304,0xff101317,Shader.TileMode.CLAMP));c.drawRect(r,p);p.setShader(null);
@@ -328,9 +328,9 @@ public final class DashboardView extends View {
         if(style==2&&prefs.getBoolean("hero_artwork",true)){
             Bitmap art=themedHero();if(art!=null){p.setStyle(Paint.Style.FILL);p.setAlpha(105);c.drawBitmap(art,null,inner,p);p.setAlpha(255);p.setColor(0xa8020305);c.drawRect(inner,p);}
         }else if(style==1){
-            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor((RED&0x00ffffff)|0x26000000);for(int i=0;i<8;i++){float inset=x(18+i*33);c.drawOval(new RectF(inner.left-inset,inner.top+x(70+i*80),inner.right+inset,inner.top+x(330+i*120)),p);}p.setStyle(Paint.Style.FILL);
+            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(2));p.setColor((RED&0x00ffffff)|0x50000000);for(int i=0;i<9;i++){float inset=x(18+i*33);c.drawOval(new RectF(inner.left-inset,inner.top+x(55+i*72),inner.right+inset,inner.top+x(315+i*112)),p);}p.setStyle(Paint.Style.FILL);
         }else{
-            p.setColor(0x251f252b);p.setStrokeWidth(x(1));for(float i=inner.left-inner.height();i<inner.right+inner.height();i+=x(30)){c.drawLine(i,inner.top,i+inner.height(),inner.bottom,p);c.drawLine(i+x(7),inner.top,i+inner.height()+x(7),inner.bottom,p);}
+            p.setColor(0x452d343d);p.setStrokeWidth(x(1));for(float i=inner.left-inner.height();i<inner.right+inner.height();i+=x(28)){c.drawLine(i,inner.top,i+inner.height(),inner.bottom,p);c.drawLine(i+x(7),inner.top,i+inner.height()+x(7),inner.bottom,p);}
         }
         c.restore();p.setAlpha(255);p.setStyle(Paint.Style.FILL);
     }
@@ -658,10 +658,12 @@ public final class DashboardView extends View {
         text(c,"TIRE PRESSURE",54,575,11,MUTED,true);text(c,"POWERTRAIN TEMPERATURE",840,575,11,MUTED,true);
         if(performanceTruck!=null){
             // Crop transparent source padding so the visible truck—not the
-            // bitmap canvas—is centered between all four tire readings.
+            // bitmap canvas—is centered in the actual PSI corridor. That
+            // corridor is left of screen center because temperatures occupy
+            // their own column on the right.
             Rect truckSource=new Rect(0,0,Math.min(324,performanceTruck.getWidth()),Math.min(540,performanceTruck.getHeight()));
-            c.save();c.rotate(-90,x(540),y(713));
-            c.drawBitmap(performanceTruck,truckSource,new RectF(x(405),y(413),x(675),y(1013)),p);
+            c.save();c.rotate(-90,x(459),y(713));
+            c.drawBitmap(performanceTruck,truckSource,new RectF(x(334),y(473),x(584),y(953)),p);
             c.restore();
         }
         tireValue(c,70,650,"FL","--");tireValue(c,70,790,"RL","--");tireValue(c,735,650,"FR","--");tireValue(c,735,790,"RR","--");

@@ -32,7 +32,7 @@ public class SettingsActivity extends Activity {
     private android.widget.Switch alerts,onlineArtwork,reduceMotion,heroArtwork;
     private SeekBar iconSize,accentBrightness;
     private TextView iconSizeValue;
-    private ImageView themePreview;
+    private ImageView themePreview,backgroundPreview;
     private TextView themePreviewTitle;
     private int selectedTheme,accent;
     private final java.util.ArrayList<FrameLayout> themeButtons=new java.util.ArrayList<>();
@@ -65,7 +65,7 @@ public class SettingsActivity extends Activity {
             FrameLayout.LayoutParams artParams=new FrameLayout.LayoutParams(-1,-1);artParams.setMargins(dp(2),dp(2),dp(2),dp(2));tile.addView(artwork,artParams);
             View shade=new View(this);shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0x00000000,0x25000000,0xe0000000}));tile.addView(shade,new FrameLayout.LayoutParams(-1,-1));
             TextView name=text(names[i],11,WHITE,true);name.setGravity(Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);name.setPadding(dp(4),0,dp(4),dp(12));tile.addView(name,new FrameLayout.LayoutParams(-1,-1));
-            tile.setContentDescription(names[i]+" theme");tile.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);prefs.edit().putInt("theme_choice",index).apply();updateThemeButtons();styleAccentControls();updateThemePreview();});
+            tile.setContentDescription(names[i]+" theme");tile.setOnClickListener(v->{selectedTheme=index;accent=themeColor(index);prefs.edit().putInt("theme_choice",index).apply();updateThemeButtons();styleAccentControls();updateThemePreview();updateBackgroundPreview();});
             themeButtons.add(tile);themes.addView(tile,weightHeight(112));
         }
         appearance.addView(themes);updateThemeButtons();
@@ -77,7 +77,7 @@ public class SettingsActivity extends Activity {
         LinearLayout.LayoutParams previewParams=new LinearLayout.LayoutParams(-1,dp(162));previewParams.topMargin=dp(7);appearance.addView(previewFrame,previewParams);updateThemePreview();
 
         customHex=edit(String.format(java.util.Locale.US,"#%06X",prefs.getInt("custom_accent",0xffff2338)&0xffffff));
-        customHex.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){if(selectedTheme==4){accent=themeColor(4);updateThemeButtons();styleAccentControls();updateThemePreview();}}public void afterTextChanged(android.text.Editable s){}});
+        customHex.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){if(selectedTheme==4){accent=themeColor(4);updateThemeButtons();styleAccentControls();updateThemePreview();updateBackgroundPreview();}}public void afterTextChanged(android.text.Editable s){}});
         LinearLayout appearanceControls=horizontal();LinearLayout leftControls=new LinearLayout(this),rightControls=new LinearLayout(this);leftControls.setOrientation(LinearLayout.VERTICAL);rightControls.setOrientation(LinearLayout.VERTICAL);
         appearanceControls.addView(leftControls,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams rc=new LinearLayout.LayoutParams(0,-2,1);rc.leftMargin=dp(8);appearanceControls.addView(rightControls,rc);appearance.addView(appearanceControls);
         addControl(leftControls,"CUSTOM ACCENT HEX",customHex);
@@ -85,11 +85,17 @@ public class SettingsActivity extends Activity {
         displayMode.setSelection(prefs.getInt("display_mode",0));addControl(rightControls,"DISPLAY MODE",displayMode);
         backgroundStyle=spinner(new String[]{"Carbon fiber","Topographic","Mountain silhouette"});
         backgroundStyle.setSelection(prefs.getInt("background_style",0));addControl(leftControls,"BACKGROUND STYLE",backgroundStyle);
+        backgroundPreview=new ImageView(this);backgroundPreview.setScaleType(ImageView.ScaleType.CENTER_CROP);backgroundPreview.setBackground(background(CARD,0xff343a42,10));
+        addControl(leftControls,"LIVE BACKGROUND PREVIEW • ALL PAGES",backgroundPreview);updateBackgroundPreview();
         reduceMotion=toggle("Reduce animation",prefs.getBoolean("reduce_motion",false));addControl(rightControls,"REDUCE MOTION",reduceMotion);
         heroArtwork=toggle("Show full-width truck artwork",prefs.getBoolean("hero_artwork",true));addControl(leftControls,"HERO ARTWORK",heroArtwork);
         accentBrightness=new SeekBar(this);accentBrightness.setMax(100);accentBrightness.setProgress(prefs.getInt("accent_brightness",88));addControl(rightControls,"ACCENT BRIGHTNESS",accentBrightness);
-        displayMode.setOnItemSelectedListener(saveSelection("display_mode"));backgroundStyle.setOnItemSelectedListener(saveSelection("background_style"));
-        heroArtwork.setOnCheckedChangeListener((v,checked)->prefs.edit().putBoolean("hero_artwork",checked).apply());reduceMotion.setOnCheckedChangeListener((v,checked)->prefs.edit().putBoolean("reduce_motion",checked).apply());
+        displayMode.setOnItemSelectedListener(saveSelection("display_mode"));
+        backgroundStyle.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){prefs.edit().putInt("background_style",position).apply();updateBackgroundPreview();}
+            public void onNothingSelected(android.widget.AdapterView<?> parent){}
+        });
+        heroArtwork.setOnCheckedChangeListener((v,checked)->{prefs.edit().putBoolean("hero_artwork",checked).apply();updateBackgroundPreview();});reduceMotion.setOnCheckedChangeListener((v,checked)->prefs.edit().putBoolean("reduce_motion",checked).apply());
         accentBrightness.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int value,boolean user){if(user)prefs.edit().putInt("accent_brightness",value).apply();}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}});
         iconSize=new SeekBar(this);iconSize.setMax(40);iconSize.setProgress(Math.max(0,Math.min(40,prefs.getInt("app_icon_percent",100)-80)));
         iconSizeValue=text((iconSize.getProgress()+80)+"%",14,WHITE,true);iconSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar s,int progress,boolean fromUser){iconSizeValue.setText((progress+80)+"%");}public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}});
@@ -188,6 +194,28 @@ public class SettingsActivity extends Activity {
         else if(selectedTheme==3){image=R.drawable.trx_hero_blue;title="OEM BLUE  //  GLACIER NIGHT";}
         else if(selectedTheme==4){title="CUSTOM  //  NIGHT HORIZON";themePreview.setColorFilter(accent,android.graphics.PorterDuff.Mode.OVERLAY);}
         themePreview.setImageResource(image);if(themePreviewTitle!=null){themePreviewTitle.setText(title);themePreviewTitle.setTextColor(accent);}
+    }
+
+    private void updateBackgroundPreview(){
+        if(backgroundPreview==null)return;
+        int style=backgroundStyle==null?prefs.getInt("background_style",0):backgroundStyle.getSelectedItemPosition();
+        int width=720,height=100;android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(width,height,android.graphics.Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas canvas=new android.graphics.Canvas(bitmap);android.graphics.Paint paint=new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG|android.graphics.Paint.FILTER_BITMAP_FLAG);
+        paint.setColor(0xff07090c);canvas.drawRect(0,0,width,height,paint);
+        if(style==2&&(heroArtwork==null?prefs.getBoolean("hero_artwork",true):heroArtwork.isChecked())){
+            int image=selectedTheme==1?R.drawable.trx_hero_baja:selectedTheme==2?R.drawable.trx_hero_stealth:selectedTheme==3?R.drawable.trx_hero_blue:R.drawable.trx_hero_banner;
+            android.graphics.Bitmap art=android.graphics.BitmapFactory.decodeResource(getResources(),image);
+            if(art!=null){canvas.drawBitmap(art,null,new android.graphics.RectF(0,0,width,height),paint);paint.setColor(0x66000000);canvas.drawRect(0,0,width,height,paint);}
+        }else if(style==2){
+            paint.setColor(0xff151a20);android.graphics.Path mountains=new android.graphics.Path();mountains.moveTo(0,height);mountains.lineTo(0,68);mountains.lineTo(120,24);mountains.lineTo(220,66);mountains.lineTo(360,12);mountains.lineTo(485,70);mountains.lineTo(610,32);mountains.lineTo(width,66);mountains.lineTo(width,height);mountains.close();canvas.drawPath(mountains,paint);
+        }else if(style==1){
+            paint.setStyle(android.graphics.Paint.Style.STROKE);paint.setStrokeWidth(3);paint.setColor((accent&0x00ffffff)|0x78000000);
+            for(int i=0;i<9;i++)canvas.drawOval(new android.graphics.RectF(-100+i*45,-55+i*12,width+130-i*32,height+65-i*4),paint);
+        }else{
+            paint.setStrokeWidth(2);paint.setColor(0x99525b67);for(int i=-height;i<width+height;i+=24){canvas.drawLine(i,0,i+height,height,paint);canvas.drawLine(i+7,0,i+height+7,height,paint);}
+        }
+        paint.setStyle(android.graphics.Paint.Style.FILL);paint.setColor((accent&0x00ffffff)|0xdd000000);canvas.drawRect(0,height-4,width,height,paint);
+        backgroundPreview.setImageBitmap(bitmap);backgroundPreview.setContentDescription((style==0?"Carbon fiber":style==1?"Topographic":"Mountain silhouette")+" background preview applied to all pages");
     }
 
     private int themeColor(int index){if(index==1)return 0xffff9f1a;if(index==2)return 0xffd9dde3;if(index==3)return 0xff438cff;if(index==4){try{return Color.parseColor(customHex==null?prefs.getString("custom_hex","#FF2338"):customHex.getText().toString().trim());}catch(Throwable ignored){return prefs.getInt("custom_accent",0xffff2338);}}return 0xffff2338;}
