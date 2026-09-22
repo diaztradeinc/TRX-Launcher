@@ -61,6 +61,9 @@ public class NavigationPanel extends FrameLayout {
     private final Bundle initialState;
     private final EditText destination;
     private final Button routeButton;
+    private Button clearButton;
+    private Button favoriteButton;
+    private Button recenterButton;
     private final Button stopButton;
     private final LinearLayout suggestions;
     private final ScrollView suggestionScroller;
@@ -148,7 +151,7 @@ public class NavigationPanel extends FrameLayout {
         destination.setBackground(panel(0xf205070a, accent, 1, 14));
         destination.setElevation(dp(10));
         LayoutParams searchLp = new LayoutParams(LayoutParams.MATCH_PARENT, dp(50), Gravity.TOP);
-        searchLp.setMargins(dp(14), dp(12), dp(78), 0);
+        searchLp.setMargins(dp(14), dp(12), dp(174), 0);
         addView(destination, searchLp);
 
         suggestions = new LinearLayout(context);
@@ -180,6 +183,10 @@ public class NavigationPanel extends FrameLayout {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
             @Override public void afterTextChanged(Editable value) {
+                boolean filled=value!=null&&value.toString().trim().length()>0;
+                clearButton.setVisibility(filled&&!compact&&!guiding?VISIBLE:GONE);
+                favoriteButton.setVisibility(filled&&!compact&&!guiding?VISIBLE:GONE);
+                updateFavoriteButton();
                 if (!selectingSuggestion) scheduleAddressSuggestions(value.toString());
             }
         });
@@ -194,6 +201,13 @@ public class NavigationPanel extends FrameLayout {
         addView(routeButton, routeLp);
         routeButton.setOnClickListener(v -> beginNavigation(destination.getText().toString()));
 
+        clearButton=button("×",false);clearButton.setTextSize(24);clearButton.setContentDescription("Clear destination");clearButton.setVisibility(GONE);
+        LayoutParams clearLp=new LayoutParams(dp(42),dp(42),Gravity.TOP|Gravity.RIGHT);clearLp.setMargins(0,dp(16),dp(70),0);addView(clearButton,clearLp);
+        clearButton.setOnClickListener(v->{destination.setText("");destination.requestFocus();showKeyboard();});
+        favoriteButton=button("☆",false);favoriteButton.setTextSize(22);favoriteButton.setContentDescription("Favorite destination");favoriteButton.setVisibility(GONE);
+        LayoutParams favoriteLp=new LayoutParams(dp(42),dp(42),Gravity.TOP|Gravity.RIGHT);favoriteLp.setMargins(0,dp(16),dp(118),0);addView(favoriteButton,favoriteLp);
+        favoriteButton.setOnClickListener(v->toggleFavorite(destination.getText().toString()));
+
         commandBar = new LinearLayout(context);
         commandBar.setOrientation(LinearLayout.HORIZONTAL);
         commandBar.setGravity(Gravity.CENTER);
@@ -203,7 +217,8 @@ public class NavigationPanel extends FrameLayout {
         addCommand("⌂  HOME", () -> beginNavigation("Home"));
         addCommand("▣  WORK", () -> beginNavigation("Work"));
         addCommand("↻  RECENT", this::showRecentDestinations);
-        LayoutParams commandLp = new LayoutParams(dp(318), dp(44), Gravity.LEFT | Gravity.TOP);
+        addCommand("★  SAVED", this::showFavoriteDestinations);
+        LayoutParams commandLp = new LayoutParams(dp(420), dp(44), Gravity.LEFT | Gravity.TOP);
         commandLp.setMargins(dp(14), dp(72), 0, 0);
         addView(commandBar, commandLp);
 
@@ -234,6 +249,9 @@ public class NavigationPanel extends FrameLayout {
         addView(layersButton,layersLp);
         layersButton.setOnClickListener(v->showMapOptions());
 
+        recenterButton=button("◎",false);recenterButton.setTextSize(22);recenterButton.setContentDescription("Recenter map");recenterButton.setPadding(0,0,0,0);recenterButton.setBackground(panel(0xf2343434,0xff73777e,1,28));
+        LayoutParams recenterLp=new LayoutParams(dp(54),dp(54),Gravity.RIGHT|Gravity.TOP);recenterLp.setMargins(0,dp(140),dp(16),0);addView(recenterButton,recenterLp);recenterButton.setOnClickListener(v->recenterMap());
+
         status = new TextView(context);
         status.setText("CONNECTING TO GOOGLE NAVIGATION…");
         status.setTextColor(Color.WHITE);
@@ -254,6 +272,7 @@ public class NavigationPanel extends FrameLayout {
         });
         LayoutParams statusLp = new LayoutParams(dp(330), dp(48), Gravity.CENTER);
         addView(status, statusLp);
+        status.setVisibility(GONE);
 
         modeBadge = new TextView(context);
         modeBadge.setText("GOOGLE LIVE TRAFFIC  •  PINCH TO ZOOM");
@@ -346,7 +365,7 @@ public class NavigationPanel extends FrameLayout {
         if (navigator != null) return;
         if (navigatorRequested) return;
         navigatorRequested = true;
-        status.setVisibility(VISIBLE);
+        status.setVisibility(GONE);
         status.setText("AUTHORIZING GOOGLE NAVIGATION…");
 
         try {
@@ -359,10 +378,9 @@ public class NavigationPanel extends FrameLayout {
                     try {
                         applyNativeNavigationChrome();
                         if (mapLoaded) {
-                            status.setText("GOOGLE MAP READY");
-                            if (!guiding) status.postDelayed(() -> status.setVisibility(GONE), 600);
+                            status.setText("GOOGLE MAP READY");status.setVisibility(GONE);
                         } else {
-                            status.setText("GOOGLE AUTHORIZED • MAP RENDERER CONNECTING…");
+                            status.setText("GOOGLE AUTHORIZED • MAP RENDERER CONNECTING…");status.setVisibility(GONE);
                         }
                     } catch (Throwable error) {
                         showInitializationError("NAV VIEW", error);
@@ -392,7 +410,7 @@ public class NavigationPanel extends FrameLayout {
         if (!initialized || mapRequested || mapLoaded || googleMap!=null) return;
         mapRequested = true;
         final int attempt = ++mapAttempt;
-        status.setVisibility(VISIBLE);
+        status.setVisibility(GONE);
         status.setText("REQUESTING GOOGLE MAP RENDERER • ATTEMPT " + attempt);
 
         try {
@@ -405,8 +423,8 @@ public class NavigationPanel extends FrameLayout {
                     map.getUiSettings().setTiltGesturesEnabled(true);
                     map.getUiSettings().setIndoorLevelPickerEnabled(true);
                     map.getUiSettings().setZoomControlsEnabled(false);
-                    map.getUiSettings().setCompassEnabled(true);
-                    map.getUiSettings().setMyLocationButtonEnabled(true);
+                    map.getUiSettings().setCompassEnabled(false);
+                    map.getUiSettings().setMyLocationButtonEnabled(false);
                     map.setBuildingsEnabled(true);
                     map.setMapType(mapType);
                     map.setTrafficEnabled(trafficEnabled);
@@ -415,7 +433,6 @@ public class NavigationPanel extends FrameLayout {
                     try {
                         if (activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
                             == PackageManager.PERMISSION_GRANTED) {
-                            map.setMyLocationEnabled(true);
                             LocationManager manager = (LocationManager) activity
                                 .getSystemService(Context.LOCATION_SERVICE);
                             Location last = manager == null ? null
@@ -431,16 +448,13 @@ public class NavigationPanel extends FrameLayout {
 
                     map.moveCamera(CameraUpdateFactory.newLatLngZoom(start, 15.4f));
                     startTruckTracking();
-                    status.setText("MAP CONNECTED • LOADING BASEMAP TILES…");
+                    status.setText("MAP CONNECTED • LOADING BASEMAP TILES…");status.setVisibility(GONE);
                     map.setOnMapLoadedCallback(() -> {
                         if (attempt != mapAttempt) return;
                         mapLoaded = true;
                         Log.i("TRXNavigation","BASEMAP_READY");
                         mapRequested = false;
-                        status.setText("GOOGLE MAP READY");
-                        if (!guiding) status.postDelayed(() -> {
-                            if (mapLoaded && !guiding) status.setVisibility(GONE);
-                        }, 800);
+                        status.setText("GOOGLE MAP READY");status.setVisibility(GONE);
                     });
                 } catch (Throwable error) {
                     mapRequested = false;
@@ -463,7 +477,7 @@ public class NavigationPanel extends FrameLayout {
                     status.setVisibility(GONE);
                     Log.w("TRXNavigation", "Map callback delayed on attempt " + attempt);
                 } else {
-                    status.setVisibility(VISIBLE);
+                    status.setVisibility(GONE);
                     status.setText("MAP STILL CONNECTING • TAP TO RETRY • HOLD FOR GOOGLE MAPS");
                     Log.e("TRXNavigation", "Map renderer unavailable on attempt " + attempt
                         + "; view=" + navigationView.getWidth() + "x" + navigationView.getHeight()
@@ -480,7 +494,7 @@ public class NavigationPanel extends FrameLayout {
         if(truckMarker!=null){truckMarker.remove();truckMarker=null;}
         mapRequested = false;
         mapAttempt++;
-        status.setVisibility(VISIBLE);
+        status.setVisibility(GONE);
         status.setText("RESTARTING MAP RENDERER…");
         try {
             navigationView.requestLayout();
@@ -541,7 +555,7 @@ public class NavigationPanel extends FrameLayout {
         hideKeyboard();
         suggestionScroller.setVisibility(GONE);
         status.setText("BUILDING ROUTE TO " + address.toUpperCase(Locale.US) + "…");
-        status.setVisibility(VISIBLE);
+        status.setVisibility(GONE);
         new Thread(() -> {
             try {
                 Waypoint waypoint;
@@ -565,7 +579,9 @@ public class NavigationPanel extends FrameLayout {
                             followRoad();
                             placesSession=null;
                             rememberDestination(address);
+                            selectingSuggestion=true;destination.setText("");selectingSuggestion=false;destination.clearFocus();
                             destination.setVisibility(GONE);
+                            clearButton.setVisibility(GONE);favoriteButton.setVisibility(GONE);
                             routeButton.setVisibility(GONE);
                             commandBar.setVisibility(GONE);
                             stopButton.setVisibility(compact?GONE:VISIBLE);
@@ -599,9 +615,11 @@ public class NavigationPanel extends FrameLayout {
         guiding = false;
         destination.setVisibility(VISIBLE);
         routeButton.setVisibility(VISIBLE);
+        clearButton.setVisibility(GONE);favoriteButton.setVisibility(GONE);
         commandBar.setVisibility(VISIBLE);
         stopButton.setVisibility(GONE);
         layersButton.setVisibility(compact?GONE:VISIBLE);
+        recenterButton.setVisibility(compact?GONE:VISIBLE);
         routeSummary.setVisibility(GONE);
         applyNativeNavigationChrome();
         routeMetricsHandler.removeCallbacks(routeMetricsUpdater);
@@ -744,7 +762,7 @@ public class NavigationPanel extends FrameLayout {
         stopButton.setBackground(panel(0xf207090c,accent,2,14));
         stopButton.setTextColor(accent);
         if(!initialized)return;
-        try{navigationView.setForceNightMode(activity.getSharedPreferences("launcher",Context.MODE_PRIVATE).getInt("display_mode",0));applyNativeNavigationChrome();}
+        try{navigationView.setForceNightMode(activity.getSharedPreferences("launcher",Context.MODE_PRIVATE).getInt("map_display_mode",0));applyNativeNavigationChrome();}
         catch(RuntimeException error){Log.w("TRXNavigation","Native navigation chrome pending initialization",error);}
     }
 
@@ -755,7 +773,7 @@ public class NavigationPanel extends FrameLayout {
             navigationView.setNavigationUiEnabled(true);
             navigationView.setHeaderEnabled(full);
             navigationView.setEtaCardEnabled(full&&guiding);
-            navigationView.setRecenterButtonEnabled(full);
+            navigationView.setRecenterButtonEnabled(false);
             navigationView.setSpeedometerEnabled(full);
             navigationView.setSpeedLimitIconEnabled(full);
         }catch(RuntimeException error){Log.w("TRXNavigation","Google navigation controls pending",error);}
@@ -953,11 +971,13 @@ public class NavigationPanel extends FrameLayout {
     }
 
     private void showMapOptions(){
+        int appearance=prefs.getInt("map_display_mode",0);
         showMenu("GOOGLE MAP OPTIONS",new String[]{
             (mapType==GoogleMap.MAP_TYPE_NORMAL?"✓  ":"○  ")+"Road map",
             (mapType==GoogleMap.MAP_TYPE_SATELLITE?"✓  ":"○  ")+"Satellite",
             (mapType==GoogleMap.MAP_TYPE_HYBRID?"✓  ":"○  ")+"Satellite + labels",
             trafficEnabled?"T  Turn live traffic off":"T  Turn live traffic on",
+            "◐  Map appearance: "+(appearance==1?"DAY":appearance==2?"NIGHT":"AUTO"),
             "◎  Recenter / follow vehicle",
             guiding?"■  END NAVIGATION":"■  No active navigation"
         },new Runnable[]{
@@ -965,10 +985,13 @@ public class NavigationPanel extends FrameLayout {
             ()->setMapType(GoogleMap.MAP_TYPE_SATELLITE),
             ()->setMapType(GoogleMap.MAP_TYPE_HYBRID),
             this::toggleTraffic,
+            this::cycleMapAppearance,
             this::recenterMap,
             ()->{if(guiding)stopGuidance();else Toast.makeText(activity,"No active navigation",Toast.LENGTH_SHORT).show();}
         });
     }
+
+    private void cycleMapAppearance(){int next=(prefs.getInt("map_display_mode",0)+1)%3;prefs.edit().putInt("map_display_mode",next).apply();applyTheme();Toast.makeText(activity,next==1?"Day map":next==2?"Night map":"Automatic map",Toast.LENGTH_SHORT).show();}
 
     private void showRecentDestinations() {
         suggestions.removeAllViews();
@@ -1001,6 +1024,14 @@ public class NavigationPanel extends FrameLayout {
         suggestionScroller.setVisibility(VISIBLE);
         suggestionScroller.bringToFront();
         routeButton.bringToFront();
+        clearButton.bringToFront();favoriteButton.bringToFront();
+    }
+
+    private void showFavoriteDestinations(){
+        suggestions.removeAllViews();TextView heading=new TextView(activity);heading.setText("FAVORITE DESTINATIONS");heading.setTextColor(accent);heading.setTextSize(10);heading.setLetterSpacing(.14f);heading.setTypeface(null,android.graphics.Typeface.BOLD);heading.setGravity(Gravity.CENTER_VERTICAL);heading.setPadding(dp(14),0,dp(10),0);suggestions.addView(heading,new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(30)));
+        int count=0;for(String value:favoriteDestinations())if(!TextUtils.isEmpty(value)){addAddressSuggestion("★  "+value,value);count++;}
+        if(count==0){TextView empty=new TextView(activity);empty.setText("Type a destination, then tap ☆ to save it");empty.setTextColor(0xffb6bac2);empty.setTextSize(13);empty.setGravity(Gravity.CENTER_VERTICAL);empty.setPadding(dp(16),0,dp(16),0);suggestions.addView(empty,new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(64)));}
+        suggestionScroller.setVisibility(VISIBLE);suggestionScroller.bringToFront();routeButton.bringToFront();clearButton.bringToFront();favoriteButton.bringToFront();
     }
 
     public void showSection(int tab) {
@@ -1009,9 +1040,7 @@ public class NavigationPanel extends FrameLayout {
         if(tab==0)return;
         if(tab==1){showRecentDestinations();return;}
         if(tab==2){
-            String[] saved={prefs.getString("home_destination",""),prefs.getString("work_destination","")};
-            showMenu("SAVED DESTINATIONS",new String[]{"⌂  Home: "+saved[0],"▣  Work: "+saved[1],"⚙  Edit saved destinations"},new Runnable[]{
-                ()->beginNavigation(saved[0]),()->beginNavigation(saved[1]),activity::openSettingsScreen});return;
+            showFavoriteDestinations();return;
         }
         showMapOptions();
     }
@@ -1038,6 +1067,12 @@ public class NavigationPanel extends FrameLayout {
             .getSystemService(Context.INPUT_METHOD_SERVICE);
         if (keyboard != null) keyboard.hideSoftInputFromWindow(destination.getWindowToken(), 0);
     }
+    private void showKeyboard(){destination.postDelayed(()->{InputMethodManager keyboard=(InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE);if(keyboard!=null)keyboard.showSoftInput(destination,InputMethodManager.SHOW_IMPLICIT);},80);}
+
+    private java.util.List<String> favoriteDestinations(){java.util.ArrayList<String> values=new java.util.ArrayList<>();String raw=prefs.getString("favorite_destinations","");if(raw!=null)for(String item:raw.split("\\n"))if(!item.trim().isEmpty())values.add(item.trim());return values;}
+    private boolean isFavorite(String value){if(value==null)return false;for(String item:favoriteDestinations())if(item.equalsIgnoreCase(value.trim()))return true;return false;}
+    private void updateFavoriteButton(){if(favoriteButton!=null)favoriteButton.setText(isFavorite(destination.getText().toString())?"★":"☆");}
+    private void toggleFavorite(String value){String item=value==null?"":value.trim();if(item.isEmpty())return;java.util.LinkedHashSet<String> values=new java.util.LinkedHashSet<>(favoriteDestinations());boolean removed=false;for(String existing:new java.util.ArrayList<>(values))if(existing.equalsIgnoreCase(item)){values.remove(existing);removed=true;break;}if(!removed)values.add(item);StringBuilder saved=new StringBuilder();for(String entry:values){if(saved.length()>0)saved.append('\n');saved.append(entry);}prefs.edit().putString("favorite_destinations",saved.toString()).apply();updateFavoriteButton();Toast.makeText(activity,removed?"Removed from favorites":"Destination saved",Toast.LENGTH_SHORT).show();}
 
     private void rememberDestination(String value) {
         if (value == null || value.trim().isEmpty()) return;
@@ -1094,9 +1129,11 @@ public class NavigationPanel extends FrameLayout {
     public void setCompact(boolean value){
         compact=value;
         destination.setVisibility(value||guiding?GONE:VISIBLE);routeButton.setVisibility(value||guiding?GONE:VISIBLE);
+        boolean hasText=destination.length()>0;clearButton.setVisibility(!value&&!guiding&&hasText?VISIBLE:GONE);favoriteButton.setVisibility(!value&&!guiding&&hasText?VISIBLE:GONE);
         commandBar.setVisibility(value||guiding?GONE:VISIBLE);mapTools.setVisibility(GONE);
         modeBadge.setVisibility(GONE);stopButton.setVisibility(!value&&guiding?VISIBLE:GONE);
         layersButton.setVisibility(value?GONE:VISIBLE);
+        recenterButton.setVisibility(value?GONE:VISIBLE);
         routeSummary.setVisibility(GONE);
         suggestionScroller.setVisibility(GONE);
         applyNativeNavigationChrome();

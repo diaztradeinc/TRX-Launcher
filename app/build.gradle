@@ -16,8 +16,8 @@ android {
         applicationId 'com.mdiaz.trxlauncher'
         minSdk 26
         targetSdk 36
-        versionCode 135
-        versionName '4.3.8'
+        versionCode 136
+        versionName '4.3.9'
         manifestPlaceholders = [MAPS_API_KEY: mapsApiKey]
         buildConfigField 'String', 'MAPS_API_KEY', "\"${escapedMapsApiKey}\""
     }

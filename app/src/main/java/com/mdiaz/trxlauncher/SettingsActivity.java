@@ -27,7 +27,7 @@ import android.widget.TextView;
 public class SettingsActivity extends Activity {
     private static final int BG=0xff030507,PANEL=0xff0b0e12,CARD=0xff10141a,WHITE=0xfff5f5f7,MUTED=0xffaeb2ba,GREEN=0xff50dc83;
     private SharedPreferences prefs;
-    private Spinner media,displayMode,startupPage,backgroundStyle;
+    private Spinner media,displayMode,mapDisplayMode,startupPage,backgroundStyle;
     private EditText home,work,coolantWarning,intakeWarning,voltageWarning,customHex;
     private android.widget.Switch alerts,onlineArtwork,reduceMotion,heroArtwork;
     private SeekBar iconSize,accentBrightness;
@@ -83,7 +83,7 @@ public class SettingsActivity extends Activity {
         addControl(leftControls,"CUSTOM ACCENT HEX",customHex);
         displayMode=spinner(new String[]{"Automatic day / night","Day cockpit","Night cockpit"});
         displayMode.setSelection(prefs.getInt("display_mode",0));addControl(rightControls,"DISPLAY MODE",displayMode);
-        backgroundStyle=spinner(new String[]{"Carbon fiber","Topographic","Mountain silhouette"});
+        backgroundStyle=spinner(new String[]{"Carbon fiber","Topographic","Mountain silhouette","Red horizon","Hex mesh","Pure black"});
         backgroundStyle.setSelection(prefs.getInt("background_style",0));addControl(leftControls,"BACKGROUND STYLE",backgroundStyle);
         backgroundPreview=new ImageView(this);backgroundPreview.setScaleType(ImageView.ScaleType.CENTER_CROP);backgroundPreview.setBackground(background(CARD,0xff343a42,10));
         addControl(leftControls,"LIVE BACKGROUND PREVIEW • ALL PAGES",backgroundPreview);updateBackgroundPreview();
@@ -107,6 +107,8 @@ public class SettingsActivity extends Activity {
         Button openMaps=action("OPEN EMBEDDED NAVIGATION",true,false);navigationPanel.addView(openMaps,buttonParams());openMaps.setOnClickListener(v->openEmbeddedNavigation());
         home=edit(prefs.getString("home_destination","Home"));addControl(navigationPanel,"HOME DESTINATION",home);
         work=edit(prefs.getString("work_destination","Work"));addControl(navigationPanel,"WORK DESTINATION",work);
+        mapDisplayMode=spinner(new String[]{"Automatic day / night","Always day map","Always night map"});mapDisplayMode.setSelection(prefs.getInt("map_display_mode",0));addControl(navigationPanel,"MAP APPEARANCE",mapDisplayMode);
+        mapDisplayMode.setOnItemSelectedListener(saveSelection("map_display_mode"));
         TextView navNote=infoCard("GOOGLE MAPS LIVE",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED?"Location ready • native turn-by-turn enabled":"Location permission required for live guidance",checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED);navigationPanel.addView(navNote,buttonParams());
 
         LinearLayout mediaPanel=category("// MEDIA","Choose the default source and manage album artwork.");
@@ -211,11 +213,17 @@ public class SettingsActivity extends Activity {
         }else if(style==1){
             paint.setStyle(android.graphics.Paint.Style.STROKE);paint.setStrokeWidth(3);paint.setColor((accent&0x00ffffff)|0x78000000);
             for(int i=0;i<9;i++)canvas.drawOval(new android.graphics.RectF(-100+i*45,-55+i*12,width+130-i*32,height+65-i*4),paint);
+        }else if(style==3){
+            paint.setShader(new android.graphics.RadialGradient(width/2f,height/2f,width*.55f,(accent&0x00ffffff)|0x88000000,0xff030406,android.graphics.Shader.TileMode.CLAMP));canvas.drawRect(0,0,width,height,paint);paint.setShader(null);paint.setColor((accent&0x00ffffff)|0x30000000);for(int y=6;y<height;y+=12)canvas.drawRect(0,y,width,y+1,paint);
+        }else if(style==4){
+            paint.setStyle(android.graphics.Paint.Style.STROKE);paint.setStrokeWidth(2);paint.setColor(0x99616a76);for(int y=12;y<height+20;y+=31)for(int x=-20;x<width+20;x+=38)canvas.drawCircle(x+((y/31)%2)*19,y,20,paint);paint.setStyle(android.graphics.Paint.Style.FILL);
+        }else if(style==5){
+            paint.setColor(0xff020304);canvas.drawRect(0,0,width,height,paint);paint.setColor((accent&0x00ffffff)|0x22000000);for(int y=8;y<height;y+=20)canvas.drawRect(0,y,width,y+1,paint);
         }else{
             paint.setStrokeWidth(2);paint.setColor(0x99525b67);for(int i=-height;i<width+height;i+=24){canvas.drawLine(i,0,i+height,height,paint);canvas.drawLine(i+7,0,i+height+7,height,paint);}
         }
         paint.setStyle(android.graphics.Paint.Style.FILL);paint.setColor((accent&0x00ffffff)|0xdd000000);canvas.drawRect(0,height-4,width,height,paint);
-        backgroundPreview.setImageBitmap(bitmap);backgroundPreview.setContentDescription((style==0?"Carbon fiber":style==1?"Topographic":"Mountain silhouette")+" background preview applied to all pages");
+        String[] names={"Carbon fiber","Topographic","Mountain silhouette","Red horizon","Hex mesh","Pure black"};backgroundPreview.setImageBitmap(bitmap);backgroundPreview.setContentDescription(names[Math.max(0,Math.min(style,names.length-1))]+" background preview applied to all pages");
     }
 
     private int themeColor(int index){if(index==1)return 0xffff9f1a;if(index==2)return 0xffd9dde3;if(index==3)return 0xff438cff;if(index==4){try{return Color.parseColor(customHex==null?prefs.getString("custom_hex","#FF2338"):customHex.getText().toString().trim());}catch(Throwable ignored){return prefs.getInt("custom_accent",0xffff2338);}}return 0xffff2338;}
@@ -232,6 +240,7 @@ public class SettingsActivity extends Activity {
         int startup=0;
         prefs.edit().putInt("theme_choice",selectedTheme).putInt("custom_accent",custom).putString("custom_hex",customHex.getText().toString().trim())
             .putInt("display_mode",displayMode.getSelectedItemPosition()).putInt("app_icon_percent",iconSize.getProgress()+80).putInt("startup_page",startup)
+            .putInt("map_display_mode",mapDisplayMode.getSelectedItemPosition())
             .putInt("background_style",backgroundStyle.getSelectedItemPosition()).putBoolean("reduce_motion",reduceMotion.isChecked())
             .putBoolean("hero_artwork",heroArtwork.isChecked()).putInt("accent_brightness",accentBrightness.getProgress())
             .putInt("media_choice",media.getSelectedItemPosition())

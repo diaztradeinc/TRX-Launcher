@@ -49,6 +49,17 @@ public class MainActivity extends Activity {
     private volatile float speedMph;
     private volatile String weatherTemp = "--°";
     private volatile String weatherCondition = "WEATHER UNAVAILABLE";
+    private volatile String weatherFeelsLike = "--°", weatherHigh = "--°", weatherLow = "--°";
+    private volatile String weatherHumidity = "--%", weatherWind = "-- MPH", weatherVisibility = "-- MI";
+    private volatile String weatherPrecip = "--%", weatherUv = "--", weatherSunrise = "--:--", weatherUpdated = "WAITING";
+    private volatile String weatherLocationName = "CURRENT LOCATION";
+    private volatile String[] hourlyTimes={"NOW","+1H","+2H","+3H","+4H","+5H"};
+    private volatile String[] hourlyTemps={"--°","--°","--°","--°","--°","--°"};
+    private volatile String[] hourlyConditions={"CLOUDY","CLOUDY","CLOUDY","CLOUDY","CLOUDY","CLOUDY"};
+    private volatile String[] dailyDays={"TODAY","DAY 2","DAY 3","DAY 4","DAY 5"};
+    private volatile String[] dailyHighs={"--°","--°","--°","--°","--°"};
+    private volatile String[] dailyLows={"--°","--°","--°","--°","--°"};
+    private volatile String[] dailyConditions={"CLOUDY","CLOUDY","CLOUDY","CLOUDY","CLOUDY"};
     private volatile Location weatherLocation;
     private long weatherRequestedAt;
     private LocationManager locationManager;
@@ -255,6 +266,12 @@ public class MainActivity extends Activity {
     public float speedMph() { return speedMph; }
     public String weatherTemp() { return weatherTemp; }
     public String weatherCondition() { return weatherCondition; }
+    public String weatherFeelsLike(){return weatherFeelsLike;} public String weatherHigh(){return weatherHigh;} public String weatherLow(){return weatherLow;}
+    public String weatherHumidity(){return weatherHumidity;} public String weatherWind(){return weatherWind;} public String weatherVisibility(){return weatherVisibility;}
+    public String weatherPrecip(){return weatherPrecip;} public String weatherUv(){return weatherUv;} public String weatherSunrise(){return weatherSunrise;}
+    public String weatherUpdated(){return weatherUpdated;} public String weatherLocationName(){return weatherLocationName;}
+    public String[] hourlyTimes(){return hourlyTimes.clone();} public String[] hourlyTemps(){return hourlyTemps.clone();} public String[] hourlyConditions(){return hourlyConditions.clone();}
+    public String[] dailyDays(){return dailyDays.clone();} public String[] dailyHighs(){return dailyHighs.clone();} public String[] dailyLows(){return dailyLows.clone();} public String[] dailyConditions(){return dailyConditions.clone();}
 
     private void fetchWeather() {
         Location fix=weatherLocation;
@@ -263,7 +280,11 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             HttpURLConnection connection = null;
             try {
-                URL url = new URL("https://api.open-meteo.com/v1/forecast?latitude="+fix.getLatitude()+"&longitude="+fix.getLongitude()+"&current=temperature_2m,weather_code&temperature_unit=fahrenheit");
+                URL url = new URL("https://api.open-meteo.com/v1/forecast?latitude="+fix.getLatitude()+"&longitude="+fix.getLongitude()
+                    +"&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,precipitation,wind_speed_10m,visibility"
+                    +"&hourly=temperature_2m,weather_code,precipitation_probability"
+                    +"&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max"
+                    +"&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=6");
                 connection = (HttpURLConnection)url.openConnection();
                 connection.setConnectTimeout(6000);
                 connection.setReadTimeout(6000);
@@ -273,11 +294,34 @@ public class MainActivity extends Activity {
                 StringBuilder json = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) json.append(line);
-                int current = json.indexOf("\"current\":");
-                double temp = numberAfter(json,"\"temperature_2m\":",current);
-                int code = (int)numberAfter(json,"\"weather_code\":",current);
+                org.json.JSONObject root=new org.json.JSONObject(json.toString());
+                org.json.JSONObject current=root.getJSONObject("current");
+                double temp=current.optDouble("temperature_2m",0);
+                int code=current.optInt("weather_code",3);
                 weatherTemp = Math.round(temp) + "°";
                 weatherCondition = weatherName(code);
+                weatherFeelsLike=Math.round(current.optDouble("apparent_temperature",temp))+"°";
+                weatherHumidity=Math.round(current.optDouble("relative_humidity_2m",0))+"%";
+                weatherWind=Math.round(current.optDouble("wind_speed_10m",0))+" MPH";
+                weatherVisibility=String.format(Locale.US,"%.1f MI",current.optDouble("visibility",0)/1609.344);
+                weatherUpdated=new java.text.SimpleDateFormat("h:mm a",Locale.US).format(new java.util.Date()).toUpperCase(Locale.US);
+
+                org.json.JSONObject daily=root.getJSONObject("daily");
+                org.json.JSONArray days=daily.getJSONArray("time"), highs=daily.getJSONArray("temperature_2m_max"), lows=daily.getJSONArray("temperature_2m_min"), dailyCodes=daily.getJSONArray("weather_code");
+                String[] dd=new String[5],dh=new String[5],dl=new String[5],dc=new String[5];
+                java.text.SimpleDateFormat input=new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US), output=new java.text.SimpleDateFormat("EEE",Locale.US);
+                for(int i=0;i<5;i++){dd[i]=i==0?"TODAY":output.format(input.parse(days.getString(i))).toUpperCase(Locale.US);dh[i]=Math.round(highs.getDouble(i))+"°";dl[i]=Math.round(lows.getDouble(i))+"°";dc[i]=weatherName(dailyCodes.getInt(i));}
+                dailyDays=dd;dailyHighs=dh;dailyLows=dl;dailyConditions=dc;weatherHigh=dh[0];weatherLow=dl[0];
+                weatherUv=String.format(Locale.US,"%.1f",daily.optJSONArray("uv_index_max").optDouble(0,0));
+                String sunrise=daily.optJSONArray("sunrise").optString(0,"");weatherSunrise=sunrise.length()>=16?sunrise.substring(11,16):"--:--";
+
+                org.json.JSONObject hourly=root.getJSONObject("hourly");
+                org.json.JSONArray ht=hourly.getJSONArray("time"),hv=hourly.getJSONArray("temperature_2m"),hc=hourly.getJSONArray("weather_code"),hp=hourly.getJSONArray("precipitation_probability");
+                String currentIso=current.optString("time","");int start=0;for(int i=0;i<ht.length();i++)if(ht.optString(i).compareTo(currentIso)>=0){start=i;break;}
+                String[] times=new String[6],temps=new String[6],conditions=new String[6];java.text.SimpleDateFormat clock=new java.text.SimpleDateFormat("h a",Locale.US);
+                for(int i=0;i<6;i++){int at=Math.min(start+i,ht.length()-1);String iso=ht.getString(at);times[i]=i==0?"NOW":clock.format(new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm",Locale.US).parse(iso)).toUpperCase(Locale.US);temps[i]=Math.round(hv.getDouble(at))+"°";conditions[i]=weatherName(hc.getInt(at));if(i==0)weatherPrecip=hp.optInt(at,0)+"%";}
+                hourlyTimes=times;hourlyTemps=temps;hourlyConditions=conditions;
+                try{List<Address> place=new Geocoder(this,Locale.US).getFromLocation(fix.getLatitude(),fix.getLongitude(),1);if(place!=null&&!place.isEmpty()){Address a=place.get(0);String name=a.getLocality();if(name==null)name=a.getSubAdminArea();if(name!=null&&!name.trim().isEmpty())weatherLocationName=name.toUpperCase(Locale.US);}}catch(Throwable ignored){}
             } catch (Throwable ignored) {
                 weatherTemp = "--°";
                 weatherCondition = "WEATHER UNAVAILABLE";

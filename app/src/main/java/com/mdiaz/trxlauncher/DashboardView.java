@@ -148,6 +148,9 @@ public final class DashboardView extends View {
             }
             mountains(c,70,1360);
         }
+        else if(style==3){p.setShader(new RadialGradient(W*.5f,H*.54f,W*.55f,(RED&0x00ffffff)|0x66000000,0xff030406,Shader.TileMode.CLAMP));c.drawRect(0,safeTop,W,H-safeBottom,p);p.setShader(null);p.setColor((RED&0x00ffffff)|0x24000000);for(float yy=y(120);yy<H-safeBottom;yy+=x(22))c.drawRect(0,yy,W,yy+x(1),p);}
+        else if(style==4){p.setColor(0x463a414b);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));float rr=x(34);for(float yy=y(90);yy<H;yy+=rr*1.48f)for(float xx=-rr;xx<W+rr;xx+=rr*1.72f){float shift=((int)((yy-y(90))/(rr*1.48f))%2)*rr*.86f;path.reset();for(int k=0;k<6;k++){double a=Math.PI/3*k;float px=xx+shift+(float)Math.cos(a)*rr,py=yy+(float)Math.sin(a)*rr;if(k==0)path.moveTo(px,py);else path.lineTo(px,py);}path.close();c.drawPath(path,p);}p.setStyle(Paint.Style.FILL);}
+        else if(style==5){p.setColor(0xff020304);c.drawRect(0,safeTop,W,H-safeBottom,p);p.setColor((RED&0x00ffffff)|0x18000000);for(float yy=y(120);yy<H-safeBottom;yy+=x(42))c.drawRect(0,yy,W,yy+x(1),p);}
         else{p.setColor(0x3a2d343d);p.setStrokeWidth(x(1));for(float i=-H;i<W+H;i+=x(30)){c.drawLine(i,safeTop,i+H,H-safeBottom,p);c.drawLine(i+x(7),safeTop,i+H+x(7),H-safeBottom,p);}}
     }
     private void status(Canvas c){
@@ -156,7 +159,8 @@ public final class DashboardView extends View {
         String now=new SimpleDateFormat("h:mm a",Locale.US).format(new Date());
         paint(WHITE,11,true);p.setTextAlign(Paint.Align.LEFT);c.drawText(activity.weatherTemp(),x(30),y(31),p);
         paint(WHITE,25,true);p.setTextAlign(Paint.Align.CENTER);c.drawText("RAM",x(540),y(30),p);
-        paint(RED,12,true);c.drawText("TRX",x(505),y(52),p);paint(WHITE,11,true);c.drawText("LAUNCHER",x(573),y(52),p);
+        paint(RED,12,true);float trxWidth=p.measureText("TRX");paint(WHITE,11,true);float launcherWidth=p.measureText("LAUNCHER"),gap=x(12),brandStart=x(540)-(trxWidth+gap+launcherWidth)/2f;
+        paint(RED,12,true);p.setTextAlign(Paint.Align.LEFT);c.drawText("TRX",brandStart,y(52),p);paint(WHITE,11,true);c.drawText("LAUNCHER",brandStart+trxWidth+gap,y(52),p);
         line(c,355,34,438,34,RED,2);line(c,642,34,725,34,RED,2);
         paint(WHITE,13,true);p.setTextAlign(Paint.Align.RIGHT);c.drawText(now+"   •   "+activity.weatherTemp(),x(1030),y(35),p);p.setTextAlign(Paint.Align.LEFT);
         line(c,0,71,1080,71,(RED&0x00ffffff)|0x99000000,2);
@@ -178,11 +182,7 @@ public final class DashboardView extends View {
                 panel(c,32,174,1048,1278,"QUICK CONTROLS");
                 String[] labels={"BLUETOOTH / AUDIO","SOUND SETTINGS","MEDIA SOURCES","SYSTEM SETTINGS"};
                 for(int i=0;i<4;i++)button(c,70,285+i*190,1010,430+i*190,labels[i],false);
-            }else{
-                panel(c,32,174,1048,1278,"WEATHER • CURRENT LOCATION");
-                text(c,activity.weatherTemp(),70,535,90,WHITE,true);text(c,activity.weatherCondition(),70,625,28,MUTED,false);
-                button(c,70,770,1010,900,"REFRESH WEATHER",true);
-            }return;
+            }else drawWeather(c);return;
         }
         if(page==2){
             if(tab==1){
@@ -230,12 +230,32 @@ public final class DashboardView extends View {
         }
     }
 
+    private void drawWeather(Canvas c){
+        RectF hero=new RectF(x(32),y(174),x(1048),y(600));raisedBox(c,hero,false,15);c.save();c.clipRoundRect(hero,x(15),x(15));
+        p.setShader(new LinearGradient(hero.left,hero.top,hero.right,hero.bottom,0xff18283a,0xff05070b,Shader.TileMode.CLAMP));c.drawRect(hero,p);p.setShader(null);
+        long now=SystemClock.uptimeMillis();boolean moving=!prefs.getBoolean("reduce_motion",false);float drift=moving?(float)Math.sin(now/3600.0)*24:0;
+        for(int i=0;i<28;i++){float sx=55+(i*97)%930,syy=205+(i*53)%245,tw=moving?(float)(.45+.55*Math.sin(now/900.0+i)):1;p.setColor((i%5==0?RED:WHITE)&0x00ffffff|((int)(35+55*Math.abs(tw))<<24));c.drawCircle(x(sx),y(syy),x(i%5==0?2.2f:1.4f),p);}
+        p.setShader(new RadialGradient(x(825),y(330),x(105),0xfff7f0d8,0x00f7f0d8,Shader.TileMode.CLAMP));c.drawCircle(x(825),y(330),x(105),p);p.setShader(null);p.setColor(0xffeef1f2);c.drawCircle(x(825),y(330),x(46),p);p.setColor(0xff182332);c.drawCircle(x(846),y(312),x(46),p);
+        drawCloud(c,690+drift,420,1.2f,0xbfe5e9ef);drawCloud(c,850-drift*.55f,455,.85f,0xa8cfd6df);
+        c.restore();text(c,activity.weatherLocationName()+" • UPDATED "+activity.weatherUpdated(),66,218,12,MUTED,true);
+        text(c,activity.weatherTemp(),68,370,90,WHITE,true);text(c,activity.weatherCondition(),76,420,27,WHITE,true);text(c,"FEELS LIKE "+activity.weatherFeelsLike()+"   •   H "+activity.weatherHigh()+"  L "+activity.weatherLow(),76,460,15,MUTED,true);
+        weatherMetric(c,75,520,"WIND",activity.weatherWind());weatherMetric(c,250,520,"HUMIDITY",activity.weatherHumidity());weatherMetric(c,445,520,"VISIBILITY",activity.weatherVisibility());
+        text(c,"HOURLY FORECAST",48,640,15,WHITE,true);text(c,"REFRESH ↻",928,640,11,RED,true);
+        String[] times=activity.hourlyTimes(),temps=activity.hourlyTemps(),conditions=activity.hourlyConditions();for(int i=0;i<6;i++){float l=42+i*169;RectF card=new RectF(x(l),y(665),x(l+154),y(830));raisedBox(c,card,i==0,10);paint(MUTED,11,true);p.setTextAlign(Paint.Align.CENTER);c.drawText(times[i],x(l+77),y(695),p);drawWeatherIcon(c,conditions[i],l+77,743,conditions[i].contains("RAIN")||conditions[i].contains("SHOWER")?.65f:0);paint(WHITE,24,true);c.drawText(temps[i],x(l+77),y(790),p);paint(MUTED,9,true);c.drawText(trim(conditions[i],14),x(l+77),y(813),p);p.setTextAlign(Paint.Align.LEFT);}
+        RectF forecast=new RectF(x(32),y(856),x(650),y(1278));raisedBox(c,forecast,false,12);text(c,"5-DAY FORECAST",54,895,14,WHITE,true);String[] days=activity.dailyDays(),highs=activity.dailyHighs(),lows=activity.dailyLows(),daily=activity.dailyConditions();for(int i=0;i<5;i++){float yy=940+i*61;text(c,days[i],60,yy,13,i==0?RED:WHITE,true);drawWeatherIcon(c,daily[i],260,yy-6,.5f);fittedText(c,daily[i],295,yy,465,11,MUTED,true);p.setTextAlign(Paint.Align.RIGHT);text(c,highs[i]+"  /  "+lows[i],620,yy,13,WHITE,true);p.setTextAlign(Paint.Align.LEFT);if(i<4)line(c,58,yy+25,625,yy+25,0xff2d333b,1);}
+        RectF details=new RectF(x(668),y(856),x(1048),y(1278));raisedBox(c,details,false,12);text(c,"DRIVE CONDITIONS",690,895,14,WHITE,true);weatherDetail(c,695,955,"RAIN CHANCE",activity.weatherPrecip());weatherDetail(c,875,955,"UV INDEX",activity.weatherUv());weatherDetail(c,695,1065,"SUNRISE",activity.weatherSunrise());weatherDetail(c,875,1065,"WIND",activity.weatherWind());button(c,692,1162,1024,1245,"REFRESH WEATHER",true);
+    }
+    private void drawCloud(Canvas c,float cx,float cy,float scale,int color){p.setColor(color);c.drawOval(new RectF(x(cx-72*scale),y(cy-19*scale),x(cx+72*scale),y(cy+25*scale)),p);c.drawCircle(x(cx-30*scale),y(cy-14*scale),x(34*scale),p);c.drawCircle(x(cx+18*scale),y(cy-27*scale),x(43*scale),p);}
+    private void drawWeatherIcon(Canvas c,String condition,float cx,float cy,float scale){boolean rain=condition!=null&&(condition.contains("RAIN")||condition.contains("SHOWER")||condition.contains("THUNDER"));p.setColor(0xffdce2e9);c.drawCircle(x(cx-9),y(cy),x(13),p);c.drawCircle(x(cx+7),y(cy-7),x(17),p);c.drawOval(new RectF(x(cx-24),y(cy),x(cx+27),y(cy+15)),p);if(!rain){p.setColor(0xffffcf57);c.drawCircle(x(cx-22),y(cy-15),x(9),p);}else{p.setColor(RED);for(int i=-1;i<=1;i++)c.drawRoundRect(new RectF(x(cx+i*14-2),y(cy+21),x(cx+i*14+2),y(cy+33)),x(2),x(2),p);}}
+    private void weatherMetric(Canvas c,float left,float top,String label,String value){text(c,label,left,top,10,MUTED,true);text(c,value,left,top+30,16,WHITE,true);}
+    private void weatherDetail(Canvas c,float left,float top,String label,String value){text(c,label,left,top,10,MUTED,true);text(c,value,left,top+38,21,WHITE,true);line(c,left,top+52,left+130,top+52,RED,2);}
+
     private boolean touchSection(float xx,float yy){
         int tab=sections[page];if(tab==0||yy<164)return false;
         if(page==0){
             if(tab==1&&yy>690&&yy<830)selectPage(xx<520?1:3,1);
             if(tab==2&&yy>285&&yy<1000){int i=(int)((yy-285)/190);if(i==0)activity.openAudioRouteSettings();else if(i==1)activity.openSoundSettings();else if(i==2)activity.openMediaAppPicker();else activity.openSystemSettings();}
-            if(tab==3&&yy>770&&yy<900)activity.refreshWeather();return true;
+            if(tab==3&&((yy>1160&&yy<1260)||(yy>610&&yy<660)))activity.refreshWeather();return true;
         }
         if(page==2){
             if(tab==1){if(yy>1140)activity.openMedia();else if(yy>=250)MediaBridge.playQueueItem(activity,(int)((yy-250)/140));}
@@ -329,6 +349,12 @@ public final class DashboardView extends View {
             Bitmap art=themedHero();if(art!=null){p.setStyle(Paint.Style.FILL);p.setAlpha(105);c.drawBitmap(art,null,inner,p);p.setAlpha(255);p.setColor(0xa8020305);c.drawRect(inner,p);}
         }else if(style==1){
             p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(2));p.setColor((RED&0x00ffffff)|0x50000000);for(int i=0;i<9;i++){float inset=x(18+i*33);c.drawOval(new RectF(inner.left-inset,inner.top+x(55+i*72),inner.right+inset,inner.top+x(315+i*112)),p);}p.setStyle(Paint.Style.FILL);
+        }else if(style==3){
+            p.setShader(new RadialGradient(inner.centerX(),inner.centerY(),inner.width()*.6f,(RED&0x00ffffff)|0x59000000,0xff05070a,Shader.TileMode.CLAMP));c.drawRect(inner,p);p.setShader(null);p.setColor((RED&0x00ffffff)|0x22000000);for(float yy=inner.top;yy<inner.bottom;yy+=x(22))c.drawRect(inner.left,yy,inner.right,yy+x(1),p);
+        }else if(style==4){
+            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(x(1));p.setColor(0x553b434d);float rr=x(25);for(float yy=inner.top;yy<inner.bottom+rr;yy+=rr*1.48f)for(float xx=inner.left-rr;xx<inner.right+rr;xx+=rr*1.72f)c.drawCircle(xx,yy,rr,p);p.setStyle(Paint.Style.FILL);
+        }else if(style==5){
+            p.setColor(0xff020304);c.drawRect(inner,p);p.setColor((RED&0x00ffffff)|0x16000000);for(float yy=inner.top;yy<inner.bottom;yy+=x(40))c.drawRect(inner.left,yy,inner.right,yy+x(1),p);
         }else{
             p.setColor(0x452d343d);p.setStrokeWidth(x(1));for(float i=inner.left-inner.height();i<inner.right+inner.height();i+=x(28)){c.drawLine(i,inner.top,i+inner.height(),inner.bottom,p);c.drawLine(i+x(7),inner.top,i+inner.height()+x(7),inner.bottom,p);}
         }
@@ -662,7 +688,7 @@ public final class DashboardView extends View {
             // corridor is left of screen center because temperatures occupy
             // their own column on the right.
             Rect truckSource=new Rect(0,0,Math.min(324,performanceTruck.getWidth()),Math.min(540,performanceTruck.getHeight()));
-            c.save();c.rotate(-90,x(459),y(713));
+            c.save();c.rotate(-90,x(459),y(720));
             c.drawBitmap(performanceTruck,truckSource,new RectF(x(334),y(473),x(584),y(953)),p);
             c.restore();
         }
@@ -878,7 +904,7 @@ public final class DashboardView extends View {
             invalidate();return true;
         }
         if(moveX<x(24)&&moveY<x(24)&&touchSection(xx,yy)){invalidate();return true;}
-        if(page==0&&xx<680&&yy>164&&yy<1048){selectPage(1,1);return true;}
+        if(page==0&&sections[0]==0&&xx<680&&yy>164&&yy<1048){selectPage(1,1);return true;}
         if(page==0&&xx>=32&&xx<=1048&&yy>1060&&yy<1290&&moveX<x(18)&&moveY<x(18)){
             if(yy<1120&&xx>900){activity.openHomeQuickAppPicker();return true;}
             int qi=(int)((xx-54)/194);List<AppEntry> quick=homeQuickApps();
