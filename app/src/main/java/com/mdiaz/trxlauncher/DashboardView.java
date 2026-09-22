@@ -231,7 +231,7 @@ public final class DashboardView extends View {
     }
 
     private void drawWeather(Canvas c){
-        RectF hero=new RectF(x(32),y(174),x(1048),y(600));raisedBox(c,hero,false,15);c.save();c.clipRoundRect(hero,x(15),x(15));
+        RectF hero=new RectF(x(32),y(174),x(1048),y(600));raisedBox(c,hero,false,15);c.save();path.reset();path.addRoundRect(hero,x(15),x(15),Path.Direction.CW);c.clipPath(path);
         p.setShader(new LinearGradient(hero.left,hero.top,hero.right,hero.bottom,0xff18283a,0xff05070b,Shader.TileMode.CLAMP));c.drawRect(hero,p);p.setShader(null);
         long now=SystemClock.uptimeMillis();boolean moving=!prefs.getBoolean("reduce_motion",false);float drift=moving?(float)Math.sin(now/3600.0)*24:0;
         for(int i=0;i<28;i++){float sx=55+(i*97)%930,syy=205+(i*53)%245,tw=moving?(float)(.45+.55*Math.sin(now/900.0+i)):1;p.setColor((i%5==0?RED:WHITE)&0x00ffffff|((int)(35+55*Math.abs(tw))<<24));c.drawCircle(x(sx),y(syy),x(i%5==0?2.2f:1.4f),p);}
