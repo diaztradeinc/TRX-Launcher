@@ -325,4 +325,35 @@ public class MediaBridge extends NotificationListenerService {
             else controller.getTransportControls().play();
         } catch (Throwable ignored) { }
     }
+
+    /** Resume the active session, or open YouTube Music when no player exists. */
+    public static void playOrOpenYouTubeMusic(Context context) {
+        try {
+            if (hasAccess(context)) refresh(context);
+            MediaController active = controller;
+            if (active != null) {
+                PlaybackState state = active.getPlaybackState();
+                if (state != null && state.getState() == PlaybackState.STATE_PLAYING)
+                    active.getTransportControls().pause();
+                else active.getTransportControls().play();
+                return;
+            }
+        } catch (Throwable ignored) { }
+        try {
+            Intent launch = context.getPackageManager()
+                .getLaunchIntentForPackage("com.google.android.apps.youtube.music");
+            if (launch != null) {
+                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(launch);
+                return;
+            }
+            Intent store = new Intent(Intent.ACTION_VIEW,
+                android.net.Uri.parse("market://details?id=com.google.android.apps.youtube.music"));
+            store.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(store);
+        } catch (Throwable ignored) {
+            android.widget.Toast.makeText(context,"YouTube Music is not installed",
+                android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
 }
