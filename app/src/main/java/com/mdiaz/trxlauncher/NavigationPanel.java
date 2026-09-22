@@ -59,6 +59,7 @@ public class NavigationPanel extends FrameLayout {
     private final SharedPreferences prefs;
     private final NavigationView navigationView;
     private final Bundle initialState;
+    private final LinearLayout destinationBar;
     private final EditText destination;
     private final Button routeButton;
     private Button clearButton;
@@ -141,19 +142,34 @@ public class NavigationPanel extends FrameLayout {
         addView(navigationView, new LayoutParams(
             LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
+        destinationBar = new LinearLayout(context);
+        destinationBar.setOrientation(LinearLayout.HORIZONTAL);
+        destinationBar.setGravity(Gravity.CENTER_VERTICAL);
+        destinationBar.setPadding(dp(8), 0, dp(6), 0);
+        destinationBar.setBackground(panel(0xf205070a, accent, 1, 18));
+        destinationBar.setElevation(dp(12));
+        LayoutParams searchLp = new LayoutParams(LayoutParams.MATCH_PARENT, dp(56), Gravity.TOP);
+        searchLp.setMargins(dp(14), dp(12), dp(14), 0);
+        addView(destinationBar, searchLp);
+
         destination = new EditText(context);
-        destination.setHint("Search destination");
+        destination.setHint("⌕  Search destination");
         destination.setSingleLine(true);
         destination.setTextColor(Color.WHITE);
         destination.setHintTextColor(0xff9ca1aa);
         destination.setTextSize(15);
-        // Reserve a clean in-field action zone for Save, Clear and Navigate.
-        destination.setPadding(dp(18), 0, dp(142), 0);
-        destination.setBackground(panel(0xf205070a, accent, 1, 14));
-        destination.setElevation(dp(10));
-        LayoutParams searchLp = new LayoutParams(LayoutParams.MATCH_PARENT, dp(50), Gravity.TOP);
-        searchLp.setMargins(dp(14), dp(12), dp(14), 0);
-        addView(destination, searchLp);
+        destination.setPadding(dp(10), 0, dp(8), 0);
+        destination.setBackgroundColor(Color.TRANSPARENT);
+        destinationBar.addView(destination, new LinearLayout.LayoutParams(0,
+            LayoutParams.MATCH_PARENT, 1));
+
+        favoriteButton=destinationAction("☆\nSAVE", "Save destination", false);
+        actionDivider();
+        clearButton=destinationAction("×\nCLEAR", "Clear destination", false);
+        actionDivider();
+        routeButton=destinationAction("➤\nGO", "Start navigation", true);
+        routeButton.setTextColor(Color.WHITE);
+        routeButton.setBackground(panel(0xff8b1020,accent,1,15));
 
         suggestions = new LinearLayout(context);
         suggestions.setOrientation(LinearLayout.VERTICAL);
@@ -185,8 +201,7 @@ public class NavigationPanel extends FrameLayout {
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
             @Override public void afterTextChanged(Editable value) {
                 boolean filled=value!=null&&value.toString().trim().length()>0;
-                clearButton.setVisibility(filled&&!compact&&!guiding?VISIBLE:GONE);
-                favoriteButton.setVisibility(filled&&!compact&&!guiding?VISIBLE:GONE);
+                updateDestinationActions(filled);
                 updateFavoriteButton();
                 if (!selectingSuggestion) scheduleAddressSuggestions(value.toString());
             }
@@ -195,19 +210,10 @@ public class NavigationPanel extends FrameLayout {
             if (!focused) suggestionHandler.postDelayed(() -> suggestionScroller.setVisibility(GONE), 220);
         });
 
-        routeButton = button("➤", true);
-        routeButton.setContentDescription("Start navigation");
-        LayoutParams routeLp = new LayoutParams(dp(38), dp(38), Gravity.TOP | Gravity.RIGHT);
-        routeLp.setMargins(0, dp(18), dp(20), 0);
-        addView(routeButton, routeLp);
         routeButton.setOnClickListener(v -> beginNavigation(destination.getText().toString()));
-
-        clearButton=button("×",false);clearButton.setTextSize(24);clearButton.setContentDescription("Clear destination");clearButton.setVisibility(GONE);
-        LayoutParams clearLp=new LayoutParams(dp(38),dp(38),Gravity.TOP|Gravity.RIGHT);clearLp.setMargins(0,dp(18),dp(62),0);addView(clearButton,clearLp);
         clearButton.setOnClickListener(v->{destination.setText("");destination.requestFocus();showKeyboard();});
-        favoriteButton=button("☆",false);favoriteButton.setTextSize(22);favoriteButton.setContentDescription("Favorite destination");favoriteButton.setVisibility(GONE);
-        LayoutParams favoriteLp=new LayoutParams(dp(38),dp(38),Gravity.TOP|Gravity.RIGHT);favoriteLp.setMargins(0,dp(18),dp(104),0);addView(favoriteButton,favoriteLp);
         favoriteButton.setOnClickListener(v->toggleFavorite(destination.getText().toString()));
+        updateDestinationActions(false);
 
         commandBar = new LinearLayout(context);
         commandBar.setOrientation(LinearLayout.HORIZONTAL);
@@ -246,12 +252,12 @@ public class NavigationPanel extends FrameLayout {
         layersButton.setPadding(0,0,0,0);
         layersButton.setBackground(panel(0xf2343434,0xff73777e,1,28));
         LayoutParams layersLp=new LayoutParams(dp(54),dp(54),Gravity.RIGHT|Gravity.TOP);
-        layersLp.setMargins(0,dp(76),dp(16),0);
+        layersLp.setMargins(0,dp(86),dp(16),0);
         addView(layersButton,layersLp);
         layersButton.setOnClickListener(v->showMapOptions());
 
         recenterButton=button("◎",false);recenterButton.setTextSize(22);recenterButton.setContentDescription("Recenter map");recenterButton.setPadding(0,0,0,0);recenterButton.setBackground(panel(0xf2343434,0xff73777e,1,28));
-        LayoutParams recenterLp=new LayoutParams(dp(54),dp(54),Gravity.RIGHT|Gravity.TOP);recenterLp.setMargins(0,dp(140),dp(16),0);addView(recenterButton,recenterLp);recenterButton.setOnClickListener(v->recenterMap());
+        LayoutParams recenterLp=new LayoutParams(dp(54),dp(54),Gravity.RIGHT|Gravity.TOP);recenterLp.setMargins(0,dp(150),dp(16),0);addView(recenterButton,recenterLp);recenterButton.setOnClickListener(v->recenterMap());
 
         status = new TextView(context);
         status.setText("CONNECTING TO GOOGLE NAVIGATION…");
@@ -429,6 +435,9 @@ public class NavigationPanel extends FrameLayout {
                     map.setBuildingsEnabled(true);
                     map.setMapType(mapType);
                     map.setTrafficEnabled(trafficEnabled);
+                    // Keep Google's required attribution neatly inset from the
+                    // screen edge so it reads as part of the dark map chrome.
+                    map.setPadding(dp(8), dp(6), dp(8), dp(10));
 
                     LatLng start = new LatLng(40.3323, -74.5819);
                     try {
@@ -581,6 +590,7 @@ public class NavigationPanel extends FrameLayout {
                             placesSession=null;
                             rememberDestination(address);
                             selectingSuggestion=true;destination.setText("");selectingSuggestion=false;destination.clearFocus();
+                            destinationBar.setVisibility(GONE);
                             destination.setVisibility(GONE);
                             clearButton.setVisibility(GONE);favoriteButton.setVisibility(GONE);
                             routeButton.setVisibility(GONE);
@@ -614,6 +624,7 @@ public class NavigationPanel extends FrameLayout {
             }
         } catch (Throwable ignored) { }
         guiding = false;
+        destinationBar.setVisibility(VISIBLE);
         destination.setVisibility(VISIBLE);
         routeButton.setVisibility(VISIBLE);
         clearButton.setVisibility(GONE);favoriteButton.setVisibility(GONE);
@@ -756,8 +767,8 @@ public class NavigationPanel extends FrameLayout {
 
     public void applyTheme(){
         accent=currentAccent();
-        destination.setBackground(panel(0xf2343434,0xff6d7075,1,24));
-        routeButton.setBackground(panel(0xff303134,0xff5f6368,1,20));
+        destinationBar.setBackground(panel(0xf2343434,0xff6d7075,1,24));
+        routeButton.setBackground(panel(0xff8b1020,accent,1,15));
         routeSummary.setBackground(panel(0xf2202124,0xff5f6368,1,16));
         routeTime.setTextColor(accent);
         stopButton.setBackground(panel(0xf207090c,accent,2,14));
@@ -905,6 +916,39 @@ public class NavigationPanel extends FrameLayout {
         lp.setMargins(dp(2), 0, dp(2), 0);
         commandBar.addView(control, lp);
         control.setOnClickListener(v -> action.run());
+    }
+
+    private Button destinationAction(String label, String description, boolean primary) {
+        Button control = button(label, primary);
+        control.setContentDescription(description);
+        control.setTextSize(9);
+        control.setGravity(Gravity.CENTER);
+        control.setMinWidth(0);
+        control.setMinimumWidth(0);
+        control.setPadding(dp(3), 0, dp(3), 0);
+        control.setBackgroundColor(Color.TRANSPARENT);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(62), dp(44));
+        lp.setMargins(dp(2), 0, dp(2), 0);
+        destinationBar.addView(control, lp);
+        return control;
+    }
+
+    private android.view.View actionDivider() {
+        android.view.View divider = new android.view.View(activity);
+        divider.setBackgroundColor(0x665f6368);
+        destinationBar.addView(divider, new LinearLayout.LayoutParams(dp(1), dp(30)));
+        return divider;
+    }
+
+    private void updateDestinationActions(boolean filled) {
+        if (clearButton == null || favoriteButton == null || routeButton == null) return;
+        boolean active = filled && !compact && !guiding;
+        clearButton.setEnabled(active);
+        favoriteButton.setEnabled(active);
+        routeButton.setEnabled(active);
+        clearButton.setAlpha(active ? 1f : .38f);
+        favoriteButton.setAlpha(active ? 1f : .38f);
+        routeButton.setAlpha(active ? 1f : .52f);
     }
 
     private void addMapTool(String label, Runnable action, String description) {
@@ -1072,7 +1116,7 @@ public class NavigationPanel extends FrameLayout {
 
     private java.util.List<String> favoriteDestinations(){java.util.ArrayList<String> values=new java.util.ArrayList<>();String raw=prefs.getString("favorite_destinations","");if(raw!=null)for(String item:raw.split("\\n"))if(!item.trim().isEmpty())values.add(item.trim());return values;}
     private boolean isFavorite(String value){if(value==null)return false;for(String item:favoriteDestinations())if(item.equalsIgnoreCase(value.trim()))return true;return false;}
-    private void updateFavoriteButton(){if(favoriteButton!=null)favoriteButton.setText(isFavorite(destination.getText().toString())?"★":"☆");}
+    private void updateFavoriteButton(){if(favoriteButton!=null)favoriteButton.setText(isFavorite(destination.getText().toString())?"★\nSAVED":"☆\nSAVE");}
     private void toggleFavorite(String value){String item=value==null?"":value.trim();if(item.isEmpty())return;java.util.LinkedHashSet<String> values=new java.util.LinkedHashSet<>(favoriteDestinations());boolean removed=false;for(String existing:new java.util.ArrayList<>(values))if(existing.equalsIgnoreCase(item)){values.remove(existing);removed=true;break;}if(!removed)values.add(item);StringBuilder saved=new StringBuilder();for(String entry:values){if(saved.length()>0)saved.append('\n');saved.append(entry);}prefs.edit().putString("favorite_destinations",saved.toString()).apply();updateFavoriteButton();Toast.makeText(activity,removed?"Removed from favorites":"Destination saved",Toast.LENGTH_SHORT).show();}
 
     private void rememberDestination(String value) {
@@ -1129,8 +1173,11 @@ public class NavigationPanel extends FrameLayout {
     }
     public void setCompact(boolean value){
         compact=value;
+        destinationBar.setVisibility(value||guiding?GONE:VISIBLE);
         destination.setVisibility(value||guiding?GONE:VISIBLE);routeButton.setVisibility(value||guiding?GONE:VISIBLE);
-        boolean hasText=destination.length()>0;clearButton.setVisibility(!value&&!guiding&&hasText?VISIBLE:GONE);favoriteButton.setVisibility(!value&&!guiding&&hasText?VISIBLE:GONE);
+        boolean hasText=destination.length()>0;
+        clearButton.setVisibility(value||guiding?GONE:VISIBLE);favoriteButton.setVisibility(value||guiding?GONE:VISIBLE);
+        updateDestinationActions(hasText);
         commandBar.setVisibility(value||guiding?GONE:VISIBLE);mapTools.setVisibility(GONE);
         modeBadge.setVisibility(GONE);stopButton.setVisibility(!value&&guiding?VISIBLE:GONE);
         layersButton.setVisibility(value?GONE:VISIBLE);

@@ -42,12 +42,12 @@ jobs:
         if: failure()
         run: test ! -f app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt || cat app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt
       - name: Package verified APK
-        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v4.3.10.apk
+        run: cp app/build/outputs/apk/release/app-release.apk TRX-Launcher-v4.3.11.apk
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: TRX-Launcher-v4.3.10
-          path: TRX-Launcher-v4.3.10.apk
+          name: TRX-Launcher-v4.3.11
+          path: TRX-Launcher-v4.3.11.apk
           if-no-files-found: error
       - name: Upload verification reports
         if: always()
